@@ -12,7 +12,15 @@ const SoftwareEng = require('../models/softwareeng');
 class PortfolioService {
   constructor() {
     this.portfolioData = new Map();
-    this.initializeDefaultData();
+    // Defer initialization to avoid circular dependency issues
+    this._initialized = false;
+  }
+
+  _ensureInitialized() {
+    if (!this._initialized) {
+      this.initializeDefaultData();
+      this._initialized = true;
+    }
   }
 
   initializeDefaultData() {
@@ -24,10 +32,10 @@ class PortfolioService {
     const originalAdminData = {
     ownerId: 'admin@test.com',
     type: 'software_engineer',
-      about: {
+      profile: {
       name: 'GAYATHRI NUTHANA GANTI',
         phone: '+1 (555) 123-4567',
-        address: 'San Antonio, TX',
+        location: 'San Antonio, TX',
         linkedin: '',
         github: 'https://github.com/gayathrinuthana',
         portfolio: '',
@@ -124,10 +132,10 @@ class PortfolioService {
     const originalCustomerData = {
     ownerId: 'cust@test.com',
     type: 'software_engineer',
-      about: {
+      profile: {
       name: 'GAYATHRI NUTHANA GANTI',
         phone: '+1 (555) 123-4567',
-        address: 'San Antonio, TX',
+        location: 'San Antonio, TX',
         linkedin: '',
         github: 'https://github.com/gayathrinuthana',
         portfolio: '',
@@ -227,13 +235,8 @@ class PortfolioService {
   }
 
   getConfig() {
-    // Get config from app settings
-    try {
-      const { app } = require('../index');
-      return app.get('config') || this.getDefaultConfig();
-    } catch (error) {
-      return this.getDefaultConfig();
-    }
+    // Get config from separate config file
+    return require('../config');
   }
 
   getDefaultConfig() {
@@ -259,14 +262,16 @@ class PortfolioService {
     return {
       ownerId,
       ...template,
-      about: {
-        ...template.about,
+      profile: {
+        ...template.profile,
         email: ownerId
       }
     };
   }
 
   async getPortfolio(ownerId) {
+    this._ensureInitialized();
+    
     // First try to get from MongoDB
     try {
       const portfolio = await SoftwareEng.findOne({ ownerId });
@@ -277,8 +282,12 @@ class PortfolioService {
       console.error('MongoDB error:', error);
     }
 
-    // Only fallback to in-memory data if not in MongoDB
-    // This prevents deleted portfolios from being recreated
+    // Fallback to in-memory data for default users
+    const config = this.getConfig();
+    if (ownerId === config.defaultUsers.admin.email || ownerId === config.defaultUsers.customer.email) {
+      return this.portfolioData.get(ownerId) || null;
+    }
+    
     return null;
   }
 
@@ -379,13 +388,8 @@ class FileUploadService {
   }
 
   getConfig() {
-    try {
-      const { app } = require('../index');
-      const config = app.get('config') || this.getDefaultUploadConfig();
-      return config;
-    } catch (error) {
-      return this.getDefaultUploadConfig();
-    }
+    // Get config from separate config file
+    return require('../config');
   }
 
   getDefaultUploadConfig() {
