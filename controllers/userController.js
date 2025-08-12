@@ -36,8 +36,11 @@ const loginUser = async(req, res) => {
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return res.status(400).json({ message: 'Invalid credentials' });
 
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        res.status(201).json({ email, token, portfolioIds: user.portfolioIds });
+        const token = jwt.sign(
+            { id: user._id, isAdmin: user.isAdmin }, // Browser knows this on refresh
+            process.env.JWT_SECRET, { expiresIn: '7d' }
+        );
+        res.status(201).json({ token, isAdmin: user.isAdmin, email, token, portfolioIds: user.portfolioIds });
     } catch (err) {
         console.log('error loggin in: ', err)
         res.status(500).json({ error: err.message });
