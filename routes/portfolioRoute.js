@@ -1,0 +1,18 @@
+const express = require('express');
+const router = express.Router();
+const { getPortfolioByEmail, 
+        addPortfolio, 
+        deletePortfolioByEmail,
+        editPortfolioByEmail,
+        getPortfolioById} = require('../controllers/portfolioController');
+
+router.get('/email/:email', getPortfolioByEmail);
+router.get('/id/:id', getPortfolioById);
+
+router.post('/add', addPortfolio);
+
+router.patch('/edit', editPortfolioByEmail);
+
+router.delete('/delete', deletePortfolioByEmail);
+
+module.exports = router;
