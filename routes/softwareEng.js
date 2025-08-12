@@ -22,10 +22,10 @@ class PortfolioService {
 
     // Original rich portfolio data
     const originalAdminData = {
-      ownerId: 'admin@test.com',
-      type: 'software_engineer',
+    ownerId: 'admin@test.com',
+    type: 'software_engineer',
       about: {
-        name: 'GAYATHRI NUTHANA GANTI',
+      name: 'GAYATHRI NUTHANA GANTI',
         phone: '+1 (555) 123-4567',
         address: 'San Antonio, TX',
         linkedin: '',
@@ -33,99 +33,99 @@ class PortfolioService {
         portfolio: '',
         link1: '',
         link2: '',
-        email: 'gayathri.nuthana02@gmail.com',
-        bio: 'Aspiring Full Stack Developer with practical experience in developing and maintaining web and mobile applications using the MERN stack (MongoDB, Express.js, React, Node.js). Passionate about building scalable, user-friendly solutions and continuously expanding technical knowledge.',
-        avatarUrl: ''
+      email: 'gayathri.nuthana02@gmail.com',
+      bio: 'Aspiring Full Stack Developer with practical experience in developing and maintaining web and mobile applications using the MERN stack (MongoDB, Express.js, React, Node.js). Passionate about building scalable, user-friendly solutions and continuously expanding technical knowledge.',
+      avatarUrl: ''
+    },
+    skills: [
+      { name: 'AWS', level: 'Advanced' },
+      { name: 'Terraform', level: 'Advanced', rating: 4 },
+      { name: 'Python', level: 'Advanced', rating: 3 },
+      { name: 'SQL', level: 'Beginner', rating: 3 }
+    ],
+    projects: [
+      {
+        title: 'Cloud Engineering',
+        description: 'Developed and optimized a serverless data cleaning pipeline using AWS Lambda, improving data processing efficiency by 3x. Built real-time data visualizations with Amazon QuickSight, identifying bottlenecks in hospital operational data. Documented the pipeline architecture and processes for future scalability and efficiency.',
+        repoUrl: 'https://github.com/gayathrinuthana',
+        demoUrl: '',
+        techStack: ['AWS', 'Terraform'],
+        imageUrl: null
       },
-      skills: [
-        { name: 'AWS', level: 'Advanced' },
-        { name: 'Terraform', level: 'Advanced', rating: 4 },
-        { name: 'Python', level: 'Advanced', rating: 3 },
-        { name: 'SQL', level: 'Beginner', rating: 3 }
-      ],
-      projects: [
-        {
-          title: 'Cloud Engineering',
-          description: 'Developed and optimized a serverless data cleaning pipeline using AWS Lambda, improving data processing efficiency by 3x. Built real-time data visualizations with Amazon QuickSight, identifying bottlenecks in hospital operational data. Documented the pipeline architecture and processes for future scalability and efficiency.',
-          repoUrl: 'https://github.com/gayathrinuthana',
-          demoUrl: '',
-          techStack: ['AWS', 'Terraform'],
-          imageUrl: null
-        },
-        {
-          title: 'SQL-Based Healthcare Wait Time Analysis',
-          description: 'Analyzed 5,000+ healthcare records using advanced SQL techniques to identify inefficiencies in hospital wait times. Built interactive dashboards using Excel and SQL query outputs to help stakeholders visualize operational inefficiencies.',
-          repoUrl: 'https://github.com/gayathrinuthana/sql-healthcare-project',
-          demoUrl: '',
-          techStack: ['SQL', 'Excel'],
-          imageUrl: null
-        },
-        {
-          title: 'AWS Serverless Data Cleaning Pipeline',
-          description: 'Developed and optimized a serverless data cleaning pipeline using AWS Lambda, improving data processing efficiency by 3x. Built real-time data visualizations with Amazon QuickSight, identifying bottlenecks in hospital operational data. Documented the pipeline architecture and processes for future scalability and efficiency.',
-          repoUrl: 'https://github.com/gayathrinuthana/aws-serverless-csv-cleaner',
-          demoUrl: '',
-          techStack: ['AWS Lambda', 'AWS Quicksight', 'Python'],
-          imageUrl: null
-        }
-      ],
-      experience: [
-        {
-          company: 'PrimEra Medical Technologies',
-          role: 'Executive – Clinical Information Management',
-          duration: 'Aug 2021 – Jul 2023',
-          details: 'Led the management of EMR systems (EPIC, Meditech) to manage large-scale data and streamline cross-functional workflows. Contributed to backend systems integration, enhancing efficiency and compliance with healthcare data regulations.'
-        },
-        {
-          company: 'SurgeAina',
-          role: 'Full stack Developer Intern',
-          duration: 'June 2025 - Sep 2025',
-          details: '● Full-stack development (MERN, REST APIs) ● Scalable project architecture ● Sprint-based collaboration ● Agile workflows and startup environments ● Optional exposure to AI/ML integration, design systems, and product thinking'
-        }
-      ],
-      education: [
-        {
-          degree: 'Master of Science in Information Technology & Management',
-          institution: 'Campbellsville University, KY',
-          year: 'Expected October 2025'
-        }
-      ],
-      certifications: [
-        {
-          title: 'AWS',
-          year: '2023',
-          imageUrl: '/uploads/1754434717581.pdf'
-        },
-        {
-          title: 'AWS',
-          year: '2023',
-          imageUrl: '/uploads/1754434512724.pdf'
-        },
-        {
-          title: 'kpmg',
-          year: '2023',
-          imageUrl: '/uploads/1754434736496.pdf'
-        }
-      ],
-      resumePdfUrl: '',
-      uiSettings: {
-        baseRem: 1,
-        sectionRem: {
-          about: 1,
-          projects: 1,
-          experience: 1,
-          education: 1,
-          certifications: 1,
-          skills: 1
-        }
+      {
+        title: 'SQL-Based Healthcare Wait Time Analysis',
+        description: 'Analyzed 5,000+ healthcare records using advanced SQL techniques to identify inefficiencies in hospital wait times. Built interactive dashboards using Excel and SQL query outputs to help stakeholders visualize operational inefficiencies.',
+        repoUrl: 'https://github.com/gayathrinuthana/sql-healthcare-project',
+        demoUrl: '',
+        techStack: ['SQL', 'Excel'],
+        imageUrl: null
+      },
+      {
+        title: 'AWS Serverless Data Cleaning Pipeline',
+        description: 'Developed and optimized a serverless data cleaning pipeline using AWS Lambda, improving data processing efficiency by 3x. Built real-time data visualizations with Amazon QuickSight, identifying bottlenecks in hospital operational data. Documented the pipeline architecture and processes for future scalability and efficiency.',
+        repoUrl: 'https://github.com/gayathrinuthana/aws-serverless-csv-cleaner',
+        demoUrl: '',
+        techStack: ['AWS Lambda', 'AWS Quicksight', 'Python'],
+        imageUrl: null
       }
+    ],
+    experience: [
+      {
+        company: 'PrimEra Medical Technologies',
+        role: 'Executive – Clinical Information Management',
+        duration: 'Aug 2021 – Jul 2023',
+        details: 'Led the management of EMR systems (EPIC, Meditech) to manage large-scale data and streamline cross-functional workflows. Contributed to backend systems integration, enhancing efficiency and compliance with healthcare data regulations.'
+      },
+      {
+        company: 'SurgeAina',
+        role: 'Full stack Developer Intern',
+        duration: 'June 2025 - Sep 2025',
+        details: '● Full-stack development (MERN, REST APIs) ● Scalable project architecture ● Sprint-based collaboration ● Agile workflows and startup environments ● Optional exposure to AI/ML integration, design systems, and product thinking'
+      }
+    ],
+    education: [
+      {
+        degree: 'Master of Science in Information Technology & Management',
+        institution: 'Campbellsville University, KY',
+        year: 'Expected October 2025'
+      }
+    ],
+    certifications: [
+      {
+        title: 'AWS',
+        year: '2023',
+        imageUrl: '/uploads/1754434717581.pdf'
+      },
+      {
+        title: 'AWS',
+        year: '2023',
+        imageUrl: '/uploads/1754434512724.pdf'
+      },
+      {
+        title: 'kpmg',
+        year: '2023',
+        imageUrl: '/uploads/1754434736496.pdf'
+      }
+    ],
+    resumePdfUrl: '',
+    uiSettings: {
+      baseRem: 1,
+      sectionRem: {
+        about: 1,
+        projects: 1,
+        experience: 1,
+        education: 1,
+        certifications: 1,
+        skills: 1
+      }
+    }
     };
 
     const originalCustomerData = {
-      ownerId: 'cust@test.com',
-      type: 'software_engineer',
+    ownerId: 'cust@test.com',
+    type: 'software_engineer',
       about: {
-        name: 'GAYATHRI NUTHANA GANTI',
+      name: 'GAYATHRI NUTHANA GANTI',
         phone: '+1 (555) 123-4567',
         address: 'San Antonio, TX',
         linkedin: '',
@@ -133,92 +133,92 @@ class PortfolioService {
         portfolio: '',
         link1: '',
         link2: '',
-        email: 'gayathri.nuthana02@gmail.com',
-        bio: 'Aspiring Full Stack Developer with practical experience in developing and maintaining web and mobile applications using the MERN stack (MongoDB, Express.js, React, Node.js). Passionate about building scalable, user-friendly solutions and continuously expanding technical knowledge.',
-        avatarUrl: ''
+      email: 'gayathri.nuthana02@gmail.com',
+      bio: 'Aspiring Full Stack Developer with practical experience in developing and maintaining web and mobile applications using the MERN stack (MongoDB, Express.js, React, Node.js). Passionate about building scalable, user-friendly solutions and continuously expanding technical knowledge.',
+      avatarUrl: ''
+    },
+    skills: [
+      { name: 'AWS', level: 'Advanced' },
+      { name: 'Terraform', level: 'Advanced', rating: 4 },
+      { name: 'Python', level: 'Advanced', rating: 3 },
+      { name: 'SQL', level: 'Beginner', rating: 3 }
+    ],
+    projects: [
+      {
+        title: 'Cloud Engineering',
+        description: 'Developed and optimized a serverless data cleaning pipeline using AWS Lambda, improving data processing efficiency by 3x. Built real-time data visualizations with Amazon QuickSight, identifying bottlenecks in hospital operational data. Documented the pipeline architecture and processes for future scalability and efficiency.',
+        repoUrl: 'https://github.com/gayathrinuthana',
+        demoUrl: '',
+        techStack: ['AWS', 'Terraform'],
+        imageUrl: null
       },
-      skills: [
-        { name: 'AWS', level: 'Advanced' },
-        { name: 'Terraform', level: 'Advanced', rating: 4 },
-        { name: 'Python', level: 'Advanced', rating: 3 },
-        { name: 'SQL', level: 'Beginner', rating: 3 }
-      ],
-      projects: [
-        {
-          title: 'Cloud Engineering',
-          description: 'Developed and optimized a serverless data cleaning pipeline using AWS Lambda, improving data processing efficiency by 3x. Built real-time data visualizations with Amazon QuickSight, identifying bottlenecks in hospital operational data. Documented the pipeline architecture and processes for future scalability and efficiency.',
-          repoUrl: 'https://github.com/gayathrinuthana',
-          demoUrl: '',
-          techStack: ['AWS', 'Terraform'],
-          imageUrl: null
-        },
-        {
-          title: 'SQL-Based Healthcare Wait Time Analysis',
-          description: 'Analyzed 5,000+ healthcare records using advanced SQL techniques to identify inefficiencies in hospital wait times. Built interactive dashboards using Excel and SQL query outputs to help stakeholders visualize operational inefficiencies.',
-          repoUrl: 'https://github.com/gayathrinuthana/sql-healthcare-project',
-          demoUrl: '',
-          techStack: ['SQL', 'Excel'],
-          imageUrl: null
-        },
-        {
-          title: 'AWS Serverless Data Cleaning Pipeline',
-          description: 'Developed and optimized a serverless data cleaning pipeline using AWS Lambda, improving data processing efficiency by 3x. Built real-time data visualizations with Amazon QuickSight, identifying bottlenecks in hospital operational data. Documented the pipeline architecture and processes for future scalability and efficiency.',
-          repoUrl: 'https://github.com/gayathrinuthana/aws-serverless-csv-cleaner',
-          demoUrl: '',
-          techStack: ['AWS Lambda', 'AWS Quicksight', 'Python'],
-          imageUrl: null
-        }
-      ],
-      experience: [
-        {
-          company: 'PrimEra Medical Technologies',
-          role: 'Executive – Clinical Information Management',
-          duration: 'Aug 2021 – Jul 2023',
-          details: 'Led the management of EMR systems (EPIC, Meditech) to manage large-scale data and streamline cross-functional workflows. Contributed to backend systems integration, enhancing efficiency and compliance with healthcare data regulations.'
-        },
-        {
-          company: 'SurgeAina',
-          role: 'Full stack Developer Intern',
-          duration: 'June 2025 - Sep 2025',
-          details: '● Full-stack development (MERN, REST APIs) ● Scalable project architecture ● Sprint-based collaboration ● Agile workflows and startup environments ● Optional exposure to AI/ML integration, design systems, and product thinking'
-        }
-      ],
-      education: [
-        {
-          degree: 'Master of Science in Information Technology & Management',
-          institution: 'Campbellsville University, KY',
-          year: 'Expected October 2025'
-        }
-      ],
-      certifications: [
-        {
-          title: 'AWS',
-          year: '2023',
-          imageUrl: '/uploads/1754434717581.pdf'
-        },
-        {
-          title: 'AWS',
-          year: '2023',
-          imageUrl: '/uploads/1754434512724.pdf'
-        },
-        {
-          title: 'kpmg',
-          year: '2023',
-          imageUrl: '/uploads/1754434736496.pdf'
-        }
-      ],
-      resumePdfUrl: '',
-      uiSettings: {
-        baseRem: 1,
-        sectionRem: {
-          about: 1,
-          projects: 1,
-          experience: 1,
-          education: 1,
-          certifications: 1,
-          skills: 1
-        }
+      {
+        title: 'SQL-Based Healthcare Wait Time Analysis',
+        description: 'Analyzed 5,000+ healthcare records using advanced SQL techniques to identify inefficiencies in hospital wait times. Built interactive dashboards using Excel and SQL query outputs to help stakeholders visualize operational inefficiencies.',
+        repoUrl: 'https://github.com/gayathrinuthana/sql-healthcare-project',
+        demoUrl: '',
+        techStack: ['SQL', 'Excel'],
+        imageUrl: null
+      },
+      {
+        title: 'AWS Serverless Data Cleaning Pipeline',
+        description: 'Developed and optimized a serverless data cleaning pipeline using AWS Lambda, improving data processing efficiency by 3x. Built real-time data visualizations with Amazon QuickSight, identifying bottlenecks in hospital operational data. Documented the pipeline architecture and processes for future scalability and efficiency.',
+        repoUrl: 'https://github.com/gayathrinuthana/aws-serverless-csv-cleaner',
+        demoUrl: '',
+        techStack: ['AWS Lambda', 'AWS Quicksight', 'Python'],
+        imageUrl: null
       }
+    ],
+    experience: [
+      {
+        company: 'PrimEra Medical Technologies',
+        role: 'Executive – Clinical Information Management',
+        duration: 'Aug 2021 – Jul 2023',
+        details: 'Led the management of EMR systems (EPIC, Meditech) to manage large-scale data and streamline cross-functional workflows. Contributed to backend systems integration, enhancing efficiency and compliance with healthcare data regulations.'
+      },
+      {
+        company: 'SurgeAina',
+        role: 'Full stack Developer Intern',
+        duration: 'June 2025 - Sep 2025',
+        details: '● Full-stack development (MERN, REST APIs) ● Scalable project architecture ● Sprint-based collaboration ● Agile workflows and startup environments ● Optional exposure to AI/ML integration, design systems, and product thinking'
+      }
+    ],
+    education: [
+      {
+        degree: 'Master of Science in Information Technology & Management',
+        institution: 'Campbellsville University, KY',
+        year: 'Expected October 2025'
+      }
+    ],
+    certifications: [
+      {
+        title: 'AWS',
+        year: '2023',
+        imageUrl: '/uploads/1754434717581.pdf'
+      },
+      {
+        title: 'AWS',
+        year: '2023',
+        imageUrl: '/uploads/1754434512724.pdf'
+      },
+      {
+        title: 'kpmg',
+        year: '2023',
+        imageUrl: '/uploads/1754434736496.pdf'
+      }
+    ],
+    resumePdfUrl: '',
+    uiSettings: {
+      baseRem: 1,
+      sectionRem: {
+        about: 1,
+        projects: 1,
+        experience: 1,
+        education: 1,
+        certifications: 1,
+        skills: 1
+      }
+    }
     };
 
     // Set the original rich data
@@ -228,7 +228,16 @@ class PortfolioService {
 
   getConfig() {
     // Get config from app settings
-    return require('../index').get('config') || {
+    try {
+      const { app } = require('../index');
+      return app.get('config') || this.getDefaultConfig();
+    } catch (error) {
+      return this.getDefaultConfig();
+    }
+  }
+
+  getDefaultConfig() {
+    return {
       defaultUsers: {
         admin: { email: 'admin@test.com' },
         customer: { email: 'cust@test.com' }
@@ -370,7 +379,17 @@ class FileUploadService {
   }
 
   getConfig() {
-    const config = require('../index').get('config') || {
+    try {
+      const { app } = require('../index');
+      const config = app.get('config') || this.getDefaultUploadConfig();
+      return config;
+    } catch (error) {
+      return this.getDefaultUploadConfig();
+    }
+  }
+
+  getDefaultUploadConfig() {
+    return {
       uploads: {
         directory: 'uploads',
         maxFileSize: 5 * 1024 * 1024,
@@ -380,7 +399,6 @@ class FileUploadService {
         }
       }
     };
-    return config;
   }
 
   createStorage() {
@@ -405,8 +423,8 @@ class FileUploadService {
       ];
 
       if (allowedTypes.includes(file.mimetype)) {
-        cb(null, true);
-      } else {
+    cb(null, true);
+  } else {
         cb(new Error(`File type not allowed. Allowed types: ${allowedTypes.join(', ')}`), false);
       }
     };
@@ -417,7 +435,7 @@ class FileUploadService {
     return multer({
       storage: this.storage,
       fileFilter: this.fileFilter,
-      limits: {
+  limits: {
         fileSize: config.uploads.maxFileSize
       }
     });

@@ -1,6 +1,6 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
-const app = require('../server');
+const { app } = require('../index');
 const SoftwareEng = require('../models/softwareeng');
 
 // Test data
