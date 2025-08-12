@@ -52,21 +52,6 @@ io.on('connection', (socket) => {
 // Make io available to routes
 app.set('io', io);
 
-// Test endpoint for WebSocket events
-app.post('/test-websocket', (req, res) => {
-  const io = req.app.get('io');
-  if (io) {
-    io.emit('test-event', {
-      message: 'Test WebSocket event',
-      timestamp: new Date().toISOString()
-    });
-    console.log('📡 Test WebSocket event emitted');
-    res.json({ message: 'Test event sent' });
-  } else {
-    res.status(500).json({ error: 'Socket.IO not available' });
-  }
-});
-
 connectDB()
     .then(() => {
         app.listen(PORT, () => {
