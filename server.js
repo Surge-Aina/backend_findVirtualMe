@@ -1,7 +1,6 @@
 const fs = require('fs');
 const { google } = require('googleapis');
 const { oauth2Client, getAuthUrl, getTokensFromCode, setCredentialsFromEnv, listFilesInFolder } = require('./oauthHandler');
-const userRoutes = require('./routes/userRoute');
 const settingsRoutes = require('./routes/settingsRoute');
 const driveRoutes = require('./routes/driveRoute');
 const photoRoutes = require('./routes/photoRoute');
