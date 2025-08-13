@@ -13,6 +13,9 @@ const uploadRoutes = require('./routes/uploadRoute');
 const userRoutes = require('./routes/userRoute');
 const portfolioRoutes = require('./routes/portfolioRoute');
 const softwareEngRoutes = require('./routes/softwareEng');
+const testimonialRoutes = require('./routes/testimonialRoute');
+const dashboardRoutes = require('./routes/dashboardRoute');
+
 
 // Import configuration from separate file
 const config = require('./config');
@@ -32,6 +35,9 @@ app.use('/settings', settingsRoutes);
 app.use('/drive', driveRoutes);
 app.use('/photo', photoRoutes);
 app.use('/upload', uploadRoutes);
+app.use('/testimonials', testimonialRoutes);
+app.use('/dashboard', dashboardRoutes);
+
 
 // Serve static files from uploads directory
 app.use(`/${config.uploads.directory}`, express.static(path.join(__dirname, config.uploads.directory)));
