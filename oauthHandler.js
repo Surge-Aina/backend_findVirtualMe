@@ -29,7 +29,11 @@ async function getTokensFromCode(code) {
 // STEP 3: Set credentials with refresh token
 function setCredentialsFromEnv() {
   if (process.env.REFRESH_TOKEN) {
+    console.log('Setting OAuth2 credentials with refresh token...');
     oauth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
+    console.log('OAuth2 credentials set successfully');
+  } else {
+    console.warn('No REFRESH_TOKEN found in environment variables. Google Drive API will not work.');
   }
 }
 
@@ -45,7 +49,7 @@ async function listFilesInFolder(folderId) {
     id: file.id,
     name: file.name,
     url: `http://localhost:5000/drive/file/${file.id}`
-  }));  
+  }));
 }
 
 module.exports = {
