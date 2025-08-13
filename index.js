@@ -27,6 +27,7 @@ const menuRoutes = require("./routes/menuRoutes");
 const galleryRoutes = require("./routes/galleryRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const taggedImageRoutes = require("./routes/taggedImageRoutes");
+const handymanPortfolioRoutes = require('./routes/handymanPortfolioRoutes');
 
 // Import configuration from separate file
 const config = require("./config");
@@ -54,6 +55,7 @@ app.use("/api/menu", menuRoutes);
 app.use("/api/gallery", galleryRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/tagged", taggedImageRoutes);
+app.use('/api/handyman/portfolio', handymanPortfolioRoutes);
 
 app.use("/api/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) =>
