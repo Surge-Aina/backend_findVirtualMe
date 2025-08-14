@@ -27,7 +27,7 @@ const menuRoutes = require("./routes/menuRoutes");
 const galleryRoutes = require("./routes/galleryRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const taggedImageRoutes = require("./routes/taggedImageRoutes");
-const handymanPortfolioRoutes = require('./routes/handymanPortfolioRoutes');
+const handymanPortfolioRoutes = require("./routes/handymanPortfolioRoutes");
 
 // Import configuration from separate file
 const config = require("./config");
@@ -49,15 +49,15 @@ app.use("/photo", photoRoutes);
 app.use("/upload", uploadRoutes);
 app.use("/testimonials", testimonialRoutes);
 app.use("/dashboard", dashboardRoutes);
-app.use("/api/banner", bannerRoutes);
-app.use("/api/about", aboutRoutes);
-app.use("/api/menu", menuRoutes);
-app.use("/api/gallery", galleryRoutes);
-app.use("/api/reviews", reviewRoutes);
-app.use("/api/tagged", taggedImageRoutes);
-app.use('/api/handyman/portfolio', handymanPortfolioRoutes);
+app.use("/banner", bannerRoutes);
+app.use("/about", aboutRoutes);
+app.use("/menu", menuRoutes);
+app.use("/gallery", galleryRoutes);
+app.use("/reviews", reviewRoutes);
+app.use("/tagged", taggedImageRoutes);
+app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 
-app.use("/api/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) =>
   res.status(200).json({ ok: true, ts: Date.now() })
 );
