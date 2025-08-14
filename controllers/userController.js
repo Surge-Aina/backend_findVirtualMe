@@ -6,6 +6,9 @@ const jwt = require('jsonwebtoken');
 const signupUser = async(req, res) => {
     try {
         const { email, password } = req.body;
+        if(!email || !password){
+            return res.status(500).json({error: "email or password missing"});
+        }
 
         // Can add checks with validator later to ensure email valid / password strong
         const userExists = await User.findOne({ email });

@@ -1,4 +1,7 @@
+const req = require('express/lib/request');
 const Portfolio = require('../models/portfolioModel');
+const pdfParse = require('pdf-parse');
+const { generatePortfolioJSON, generateMatchSummary } = require('../services/openAiService');
 
 exports.getPortfolioByEmail = async (req, res) => {
     const email = req.params.email;
@@ -46,6 +49,33 @@ exports.addPortfolio = async (req, res) => {
     }
 }
 
+exports.addPDF = async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No PDF file uploaded' });
+    }
+
+    try {
+        // req.file.buffer contains the PDF file in memory
+        const data = await pdfParse(req.file.buffer);
+
+        // Example: Simple JSON response with extracted text and number of pages
+        const jsonResponse = {
+        numPages: data.numpages,
+        numRenderedPages: data.numrender,
+        info: data.info,
+        metadata: data.metadata,
+        text: data.text,
+        };
+
+        const jsonPortfolio = await generatePortfolioJSON(jsonResponse.text);
+
+        res.json(jsonPortfolio);
+    } catch (err) {
+        console.error('Error parsing PDF:', err);
+        res.status(500).json({ error: 'Failed to parse PDF' });
+    }
+}
+
 exports.editPortfolioByEmail = async (req, res) => {
     const email = req.query.email;
     const portfolio = req.body.portfolio;
@@ -80,4 +110,18 @@ exports.deletePortfolioByEmail = async (req, res) => {
         console.log('error deleting portfolio: ', error);
         res.status(500).json({message: 'error deleting portfolio'});
     }
+}
+
+exports.aiSummary = async (req, res) => {
+  const { resumeJSON, jobText } = req.body;
+  if (!resumeJSON || !jobText)
+    return res.status(400).json({ error: 'Missing input' });
+
+  try {
+    const summary = await generateMatchSummary(resumeJSON, jobText);
+    res.json({ summary });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Generation failed' });
+  }
 }
