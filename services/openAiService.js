@@ -35,4 +35,24 @@ async function generateMatchSummary(resumeJSON, jobText) {
   return response.choices[0].message.content.trim();
 }
 
-module.exports = { generateMatchSummary };
+async function generatePortfolioJSON(resumeText){
+    const prompt = `
+    Convert this resume text into JSON format using the following structure:
+
+    {"about":{"name":"","phone":"","address":"","linkedin":"","github":"","portfolio":"","link1":"","link2":""},"education":[{"degree":"","institution":"","year":"","points":[]}],"skills":[],"projects":[{"name":"","about":"","time":"","points":[]}],"experience":[{"company":"","role":"","duration":"","points":[]}],"certificates":[],"testimonials":[],"extraParts":[{"title":"","content":""}]}
+   
+
+    ${resumeText}
+    `;
+
+    const response = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.3,
+    max_tokens: 2000,
+  });
+
+  return response.choices[0].message.content.trim();
+}
+
+module.exports = { generateMatchSummary, generatePortfolioJSON };
