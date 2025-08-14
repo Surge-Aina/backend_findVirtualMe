@@ -48,14 +48,14 @@ app.use("/photo", photoRoutes);
 app.use("/upload", uploadRoutes);
 app.use("/testimonials", testimonialRoutes);
 app.use("/dashboard", dashboardRoutes);
-app.use("/api/banner", bannerRoutes);
-app.use("/api/about", aboutRoutes);
-app.use("/api/menu", menuRoutes);
-app.use("/api/gallery", galleryRoutes);
-app.use("/api/reviews", reviewRoutes);
-app.use("/api/tagged", taggedImageRoutes);
+app.use("/banner", bannerRoutes);
+app.use("/about", aboutRoutes);
+app.use("/menu", menuRoutes);
+app.use("/gallery", galleryRoutes);
+app.use("/reviews", reviewRoutes);
+app.use("/tagged", taggedImageRoutes);
 
-app.use("/api/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) =>
   res.status(200).json({ ok: true, ts: Date.now() })
 );

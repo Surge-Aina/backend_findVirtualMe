@@ -16,11 +16,11 @@ exports.createAbout = async (req, res) => {
     const { title, description, shape, contentBlocks } = req.body;
 
     const bannerImage = req.files?.bannerImage?.[0]?.filename
-      ? `/api/uploads/${req.files.bannerImage[0].filename}`
+      ? `/uploads/${req.files.bannerImage[0].filename}`
       : "";
 
     const gridImages =
-      req.files?.gridImages?.map((f) => `/api/uploads/${f.filename}`) || [];
+      req.files?.gridImages?.map((f) => `/uploads/${f.filename}`) || [];
 
     const parsedBlocks =
       typeof contentBlocks === "string"
@@ -57,13 +57,13 @@ exports.updateAbout = async (req, res) => {
     // files → banner
     if (req.files?.bannerImage?.length) {
       about.banner = about.banner || {};
-      about.banner.image = `/api/uploads/${req.files.bannerImage[0].filename}`;
+      about.banner.image = `/uploads/${req.files.bannerImage[0].filename}`;
     }
 
     // files → grid images (append & dedupe)
     if (req.files?.gridImages?.length) {
       const uploaded = req.files.gridImages.map(
-        (f) => `/api/uploads/${f.filename}`
+        (f) => `/uploads/${f.filename}`
       );
       const current = Array.isArray(about.gridImages) ? about.gridImages : [];
       about.gridImages = Array.from(new Set([...current, ...uploaded]));
@@ -139,7 +139,7 @@ exports.deleteAbout = async (req, res) => {
 
 exports.imageUpload = async (req, res) => {
   try {
-    const urls = req.files.map((file) => `/api/uploads/${file.filename}`);
+    const urls = req.files.map((file) => `/uploads/${file.filename}`);
     res.json({ urls });
   } catch (err) {
     console.error("Image upload error:", err);
