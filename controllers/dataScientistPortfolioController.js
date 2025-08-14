@@ -25,7 +25,7 @@ const updateDataScientistPortfolio = async (req, res) => {
       return res.status(400).json({ message: 'Portfolio data is required' });
     }
     
-    console.log('Received portfolio update request:', JSON.stringify(portfolio, null, 2));
+
     
     // Remove _id field from portfolio data to avoid MongoDB immutable field error
     const { _id, ...cleanPortfolio } = portfolio;
@@ -62,7 +62,7 @@ const updateDataScientistPortfolio = async (req, res) => {
       });
     }
     
-    console.log('Cleaned portfolio data:', JSON.stringify(cleanPortfolio, null, 2));
+
     
     const updatedPortfolio = await DataScientistPortfolio.findOneAndUpdate(
       { portfolioId: 'datascience' },
@@ -70,7 +70,7 @@ const updateDataScientistPortfolio = async (req, res) => {
       { new: true, upsert: true, runValidators: true }
     );
     
-    console.log('Portfolio updated successfully');
+
     res.status(200).json(updatedPortfolio);
   } catch (error) {
     console.error('Error updating datascience portfolio:', error);
@@ -112,7 +112,7 @@ const updateExperience = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
-    console.log('Updating experience item:', id, updateData);
+
     
     const portfolio = await DataScientistPortfolio.findOne({ portfolioId: 'datascience' });
     
@@ -134,7 +134,7 @@ const updateExperience = async (req, res) => {
     portfolio.experience[experienceIndex] = { ...portfolio.experience[experienceIndex], ...updateData };
     await portfolio.save();
     
-    console.log('Experience updated successfully');
+
     res.status(200).json(portfolio);
   } catch (error) {
     console.error('Error updating experience:', error);
@@ -190,7 +190,7 @@ const updateEducation = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
-    console.log('Updating education item:', id, updateData);
+
     
     const portfolio = await DataScientistPortfolio.findOne({ portfolioId: 'datascience' });
     
@@ -212,7 +212,7 @@ const updateEducation = async (req, res) => {
     portfolio.education[educationIndex] = { ...portfolio.education[educationIndex], ...updateData };
     await portfolio.save();
     
-    console.log('Education updated successfully');
+
     res.status(200).json(portfolio);
   } catch (error) {
     console.error('Error updating education:', error);
@@ -268,7 +268,7 @@ const updateProject = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
     
-    console.log('Updating project item:', id, updateData);
+
     
     const portfolio = await DataScientistPortfolio.findOne({ portfolioId: 'datascience' });
     
@@ -290,7 +290,7 @@ const updateProject = async (req, res) => {
     portfolio.projects[projectIndex] = { ...portfolio.projects[projectIndex], ...updateData };
     await portfolio.save();
     
-    console.log('Project updated successfully');
+
     res.status(200).json(portfolio);
   } catch (error) {
     console.error('Error updating project:', error);

@@ -6,7 +6,14 @@ exports.getDashboard = async (req, res) => {
         const dashboard = await Dashboard.findOne({ isActive: true });
         if (!dashboard) {
             // Create default dashboard if none exists
-            const defaultDashboard = new Dashboard();
+            const defaultDashboard = new Dashboard({
+                data: {
+                    sales: [120, 190, 300, 500, 200, 300, 450, 380, 420, 280, 350, 400],
+                    revenue: [15000, 22000, 35000, 48000, 25000, 32000, 42000, 38000, 45000, 30000, 38000, 42000],
+                    xLabels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    hiddenPoints: []
+                }
+            });
             await defaultDashboard.save();
             res.status(200).json(defaultDashboard);
             return;
