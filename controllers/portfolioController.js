@@ -50,9 +50,32 @@ exports.editPortfolioByEmail = async (req, res) => {
     const email = req.query.email;
     const portfolio = req.body.portfolio;
     try{
+        // Remove _id field from portfolio data to avoid MongoDB immutable field error
+        const { _id, ...cleanPortfolio } = portfolio;
+        
+        // Also clean nested arrays to remove _id fields
+        if (cleanPortfolio.experience) {
+            cleanPortfolio.experience = cleanPortfolio.experience.map(exp => {
+                const { _id: expId, ...cleanExp } = exp;
+                return cleanExp;
+            });
+        }
+        if (cleanPortfolio.education) {
+            cleanPortfolio.education = cleanPortfolio.education.map(edu => {
+                const { _id: eduId, ...cleanEdu } = edu;
+                return cleanEdu;
+            });
+        }
+        if (cleanPortfolio.projects) {
+            cleanPortfolio.projects = cleanPortfolio.projects.map(proj => {
+                const { _id: projId, ...cleanProj } = proj;
+                return cleanProj;
+            });
+        }
+        
         const updatedPortfolio = await Portfolio.findOneAndUpdate(
             {email: email},
-            {$set: portfolio},
+            {$set: cleanPortfolio},
             {new: true}     //return updated document
         );
 

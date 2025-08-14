@@ -11,7 +11,8 @@ router.get('/id/:id', getPortfolioById);
 
 router.post('/add', addPortfolio);
 
-router.patch('/edit', editPortfolioByEmail);
+// Temporarily disabled to debug routing issue
+// router.patch('/edit', editPortfolioByEmail);
 
 router.delete('/delete', deletePortfolioByEmail);
 

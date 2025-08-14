@@ -15,6 +15,7 @@ const portfolioRoutes = require('./routes/portfolioRoute');
 const softwareEngRoutes = require('./routes/softwareEng');
 const testimonialRoutes = require('./routes/testimonialRoute');
 const dashboardRoutes = require('./routes/dashboardRoute');
+const dataScientistPortfolioRoutes = require('./routes/dataScientistPortfolioRoute');
 
 
 // Import configuration from separate file
@@ -23,7 +24,12 @@ const config = require('./config');
 const app = express();
 const PORT = process.env.PORT;
 
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176', 'http://localhost:5177', 'http://localhost:5178'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 setCredentialsFromEnv();
 
@@ -37,6 +43,7 @@ app.use('/photo', photoRoutes);
 app.use('/upload', uploadRoutes);
 app.use('/testimonials', testimonialRoutes);
 app.use('/dashboard', dashboardRoutes);
+app.use('/datascience-portfolio', dataScientistPortfolioRoutes);
 
 
 // Serve static files from uploads directory
