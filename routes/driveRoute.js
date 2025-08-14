@@ -2,6 +2,9 @@ const express = require('express');
 const { google } = require('googleapis');
 const { oauth2Client, listFilesInFolder } = require('../oauthHandler');
 const router = express.Router();
+const backendUrl = process.env.VITE_BACKEND_API;
+const dotenv = require('dotenv');
+dotenv.config();
 
 // Check OAuth2 status
 router.get('/status', (req, res) => {
@@ -81,7 +84,7 @@ router.get('/test/:folderId', async (req, res) => {
       images: files.data.files.map(file => ({
         id: file.id,
         name: file.name,
-        url: `http://localhost:5000/drive/file/${file.id}`
+        url: `${backendUrl}/drive/file/${file.id}`
       }))
     });
 

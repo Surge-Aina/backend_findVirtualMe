@@ -1,5 +1,6 @@
 const { google } = require('googleapis');
 const dotenv = require('dotenv');
+const backendUrl = process.env.VITE_BACKEND_API;
 dotenv.config();
 
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, REDIRECT_URI } = process.env;
@@ -48,7 +49,7 @@ async function listFilesInFolder(folderId) {
   return res.data.files.map(file => ({
     id: file.id,
     name: file.name,
-    url: `http://localhost:5000/drive/file/${file.id}`
+    url: `${backendUrl}/drive/file/${file.id}`
   }));
 }
 
