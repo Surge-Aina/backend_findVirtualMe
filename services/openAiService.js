@@ -41,7 +41,7 @@ async function generatePortfolioJSON(resumeText, email){
 
   const omsJSONPortfolioAPISchema = '{"about":{"name":"","phone":"","address":"","linkedin":"","github":"","portfolio":"","link1":"","link2":""},"education":[{"degree":"","institution":"","year":"","points":[]}],"skills":[],"projects":[{"name":"","about":"","time":"","points":[]}],"experience":[{"company":"","role":"","duration":"","points":[]}],"certificates":[],"testimonials":[],"extraParts":[{"title":"","content":""}]}'
 
-    const prompt = `
+    let prompt = `
       Convert this resume text into valid JSON following EXACTLY this structure (keep all keys even if values are empty):
 
       ${jsonAIPortfolioSchema}
