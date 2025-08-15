@@ -22,7 +22,7 @@ router.post(
 
 // routes/aboutRoutes.js
 router.put(
-  "/:id",
+  "/",
   upload.fields([
     { name: "bannerImage", maxCount: 1 },
     { name: "gridImages", maxCount: 10 },
