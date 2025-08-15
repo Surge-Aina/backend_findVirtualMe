@@ -35,13 +35,13 @@ async function generateMatchSummary(resumeJSON, jobText) {
   return response.choices[0].message.content.trim();
 }
 
-async function generatePortfolioJSON(resumeText){
+async function generatePortfolioJSON(resumeText, email){
 
   const jsonAIPortfolioSchema = `{"name":"","title":"","summary":"","email":"","phone":"","location":"","skills":[],"experiences":[{"company":"","title":"","location":"","startDate":"","endDate":"","description":""}],"education":[{"school":"","gpa":"","degrees":[""],"fieldOfStudy":"","awards":[""],"startDate":"","endDate":"","description":""}],"projects":[{"name":"","description":""}],"socialLinks":{"github":"","linkedin":"","website":""}}`;
 
   const omsJSONPortfolioAPISchema = '{"about":{"name":"","phone":"","address":"","linkedin":"","github":"","portfolio":"","link1":"","link2":""},"education":[{"degree":"","institution":"","year":"","points":[]}],"skills":[],"projects":[{"name":"","about":"","time":"","points":[]}],"experience":[{"company":"","role":"","duration":"","points":[]}],"certificates":[],"testimonials":[],"extraParts":[{"title":"","content":""}]}'
 
-    const prompt = `
+    let prompt = `
       Convert this resume text into valid JSON following EXACTLY this structure (keep all keys even if values are empty):
 
       ${jsonAIPortfolioSchema}
@@ -56,6 +56,10 @@ async function generatePortfolioJSON(resumeText){
       Resume text:
       ${resumeText}
     `;
+
+    if(email){
+      prompt = prompt + `also replace email with ${email}`;
+    }
 
     const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",

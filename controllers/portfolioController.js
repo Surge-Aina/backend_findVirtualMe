@@ -77,6 +77,7 @@ exports.addPortfolio = async (req, res) => {
 }
 
 exports.addPDF = async (req, res) => {
+    const email = req.body.email;
     if (!req.file) {
         return res.status(400).json({ error: 'No PDF file uploaded' });
     }
@@ -95,7 +96,7 @@ exports.addPDF = async (req, res) => {
         };
 
         //call openAI API
-        const jsonPortfolio = await generatePortfolioJSON(jsonResponse.text);
+        const jsonPortfolio = await generatePortfolioJSON(jsonResponse.text, email);
         console.log(jsonPortfolio)
 
         const portfolioObj = typeof jsonPortfolio === "string" ? JSON.parse(jsonPortfolio) : jsonPortfolio;
