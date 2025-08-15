@@ -35,7 +35,7 @@ async function generateMatchSummary(resumeJSON, jobText) {
   return response.choices[0].message.content.trim();
 }
 
-async function generatePortfolioJSON(resumeText){
+async function generatePortfolioJSON(resumeText, email){
 
   const jsonAIPortfolioSchema = `{"name":"","title":"","summary":"","email":"","phone":"","location":"","skills":[],"experiences":[{"company":"","title":"","location":"","startDate":"","endDate":"","description":""}],"education":[{"school":"","gpa":"","degrees":[""],"fieldOfStudy":"","awards":[""],"startDate":"","endDate":"","description":""}],"projects":[{"name":"","description":""}],"socialLinks":{"github":"","linkedin":"","website":""}}`;
 
@@ -56,6 +56,10 @@ async function generatePortfolioJSON(resumeText){
       Resume text:
       ${resumeText}
     `;
+
+    if(email){
+      prompt = prompt + `also replace email with ${email}`;
+    }
 
     const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
