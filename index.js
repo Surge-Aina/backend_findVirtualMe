@@ -28,6 +28,7 @@ const galleryRoutes = require("./routes/galleryRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const taggedImageRoutes = require("./routes/taggedImageRoutes");
 const handymanPortfolioRoutes = require("./routes/handymanPortfolioRoutes");
+const dataScientistRoutes = require("./routes/dataScientistRoutes");
 
 // Import configuration from separate file
 const config = require("./config");
@@ -35,7 +36,10 @@ const config = require("./config");
 const app = express();
 const PORT = process.env.PORT;
 
-app.use(cors());
+app.use(cors({
+  origin: config.server.corsOrigin,
+  credentials: true
+}));
 app.use(express.json());
 setCredentialsFromEnv();
 
@@ -56,6 +60,7 @@ app.use("/gallery", galleryRoutes);
 app.use("/reviews", reviewRoutes);
 app.use("/tagged", taggedImageRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
+app.use("/datascience-portfolio", dataScientistRoutes);
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) =>
