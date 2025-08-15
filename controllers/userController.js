@@ -5,9 +5,9 @@ const jwt = require('jsonwebtoken');
 // Not using the signup feature for now
 const signupUser = async(req, res) => {
     try {
-        const { email, password } = req.body;
-        if(!email || !password){
-            return res.status(500).json({error: "email or password missing"});
+        const {name, email, password } = req.body;
+        if(!name || !email || !password){
+            return res.status(500).json({error: "name, email or password missing"});
         }
 
         // Can add checks with validator later to ensure email valid / password strong
@@ -18,11 +18,11 @@ const signupUser = async(req, res) => {
         const hashed = await bcrypt.hash(password, 10);
 
         // Create and save new user
-        const newUser = new User({ email, password: hashed });
+        const newUser = new User({ name, email, password: hashed });
         await newUser.save();
 
         const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        res.status(201).json({ email, token });
+        res.status(201).json({ name, email, token });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
