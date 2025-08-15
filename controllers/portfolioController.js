@@ -17,6 +17,33 @@ exports.getPortfolioByEmail = async (req, res) => {
         res.status(500).json({message: 'error getting portfolio'});
     }
 }
+exports.getAllPortfoliosByEmail = async (req, res) => {
+    const email = req.params.email;
+    try{
+        const portfolios = await Portfolio.find({email});
+        if(portfolios.length === 0){
+            res.status(404).json({message: 'portfolios not found'});
+            return;
+        }
+        res.status(200).json(portfolios);
+    }catch(error){
+        console.log('error getting portfolio: ', error);
+        res.status(500).json({message: 'error getting portfolio'});
+    }
+}
+
+exports.getAllPortfolios = async (req, res) => {
+  try {
+    const portfolios = await Portfolio.find({});
+    if (portfolios.length === 0) {
+      return res.status(404).json({ message: 'No portfolios found' });
+    }
+    res.status(200).json(portfolios);
+  } catch (error) {
+    console.error('Error getting portfolios:', error);
+    res.status(500).json({ message: 'Error getting portfolios' });
+  }
+};
 
 exports.getPortfolioById = async (req, res) => {
     const id = req.params.id
@@ -67,9 +94,17 @@ exports.addPDF = async (req, res) => {
         text: data.text,
         };
 
+        //call openAI API
         const jsonPortfolio = await generatePortfolioJSON(jsonResponse.text);
+        console.log(jsonPortfolio)
 
-        res.json(jsonPortfolio);
+        const portfolioObj = typeof jsonPortfolio === "string" ? JSON.parse(jsonPortfolio) : jsonPortfolio;
+
+        //save portfolio
+        const newPortfolio = new Portfolio(portfolioObj);
+        await newPortfolio.save();
+        res.status(201).json(newPortfolio);
+
     } catch (err) {
         console.error('Error parsing PDF:', err);
         res.status(500).json({ error: 'Failed to parse PDF' });
