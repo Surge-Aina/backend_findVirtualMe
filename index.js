@@ -17,8 +17,8 @@ const driveRoutes = require("./routes/driveRoute");
 const photoRoutes = require("./routes/photoRoute");
 const uploadRoutes = require("./routes/uploadRoute");
 const userRoutes = require("./routes/userRoute");
-const portfolioRoutes = require("./routes/portfolioRoute");
-const softwareEngRoutes = require("./routes/softwareEng");
+const authRoutes = require("./routes/auth");
+const portfolioRoutes = require("./routes/portfolio");
 const testimonialRoutes = require("./routes/testimonialRoute");
 const dashboardRoutes = require("./routes/dashboardRoute");
 const bannerRoutes = require("./routes/bannerRoutes");
@@ -45,7 +45,8 @@ setCredentialsFromEnv();
 
 //jaqueline login route
 app.use("/user", userRoutes);
-app.use("/software-eng", softwareEngRoutes);
+app.use("/auth", authRoutes);
+// app.use("/software-eng", softwareEngRoutes); // Removed - using portfolio.js instead
 app.use("/portfolio", portfolioRoutes);
 app.use("/settings", settingsRoutes);
 app.use("/drive", driveRoutes);
