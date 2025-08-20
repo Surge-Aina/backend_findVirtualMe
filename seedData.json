@@ -1,0 +1,66 @@
+{
+  "services": [
+    {
+      "serviceName": "Leaky Faucet Repair",
+      "category": "Plumbing",
+      "estimatedPrice": 150
+    },
+    {
+      "serviceName": "Ceiling Fan Installation",
+      "category": "Electrical",
+      "estimatedPrice": 200
+    },
+    {
+      "serviceName": "Interior Room Painting",
+      "category": "Painting",
+      "estimatedPrice": 450
+    },
+    {
+      "serviceName": "Drywall Patching",
+      "category": "General Repairs",
+      "estimatedPrice": 180
+    },
+    {
+      "serviceName": "Furniture Assembly",
+      "category": "General Repairs",
+      "estimatedPrice": 120
+    }
+  ],
+  "portfolio": [
+    {
+      "title": "Bathroom Faucet Replacement",
+      "category": "Plumbing",
+      "beforeImageUrl": "https://res.cloudinary.com/dgvfuvako/image/upload/v1753908265/BeforeAfter_2_rlwe96.jpg",
+      "afterImageUrl": "https://res.cloudinary.com/dgvfuvako/image/upload/v1753908265/BeforeAfter_2_rlwe96.jpg"
+    },
+    {
+      "title": "Living Room Repaint",
+      "category": "Painting",
+      "beforeImageUrl": "https://res.cloudinary.com/dgvfuvako/image/upload/v1753908356/before-and-after_yfgqss.jpg",
+      "afterImageUrl": "https://res.cloudinary.com/dgvfuvako/image/upload/v1753908356/before-and-after_yfgqss.jpg"
+    },
+    {
+      "title": "Ceiling Fan Installation",
+      "category": "Electrical",
+      "beforeImageUrl": "https://res.cloudinary.com/dgvfuvako/image/upload/v1753908417/hq720_rhavae.jpg",
+      "afterImageUrl": "https://res.cloudinary.com/dgvfuvako/image/upload/v1753908417/hq720_rhavae.jpg"
+    }
+  ],
+  "testimonials": [
+    {
+      "customerName": "Sarah P.",
+      "location": "CA",
+      "quote": "Incredibly reliable and professional. The job was done perfectly and on time! Will definitely be calling again for future projects."
+    },
+    {
+      "customerName": "Mark T.",
+      "location": "CA",
+      "quote": "Finally found a handyman service I can trust. They were transparent with pricing and the quality of work was exceptional. Highly recommended."
+    },
+    {
+      "customerName": "Jennifer L.",
+      "location": "CA",
+      "quote": "They fixed a leaky pipe that two other companies couldn't figure out. Fast, efficient, and very friendly service."
+    }
+  ]
+}
