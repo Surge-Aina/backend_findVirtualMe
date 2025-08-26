@@ -29,7 +29,6 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const taggedImageRoutes = require("./routes/taggedImageRoutes");
 const handymanPortfolioRoutes = require("./routes/handymanPortfolioRoutes");
 const dataScientistRoutes = require("./routes/dataScientistRoutes");
-const handymanPortfolioRoutes = require("./routes/handymanPortfolioRoutes");
 const handymanTemplateRoutes = require('./routes/handymanTemplateRoutes');
 
 // Import configuration from separate file
