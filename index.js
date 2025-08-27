@@ -32,6 +32,7 @@ const handymanPortfolioRoutes = require("./routes/handymanPortfolioRoutes");
 const dataScientistRoutes = require("./routes/dataScientistRoutes");
 const authRoutes = require('./routes/auth'); // Import authentication routes
 const seedUsers = require('./seed/users'); // Import seed users function
+const handymanTemplateRoutes = require('./routes/handymanTemplateRoutes');
 
 // Import configuration from separate file
 const config = require("./config");
@@ -70,6 +71,8 @@ app.use("/reviews", reviewRoutes);
 app.use("/tagged", taggedImageRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/datascience-portfolio", dataScientistRoutes);
+app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
+app.use('/api/handyman-template', handymanTemplateRoutes);
 
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
