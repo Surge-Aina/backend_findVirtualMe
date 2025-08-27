@@ -1,7 +1,7 @@
 const req = require('express/lib/request');
 const Portfolio = require('../models/portfolioModel');
 const pdfParse = require('pdf-parse');
-// const { generatePortfolioJSON, generateMatchSummary } = require('../services/openAiService');
+const { generatePortfolioJSON, generateMatchSummary } = require('../services/openAiService');
 
 exports.getPortfolioByEmail = async (req, res) => {
     const email = req.params.email;
@@ -96,18 +96,15 @@ exports.addPDF = async (req, res) => {
         };
 
         //call openAI API
-        // const jsonPortfolio = await generatePortfolioJSON(jsonResponse.text, email);
-        // console.log(jsonPortfolio)
+        const jsonPortfolio = await generatePortfolioJSON(jsonResponse.text, email);
+        console.log(jsonPortfolio)
 
-        // const portfolioObj = typeof jsonPortfolio === "string" ? JSON.parse(jsonPortfolio) : jsonPortfolio;
+        const portfolioObj = typeof jsonPortfolio === "string" ? JSON.parse(jsonPortfolio) : jsonPortfolio;
 
         //save portfolio
-        // const newPortfolio = new Portfolio(portfolioObj);
-        // await newPortfolio.save();
-        // res.status(201).json(newPortfolio);
-        
-        // Temporarily disabled OpenAI functionality
-        res.status(501).json({ error: 'OpenAI functionality temporarily disabled' });
+        const newPortfolio = new Portfolio(portfolioObj);
+        await newPortfolio.save();
+        res.status(201).json(newPortfolio);
 
     } catch (err) {
         console.error('Error parsing PDF:', err);
@@ -157,9 +154,8 @@ exports.aiSummary = async (req, res) => {
     return res.status(400).json({ error: 'Missing input' });
 
   try {
-    // const summary = await generateMatchSummary(resumeJSON, jobText);
-    // res.json({ summary });
-    res.status(501).json({ error: 'OpenAI functionality temporarily disabled' });
+    const summary = await generateMatchSummary(resumeJSON, jobText);
+    res.json({ summary });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Generation failed' });

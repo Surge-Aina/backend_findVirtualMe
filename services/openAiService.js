@@ -1,11 +1,19 @@
 // services/openaiService.js
 const OpenAI = require("openai");
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, 
-});
+// Only initialize OpenAI if API key is available
+let openai = null;
+if (process.env.OPENAI_API_KEY) {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY, 
+  });
+}
 
 async function generateMatchSummary(resumeJSON, jobText) {
+  if (!openai) {
+    throw new Error('OpenAI API key not configured');
+  }
+  
   const prompt = `
     Match this resume to the job. List strong matches and missing areas briefly (max 150 words).
 
@@ -36,6 +44,9 @@ async function generateMatchSummary(resumeJSON, jobText) {
 }
 
 async function generatePortfolioJSON(resumeText, email){
+  if (!openai) {
+    throw new Error('OpenAI API key not configured');
+  }
 
   const jsonAIPortfolioSchema = `{"name":"","title":"","summary":"","email":"","phone":"","location":"","skills":[],"experiences":[{"company":"","title":"","location":"","startDate":"","endDate":"","description":""}],"education":[{"school":"","gpa":"","degrees":[""],"fieldOfStudy":"","awards":[""],"startDate":"","endDate":"","description":""}],"projects":[{"name":"","description":""}],"socialLinks":{"github":"","linkedin":"","website":""}}`;
 
