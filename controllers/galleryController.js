@@ -2,7 +2,7 @@ const GalleryImage = require("../models/GalleryImage");
 
 exports.getAllGalleryImages = async (req, res) => {
   try {
-    const images = await GalleryImage.find();
+    const images = await GalleryImage.find({ vendorId: req.params.vendorId });
     res.json(images);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch gallery images" });
@@ -17,7 +17,11 @@ exports.createGalleryImage = async (req, res) => {
     if (!imageUrl)
       return res.status(400).json({ error: "Image file is required" });
 
-    const newImage = new GalleryImage({ imageUrl, caption });
+    const newImage = new GalleryImage({
+      vendorId: req.params.vendorId,
+      imageUrl,
+      caption,
+    });
     const saved = await newImage.save();
     res.status(201).json(saved);
   } catch (err) {
@@ -33,6 +37,7 @@ exports.insertMultipleGalleryImage = async (req, res) => {
       return res.status(400).json({ error: "No images provided" });
 
     const images = files.map((file, index) => ({
+      vendorId: req.params.vendorId,
       imageUrl: `/uploads/${file.filename}`,
       caption: req.body.captions?.[index] || "", // assuming captions is an array of strings (optional)
     }));
@@ -54,8 +59,8 @@ exports.updateGalleryImage = async (req, res) => {
     if (caption !== undefined) updatedData.caption = caption;
     if (imageUrl) updatedData.imageUrl = imageUrl;
 
-    const updated = await GalleryImage.findByIdAndUpdate(
-      req.params.id,
+    const updated = await GalleryImage.findOneAndUpdate(
+      { _id: req.params.id, vendorId: req.params.vendorId },
       updatedData,
       { new: true }
     );
@@ -71,7 +76,10 @@ exports.updateGalleryImage = async (req, res) => {
 
 exports.deleteGalleryImage = async (req, res) => {
   try {
-    const deleted = await GalleryImage.findByIdAndDelete(req.params.id);
+    const deleted = await GalleryImage.findOneAndDelete({
+      _id: req.params.id,
+      vendorId: req.params.vendorId,
+    });
     if (!deleted)
       return res.status(404).json({ error: "Gallery image not found" });
     res.json({ message: "Gallery image deleted" });
