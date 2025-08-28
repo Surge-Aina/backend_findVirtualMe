@@ -43,7 +43,7 @@ const loginUser = async(req, res) => {
             { id: user._id, isAdmin: user.isAdmin }, // Browser knows this on refresh
             process.env.JWT_SECRET, { expiresIn: '7d' }
         );
-        res.status(201).json({ token, isAdmin: user.isAdmin, email, token, portfolioIds: user.portfolioIds });
+        res.status(201).json({ token, isAdmin: user.isAdmin, email, token, portfolioIds: user.portfolioIds, userId: user._id });
     } catch (err) {
         console.log('error loggin in: ', err)
         res.status(500).json({ error: err.message });
