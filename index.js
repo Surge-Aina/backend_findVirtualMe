@@ -29,6 +29,7 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const taggedImageRoutes = require("./routes/taggedImageRoutes");
 const handymanPortfolioRoutes = require("./routes/handymanPortfolioRoutes");
 const dataScientistRoutes = require("./routes/dataScientistRoutes");
+const handymanTemplateRoutes = require("./routes/handymanTemplateRoutes");
 const localVendorRoutes = require("./routes/localVendorRoutes");
 
 // Import configuration from separate file
@@ -65,6 +66,8 @@ app.use("/tagged", taggedImageRoutes);
 app.use("/vendor", localVendorRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/datascience-portfolio", dataScientistRoutes);
+app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
+app.use("/api/handyman-template", handymanTemplateRoutes);
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) =>
