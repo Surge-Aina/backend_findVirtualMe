@@ -2,7 +2,7 @@ const Banner = require("../models/Banner");
 
 exports.getAllBanners = async (req, res) => {
   try {
-    const banners = await Banner.find();
+    const banners = await Banner.find({ vendorId: req.params.vendorId });
     res.json(banners);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch banners" });
@@ -12,9 +12,10 @@ exports.getAllBanners = async (req, res) => {
 exports.createBanner = async (req, res) => {
   try {
     const newBanner = new Banner({
+      vendorId: req.params.vendorId,
       title: req.body.title,
       description: req.body.description,
-      shape: req.body.shape || "blob",
+      shape: req.body.shape || "fullscreen",
       image: req.file ? `/uploads/${req.file.filename}` : null,
     });
 
@@ -38,9 +39,13 @@ exports.updateBanner = async (req, res) => {
       updateData.image = `/uploads/${req.file.filename}`;
     }
 
-    const updated = await Banner.findByIdAndUpdate(req.params.id, updateData, {
-      new: true,
-    });
+    const updated = await Banner.findOneAndUpdate(
+      { _id: req.params.id, vendorId: req.params.vendorId },
+      updateData,
+      {
+        new: true,
+      }
+    );
 
     if (!updated) return res.status(404).json({ error: "Banner not found" });
     res.json(updated);
@@ -52,7 +57,10 @@ exports.updateBanner = async (req, res) => {
 
 exports.deleteBanner = async (req, res) => {
   try {
-    const deleted = await Banner.findByIdAndDelete(req.params.id);
+    const deleted = await Banner.findOneAndDelete({
+      _id: req.params.id,
+      vendorId: req.params.vendorId,
+    });
     if (!deleted) return res.status(404).json({ error: "Banner not found" });
     res.json({ message: "Banner deleted" });
   } catch (err) {
