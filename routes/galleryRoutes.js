@@ -9,14 +9,14 @@ const {
   insertMultipleGalleryImage,
 } = require("../controllers/galleryController");
 
-router.get("/", getAllGalleryImages);
-router.post("/", upload.single("image"), createGalleryImage);
-router.put("/:id", upload.single("image"), updateGalleryImage);
+router.get("/:vendorId", getAllGalleryImages);
+router.post("/:vendorId", upload.single("image"), createGalleryImage);
+router.put("/:vendorId/:id", upload.single("image"), updateGalleryImage);
 router.post(
-  "/multiple",
+  "/:vendorId/multiple",
   upload.array("images", 10),
   insertMultipleGalleryImage
 );
-router.delete("/:id", deleteGalleryImage);
+router.delete("/:vendorId/:id", deleteGalleryImage);
 
 module.exports = router;

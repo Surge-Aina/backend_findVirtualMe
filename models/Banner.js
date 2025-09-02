@@ -2,6 +2,12 @@ const mongoose = require("mongoose");
 
 const bannerSchema = new mongoose.Schema(
   {
+    vendorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "LocalVendorPortfolio",
+      required: true,
+    },
+
     title: {
       type: String,
       required: true,
@@ -11,7 +17,7 @@ const bannerSchema = new mongoose.Schema(
     shape: {
       type: String,
       enum: ["blob", "oval", "square", "fullscreen"], // you can expand this
-      default: "blob",
+      default: "fullscreen",
     },
   },
   { timestamps: true }
