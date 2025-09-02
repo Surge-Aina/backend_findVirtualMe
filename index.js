@@ -29,6 +29,10 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const taggedImageRoutes = require("./routes/taggedImageRoutes");
 const handymanPortfolioRoutes = require("./routes/handymanPortfolioRoutes");
 const dataScientistRoutes = require("./routes/dataScientistRoutes");
+const userRoutes2 = require('./routes/userRoute2.js');
+const serviceRoutes = require('./routes/serviceRoutes.js');
+const quoteRoutes = require('./routes/quoteRoutes.js');
+const roomRoutes = require('./routes/roomRoutes.js');
 
 // Import configuration from separate file
 const config = require("./config");
@@ -61,6 +65,12 @@ app.use("/reviews", reviewRoutes);
 app.use("/tagged", taggedImageRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/datascience-portfolio", dataScientistRoutes);
+// Routes
+app.use("/cleaning/user", userRoutes2);
+app.use('/services', serviceRoutes);
+app.use('/quotes', quoteRoutes);
+app.use('/rooms', roomRoutes);
+
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) =>
