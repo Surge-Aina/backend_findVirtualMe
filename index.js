@@ -29,19 +29,23 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const taggedImageRoutes = require("./routes/taggedImageRoutes");
 const handymanPortfolioRoutes = require("./routes/handymanPortfolioRoutes");
 const dataScientistRoutes = require("./routes/dataScientistRoutes");
-
+const checkoutRoutes = require("./routes/checkoutRoutes");
 // Import configuration from separate file
 const config = require("./config");
 
 const app = express();
 const PORT = process.env.PORT;
 
-app.use(cors({
-  origin: config.server.corsOrigin,
-  credentials: true
-}));
+// app.use(cors({
+//   origin: config.server.corsOrigin,
+//   credentials: true
+// }));
+app.use(cors({ origin: "http://localhost:5173" }))
 app.use(express.json());
 setCredentialsFromEnv();
+
+//stripe payment
+app.use("/checkout", checkoutRoutes);
 
 //jaqueline login route
 app.use("/user", userRoutes);
