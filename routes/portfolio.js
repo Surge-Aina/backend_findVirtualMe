@@ -6,11 +6,33 @@ console.log('📁 Loading portfolio routes...');
 const express = require('express');
 const router = express.Router();
 const Portfolio = require('../models/Portfolio');
-const upload = require('../utils/multer');
-const path = require('path');
-const fs = require('fs');
-const { PDFDocument } = require('pdf-lib');
+const { uploadResume, uploadImage, uploadToCloudinary } = require('../utils/cloudinaryUpload');
 const pdfParse = require('pdf-parse');
+
+// Custom middleware to handle raw file uploads with size limit
+const handleRawUpload = (req, res, next) => {
+  let data = [];
+  let totalSize = 0;
+  const maxSize = 25 * 1024 * 1024; // 25MB limit for images
+  
+  req.on('data', chunk => {
+    totalSize += chunk.length;
+    if (totalSize > maxSize) {
+      return res.status(413).json({ error: 'File too large. Maximum size is 25MB.' });
+    }
+    data.push(chunk);
+  });
+  
+  req.on('end', () => {
+    req.body = Buffer.concat(data);
+    next();
+  });
+  
+  req.on('error', (err) => {
+    console.error('❌ Request error:', err);
+    res.status(500).json({ error: 'Request processing error' });
+  });
+};
 
 // In-memory storage for portfolio data (temporary solution)
 let portfolioData = {
@@ -361,126 +383,67 @@ router.delete('/:ownerId', async (req, res) => {
   }
 });
 
-// POST /portfolio/:ownerId/photo - upload profile photo
-router.post('/:ownerId/photo', upload.single('avatar'), async (req, res) => {
-  try {
-    const avatarUrl = `/uploads/${req.file.filename}`;
-    const portfolio = await Portfolio.findOneAndUpdate(
-      { ownerId: req.params.ownerId },
-      { 'profile.avatarUrl': avatarUrl },
-      { new: true }
-    );
-    if (!portfolio) return res.status(404).json({ error: 'Portfolio not found' });
-    
-    // Emit real-time update for avatar upload
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`${req.params.ownerId}-updates`).emit('avatar-uploaded', {
-        ownerId: req.params.ownerId,
-        avatarUrl: avatarUrl,
-        timestamp: new Date().toISOString()
-      });
-      console.log('📡 Avatar upload event emitted for:', req.params.ownerId);
-    }
-    
-    res.json({ avatarUrl });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// Note: Old photo upload route removed - now using Cloudinary profile-image route
 
-// POST /portfolio/:ownerId/project-image - upload project image
-router.post('/:ownerId/project-image', upload.single('projectImage'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No image file uploaded' });
-    }
-    const imageUrl = `/uploads/${req.file.filename}`;
-    res.json({ imageUrl });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// Note: Old project-image route removed - now using Cloudinary project-image route
 
-// POST /portfolio/:ownerId/certificate-image - upload certificate image
-router.post('/:ownerId/certificate-image', upload.single('certificateImage'), async (req, res) => {
-  try {
-    console.log('Certificate upload request received:', req.file);
-    
-    if (!req.file) {
-      return res.status(400).json({ error: 'No image file uploaded' });
-    }
-    
-    const imageUrl = `/uploads/${req.file.filename}`;
-    console.log('Certificate image uploaded successfully:', imageUrl);
-    
-    // If it's a PDF or PowerPoint, create a preview image
-    let previewUrl = null;
-    let isPdf = req.file.mimetype === 'application/pdf';
-    let isPowerPoint = req.file.mimetype === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' || 
-                      req.file.mimetype === 'application/vnd.ms-powerpoint';
-    
-    if (isPdf || isPowerPoint) {
-      try {
-        // For now, we'll return the same URL but mark it appropriately
-        // In a production environment, you'd convert PDF/PowerPoint to image here
-        previewUrl = imageUrl; // This would be the preview image URL
-      } catch (previewError) {
-        console.error('Error creating preview:', previewError);
-      }
-    }
-    
-    res.json({ 
-      imageUrl,
-      previewUrl,
-      isPdf: isPdf,
-      isPowerPoint: isPowerPoint
-    });
-  } catch (err) {
-    console.error('Certificate upload error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
+// Note: Old certificate-image route removed - now using Cloudinary certificate-image route
 
-// GET /portfolio/pdf-preview/:filename - get PDF preview
-router.get('/pdf-preview/:filename', async (req, res) => {
-  try {
-    const filename = req.params.filename;
-    const filePath = path.join(__dirname, '../uploads', filename);
-    
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'File not found' });
+// Note: Old PDF preview route removed - Cloudinary handles file serving
+
+// Custom middleware for PDF uploads with larger size limit
+const handlePdfUpload = (req, res, next) => {
+  let data = [];
+  let totalSize = 0;
+  const maxSize = 50 * 1024 * 1024; // 50MB limit
+  
+  req.on('data', chunk => {
+    totalSize += chunk.length;
+    if (totalSize > maxSize) {
+      return res.status(413).json({ error: 'File too large. Maximum size is 50MB.' });
     }
-    
-    // For now, return the PDF file directly
-    // In production, you'd convert PDF to image and return that
-    res.sendFile(filePath);
-  } catch (err) {
-    console.error('PDF preview error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
+    data.push(chunk);
+  });
+  
+  req.on('end', () => {
+    req.body = Buffer.concat(data);
+    next();
+  });
+  
+  req.on('error', (err) => {
+    console.error('❌ PDF upload request error:', err);
+    res.status(500).json({ error: 'Request processing error' });
+  });
+};
 
 // POST /portfolio/:ownerId/resume - upload and parse resume PDF
-router.post('/:ownerId/resume', upload.single('resume'), async (req, res) => {
+router.post('/:ownerId/resume', handlePdfUpload, async (req, res) => {
   try {
     console.log('📄 Resume upload request received for:', req.params.ownerId);
     
-    if (!req.file) {
+    if (!req.body || req.body.length === 0) {
       return res.status(400).json({ error: 'No resume file uploaded' });
     }
     
-    // Check if file is PDF
-    if (req.file.mimetype !== 'application/pdf') {
+    // Check if file is PDF (basic check)
+    if (!req.headers['content-type']?.includes('application/pdf')) {
       return res.status(400).json({ error: 'Only PDF files are allowed' });
     }
     
-    const resumeUrl = `/uploads/${req.file.filename}`;
-    console.log('📄 Resume uploaded successfully:', resumeUrl);
+    console.log('📄 PDF file received, uploading to Cloudinary...');
+    
+    // Upload PDF to Cloudinary
+    const uploadResult = await uploadResume(req.body, req.params.ownerId);
+    
+    if (!uploadResult.success) {
+      return res.status(500).json({ error: 'Failed to upload to Cloudinary: ' + uploadResult.error });
+    }
+    
+    const resumeUrl = uploadResult.url;
+    console.log('📄 Resume uploaded to Cloudinary successfully:', resumeUrl);
     
     // Parse PDF and extract text
-    const pdfPath = req.file.path;
-    const pdfBuffer = fs.readFileSync(pdfPath);
+    const pdfBuffer = req.body;
     
     // For now, we'll use a simple text extraction
     // In production, you'd use a more sophisticated PDF parser
@@ -678,6 +641,163 @@ async function convertResumeToPortfolio(resumeText, ownerId) {
 // Test route to verify router is loaded
 router.get('/test', (req, res) => {
   res.json({ message: 'Portfolio router is working!', timestamp: new Date().toISOString() });
+});
+
+// POST /portfolio/:ownerId/project-image - upload project image to Cloudinary
+router.post('/:ownerId/project-image', handleRawUpload, async (req, res) => {
+  try {
+    console.log('🖼️ Project image upload request received for:', req.params.ownerId);
+    
+    if (!req.body || req.body.length === 0) {
+      return res.status(400).json({ error: 'No image file uploaded' });
+    }
+    
+    // req.body is already a Buffer from our custom middleware
+    const fileBuffer = req.body;
+    
+    // Upload image to Cloudinary
+    const uploadResult = await uploadImage(fileBuffer, req.params.ownerId, 'projects');
+    
+    if (!uploadResult.success) {
+      return res.status(500).json({ error: 'Failed to upload to Cloudinary: ' + uploadResult.error });
+    }
+    
+    console.log('🖼️ Project image uploaded to Cloudinary successfully:', uploadResult.url);
+    
+    res.json({ 
+      success: true,
+      imageUrl: uploadResult.url,
+      publicId: uploadResult.publicId,
+      message: 'Project image uploaded successfully'
+    });
+    
+  } catch (err) {
+    console.error('❌ Project image upload error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Custom middleware for certificate uploads with larger size limit (PDFs can be bigger)
+const handleCertificateUpload = (req, res, next) => {
+  let data = [];
+  let totalSize = 0;
+  const maxSize = 50 * 1024 * 1024; // 50MB limit for certificates (PDFs can be large)
+  
+  req.on('data', chunk => {
+    totalSize += chunk.length;
+    if (totalSize > maxSize) {
+      return res.status(413).json({ error: 'File too large. Maximum size is 50MB.' });
+    }
+    data.push(chunk);
+  });
+  
+  req.on('end', () => {
+    req.body = Buffer.concat(data);
+    next();
+  });
+  
+  req.on('error', (err) => {
+    console.error('❌ Certificate upload request error:', err);
+    res.status(500).json({ error: 'Request processing error' });
+  });
+};
+
+// POST /portfolio/:ownerId/certificate-image - upload certificate file (PDF, PNG, JPEG) to Cloudinary
+router.post('/:ownerId/certificate-image', handleCertificateUpload, async (req, res) => {
+  try {
+    console.log('🏆 Certificate upload request received for:', req.params.ownerId);
+    console.log('🏆 Request body type:', typeof req.body);
+    console.log('🏆 Request body length:', req.body?.length);
+    console.log('🏆 Request body is Buffer:', Buffer.isBuffer(req.body));
+    console.log('🏆 Request body first bytes:', req.body?.slice?.(0, 10));
+    
+    if (!req.body || req.body.length === 0) {
+      return res.status(400).json({ error: 'No certificate file uploaded' });
+    }
+    
+    // req.body is already a Buffer from our custom middleware
+    const fileBuffer = req.body;
+    console.log('🏆 FileBuffer length:', fileBuffer.length);
+    console.log('🏆 FileBuffer first bytes:', fileBuffer.slice(0, 10));
+    
+    // Determine file type and upload accordingly
+    let uploadResult;
+    
+    // Check if it's a PDF file
+    if (fileBuffer.length > 4 && 
+        fileBuffer[0] === 0x25 && fileBuffer[1] === 0x50 && 
+        fileBuffer[2] === 0x44 && fileBuffer[3] === 0x46) {
+      // PDF file detected - upload as raw document
+      console.log('🏆 PDF certificate detected, uploading as document...');
+      uploadResult = await uploadToCloudinary(fileBuffer, `certificates/${req.params.ownerId}`, {
+        resource_type: 'raw',
+        format: 'pdf'
+      });
+    } else {
+      // Image file detected - upload as image
+      console.log('🏆 Image certificate detected, uploading as image...');
+      uploadResult = await uploadImage(fileBuffer, req.params.ownerId, 'certificates');
+    }
+    
+    if (!uploadResult.success) {
+      return res.status(500).json({ error: 'Failed to upload to Cloudinary: ' + uploadResult.error });
+    }
+    
+    console.log('🏆 Certificate uploaded to Cloudinary successfully:', uploadResult.url);
+    
+    res.json({ 
+      success: true,
+      imageUrl: uploadResult.url,
+      publicId: uploadResult.publicId,
+      message: 'Certificate uploaded successfully'
+    });
+    
+  } catch (err) {
+    console.error('❌ Certificate upload error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /portfolio/:ownerId/profile-image - upload profile image to Cloudinary
+router.post('/:ownerId/profile-image', handleRawUpload, async (req, res) => {
+  try {
+    console.log('👤 Profile image upload request received for:', req.params.ownerId);
+    
+    if (!req.body || req.body.length === 0) {
+      return res.status(400).json({ error: 'No image file uploaded' });
+    }
+    
+    // req.body is already a Buffer from our custom middleware
+    const fileBuffer = req.body;
+    
+    // Upload image to Cloudinary
+    const uploadResult = await uploadImage(fileBuffer, req.params.ownerId, 'profile');
+    
+    if (!uploadResult.success) {
+      return res.status(500).json({ error: 'Failed to upload to Cloudinary: ' + uploadResult.error });
+    }
+    
+    console.log('👤 Profile image uploaded to Cloudinary successfully:', uploadResult.url);
+    
+    // Update portfolio with new profile image
+    const portfolio = await Portfolio.findOne({ ownerId: req.params.ownerId });
+    if (portfolio) {
+      portfolio.profile.avatarUrl = uploadResult.url;
+      await portfolio.save();
+      console.log('✅ Portfolio updated with new profile image');
+    }
+    
+    res.json({ 
+      success: true,
+      imageUrl: uploadResult.url,
+      publicId: uploadResult.publicId,
+      message: 'Profile image uploaded successfully'
+    });
+    
+  } catch (err) {
+    console.error('❌ Profile image upload error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 /**

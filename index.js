@@ -86,7 +86,7 @@ app.get("/health", (_req, res) =>
  * @returns {Promise<void>} Logs success or error to console
  * @notes Uses Mongoose for ODM. Connection is required for API to function.
  */
-mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
     console.log('MongoDB connected'); // Log success
     // Seed users after successful database connection
