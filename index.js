@@ -33,6 +33,9 @@ const dataScientistRoutes = require("./routes/dataScientistRoutes");
 const authRoutes = require('./routes/auth'); // Import authentication routes
 const seedUsers = require('./seed/users'); // Import seed users function
 const handymanTemplateRoutes = require('./routes/handymanTemplateRoutes');
+const handymanTemplateRoutes = require("./routes/handymanTemplateRoutes");
+const localVendorRoutes = require("./routes/localVendorRoutes");
+
 
 // Import configuration from separate file
 const config = require("./config");
@@ -40,10 +43,12 @@ const config = require("./config");
 const app = express();
 const PORT = process.env.PORT;
 
-app.use(cors({
-  origin: config.server.corsOrigin,
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: config.server.corsOrigin,
+    credentials: true,
+  })
+);
 app.use(express.json());
 setCredentialsFromEnv();
 
@@ -69,10 +74,11 @@ app.use("/menu", menuRoutes);
 app.use("/gallery", galleryRoutes);
 app.use("/reviews", reviewRoutes);
 app.use("/tagged", taggedImageRoutes);
+app.use("/vendor", localVendorRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/datascience-portfolio", dataScientistRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
-app.use('/api/handyman-template', handymanTemplateRoutes);
+app.use("/api/handyman-template", handymanTemplateRoutes);
 
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

@@ -9,10 +9,10 @@ const {
   getUniqueCategories,
 } = require("../controllers/menuController");
 
-router.get("/", getMenuItems);
-router.get("/categories", getUniqueCategories);
-router.post("/", upload.single("image"), createMenuItem);
-router.put("/:id", upload.single("image"), updateMenuItem);
-router.delete("/:id", deleteMenuItem);
+router.get("/:vendorId", getMenuItems);
+router.get("/:vendorId/categories", getUniqueCategories);
+router.post("/:vendorId", upload.single("image"), createMenuItem);
+router.put("/:vendorId/:id", upload.single("image"), updateMenuItem);
+router.delete("/:vendorId/:id", deleteMenuItem);
 
 module.exports = router;

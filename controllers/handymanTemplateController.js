@@ -14,20 +14,6 @@ exports.getPortfolioById = async (req, res) => {
     }
 };
 
-// Get a portfolio by the user's ID
-exports.getPortfolioByUserId = async (req, res) => {
-    try {
-        const portfolio = await HandymanTemplate.findOne({ userId: req.params.userId });
-        if (!portfolio) {
-            return res.status(404).json({ message: 'Handyman portfolio not found for this user' });
-        }
-        res.json(portfolio);
-    } catch (error) {
-        res.status(500).json({ message: 'Error fetching portfolio data', error });
-    }
-};
-
-
 // Create a new portfolio for a user (e.g., upon signup or first time setup)
 exports.createPortfolio = async (req, res) => {
     try {

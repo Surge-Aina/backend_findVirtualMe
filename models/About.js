@@ -2,6 +2,11 @@ const mongoose = require("mongoose");
 
 const aboutSchema = new mongoose.Schema(
   {
+    vendorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "LocalVendorPortfolio",
+      required: true,
+    },
     banner: {
       image: String,
       title: String,

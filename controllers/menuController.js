@@ -3,8 +3,8 @@ const MenuItem = require("../models/MenuItems");
 exports.getMenuItems = async (req, res) => {
   try {
     const { category } = req.query;
-
-    const filter = category && category !== "All" ? { category } : {};
+    const filter = { vendorId: req.params.vendorId };
+    if (category && category !== "All") filter.category = category;
     const items = await MenuItem.find(filter);
 
     res.json(items);
@@ -16,7 +16,9 @@ exports.getMenuItems = async (req, res) => {
 
 exports.getUniqueCategories = async (req, res) => {
   try {
-    const categories = await MenuItem.distinct("category");
+    const categories = await MenuItem.distinct("category", {
+      vendorId: req.params.vendorId,
+    });
     res.json(["All", ...categories]);
   } catch (err) {
     console.error("Failed to fetch categories:", err);
@@ -32,6 +34,7 @@ exports.createMenuItem = async (req, res) => {
 
   try {
     const menuItem = new MenuItem({
+      vendorId: req.params.vendorId,
       name,
       price,
       category,
@@ -49,14 +52,6 @@ exports.createMenuItem = async (req, res) => {
 };
 
 exports.updateMenuItem = async (req, res) => {
-  // const { name, description, category, price } = req.body;
-  // const updateData = {
-  //   name: req.body.name,
-  //   description: req.body.description,
-  //   price: req.body.price,
-  //   category: req.body.category,
-
-  // };
   const updateData = { ...req.body };
 
   if (req.file) {
@@ -65,11 +60,12 @@ exports.updateMenuItem = async (req, res) => {
 
   try {
     const updated = await MenuItem.findByIdAndUpdate(
-      req.params.id,
+      { _id: req.params.id, vendorId: req.params.vendorId },
       updateData,
       { new: true }
     );
-    res.status(200).json(updated);
+    if (!updated) return res.status(404).json({ error: "Menu item not found" });
+    res.json(updated);
   } catch (err) {
     console.error("Update failed:", err);
     res.status(400).json({ error: "Failed to update menu item" });
@@ -78,7 +74,10 @@ exports.updateMenuItem = async (req, res) => {
 
 exports.deleteMenuItem = async (req, res) => {
   try {
-    const deleted = await MenuItem.findByIdAndDelete(req.params.id);
+    const deleted = await MenuItem.findByIdAndDelete({
+      _id: req.params.id,
+      vendorId: req.params.vendorId,
+    });
     if (!deleted) return res.status(404).json({ error: "Item not found" });
     res.json({ message: "Deleted successfully" });
   } catch (err) {

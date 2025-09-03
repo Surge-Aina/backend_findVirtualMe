@@ -9,10 +9,10 @@ const {
   deleteAbout,
 } = require("../controllers/aboutController");
 
-router.get("/", getAllAbouts);
+router.get("/:vendorId", getAllAbouts);
 
 router.post(
-  "/",
+  "/:vendorId",
   upload.fields([
     { name: "bannerImage", maxCount: 1 },
     { name: "gridImages", maxCount: 6 },
@@ -22,7 +22,7 @@ router.post(
 
 // routes/aboutRoutes.js
 router.put(
-  "/",
+  "/:vendorId",
   upload.fields([
     { name: "bannerImage", maxCount: 1 },
     { name: "gridImages", maxCount: 10 },
@@ -30,8 +30,12 @@ router.put(
   updateAbout
 );
 
-router.post("/upload-grid-images", upload.array("images", 10), imageUpload);
+router.post(
+  "/:vendorId/upload-grid-images",
+  upload.array("images", 10),
+  imageUpload
+);
 
-router.delete("/:id", deleteAbout);
+router.delete("/:vendorId/:id", deleteAbout);
 
 module.exports = router;
