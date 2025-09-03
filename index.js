@@ -33,7 +33,6 @@ const dataScientistRoutes = require("./routes/dataScientistRoutes");
 const authRoutes = require('./routes/auth'); // Import authentication routes
 const seedUsers = require('./seed/users'); // Import seed users function
 const handymanTemplateRoutes = require('./routes/handymanTemplateRoutes');
-const handymanTemplateRoutes = require("./routes/handymanTemplateRoutes");
 const localVendorRoutes = require("./routes/localVendorRoutes");
 
 
@@ -77,7 +76,6 @@ app.use("/tagged", taggedImageRoutes);
 app.use("/vendor", localVendorRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/datascience-portfolio", dataScientistRoutes);
-app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/api/handyman-template", handymanTemplateRoutes);
 
 

@@ -1,12 +1,17 @@
 // services/openaiService.js
 const OpenAI = require("openai");
 
-
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-  
+/**
+ * Generate a match summary between a resume and job description
+ * @param {Object} resumeJSON - The resume data in JSON format
+ * @param {string} jobText - The job description text
+ * @returns {Promise<string>} A summary of matches and missing areas
+ */
+async function generateMatchSummary(resumeJSON, jobText) {
   const prompt = `
     Match this resume to the job. List strong matches and missing areas briefly (max 150 words).
 
@@ -19,10 +24,8 @@ const openai = new OpenAI({
     Output format:
     ✓ Matches: skill1, skill2
 
-
     ✗ Missing: skill3, skill4
 
-    
     Summary: [very short overall assessment]
   `;
 
@@ -37,6 +40,12 @@ const openai = new OpenAI({
 }
 
 
+/**
+ * Generate portfolio JSON from resume text
+ * @param {string} resumeText - The resume text to convert
+ * @param {string} email - Optional email to replace in the portfolio
+ * @returns {Promise<string>} JSON string representing the portfolio
+ */
 async function generatePortfolioJSON(resumeText, email) {
 
   const jsonAIPortfolioSchema = `{"name":"","title":"","summary":"","email":"","phone":"","location":"","skills":[],"experiences":[{"company":"","title":"","location":"","startDate":"","endDate":"","description":""}],"education":[{"school":"","gpa":"","degrees":[""],"fieldOfStudy":"","awards":[""],"startDate":"","endDate":"","description":""}],"projects":[{"name":"","description":""}],"socialLinks":{"github":"","linkedin":"","website":""}}`;
@@ -74,6 +83,11 @@ async function generatePortfolioJSON(resumeText, email) {
   return response.choices[0].message.content.trim();
 }
 
+/**
+ * Generate vendor portfolio JSON from vendor description text
+ * @param {string} vendorText - The vendor description text to convert
+ * @returns {Promise<string>} JSON string representing the vendor portfolio
+ */
 async function generateVendorPortfolioJSON(vendorText) {
   const vendorPortfolioSchema = `{
     "vendorInfo": { "name": "", "description": "", "contact": "", "location": "" },
