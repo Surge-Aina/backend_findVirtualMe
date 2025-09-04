@@ -1,5 +1,5 @@
 const express = require("express");
-const mongoose = require('mongoose'); // Import Mongoose for MongoDB interaction
+const connectDB = require('./utils/db'); // Import database connection from utils
 const cors = require("cors");
 require('dotenv').config(); // Load environment variables from .env file
 const path = require("path");
@@ -19,7 +19,9 @@ const driveRoutes = require("./routes/driveRoute");
 const photoRoutes = require("./routes/photoRoute");
 const uploadRoutes = require("./routes/uploadRoute");
 const userRoutes = require("./routes/userRoute");
-const portfolioRoutes = require("./routes/portfolio");
+const portfolioRoutes = require("./routes/portfolioRoute");
+const softwareEngRoutes = require("./routes/portfolio");
+
 const testimonialRoutes = require("./routes/testimonialRoute");
 const dashboardRoutes = require("./routes/dashboardRoute");
 const bannerRoutes = require("./routes/bannerRoutes");
@@ -51,8 +53,11 @@ app.use(
 app.use(express.json());
 setCredentialsFromEnv();
 
-// Mount the portfolio API routes at /portfolio (moved to top priority)
+// Mount the main portfolio API routes at /portfolio
 app.use('/portfolio', portfolioRoutes);
+
+// Mount the software engineering portfolio API routes at /softwareeng
+app.use('/softwareeng', softwareEngRoutes);
 
 // Test route to verify routing is working
 app.get('/test-route', (req, res) => {
@@ -85,14 +90,13 @@ app.get("/health", (_req, res) =>
 );
 
 /**
- * Connect to MongoDB using the URI from .env
+ * Connect to MongoDB using the connection function from utils/db.js
  * @function
  * @returns {Promise<void>} Logs success or error to console
- * @notes Uses Mongoose for ODM. Connection is required for API to function.
+ * @notes Uses centralized database connection. Connection is required for API to function.
  */
-mongoose.connect(process.env.MONGODB_URI)
+connectDB()
   .then(async () => {
-    console.log('MongoDB connected'); // Log success
     // Seed users after successful database connection
     await seedUsers();
   })
