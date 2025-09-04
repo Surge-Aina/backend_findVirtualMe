@@ -5,6 +5,13 @@ const Stripe = require("stripe");
 
 const app = express();
 
+app.get("/", (req, res) => {
+  res.status(200).json({
+    message: "Stripe service is alive",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Stripe Webhook 
 app.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
   const sig = req.headers["stripe-signature"];
