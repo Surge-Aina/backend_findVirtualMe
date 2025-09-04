@@ -7,7 +7,7 @@ const handymanPortfolioSchema = new mongoose.Schema({
   afterImageUrl: { type: String, required: true },
 }, { 
   timestamps: true,
-  collection: 'handymanportfolios' // Add this line
+  collection: 'handymanportfolios' 
 });
 
 const HandymanPortfolio = mongoose.model('HandymanPortfolio', handymanPortfolioSchema);
