@@ -30,21 +30,21 @@ const signupUser = async(req, res) => {
 
 const loginUser = async(req, res) => {
     try {
-        const { email, password, portfolioId } = req.body;
-        if (!email || !password || !portfolioId) return res.status(400).json({ message: 'All fields (including portfolioId) must be filled out'});
+        const { email, password} = req.body;
+        if (!email || !password) return res.status(400).json({ message: 'All fields must be filled out'});
 
-        const user = await User.findOne({ email, portfolioId });
+        const user = await User.findOne({ email});
         if (!user) return res.status(400).json({ message: 'User not found for this portfolio' });
 
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return res.status(400).json({ message: 'Invalid credentials' });
 
         const token = jwt.sign(
-            { id: user._id, isAdmin: user.isAdmin, portfolioId: user.portfolioId },
+            { id: user._id, isAdmin: user.isAdmin},
             process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
-        res.status(201).json({ token, isAdmin: user.isAdmin, portfolioId: user.portfolioId });
+        res.status(201).json({ token, isAdmin: user.isAdmin});
     } catch (err) {
         console.log('error loggin in: ', err)
         res.status(500).json({ error: err.message });
