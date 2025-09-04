@@ -21,7 +21,6 @@ const uploadRoutes = require("./routes/uploadRoute");
 const userRoutes = require("./routes/userRoute");
 const portfolioRoutes = require("./routes/portfolioRoute");
 const softwareEngRoutes = require("./routes/portfolio");
-
 const testimonialRoutes = require("./routes/testimonialRoute");
 const dashboardRoutes = require("./routes/dashboardRoute");
 const bannerRoutes = require("./routes/bannerRoutes");
@@ -53,6 +52,7 @@ app.use(
 app.use(express.json());
 setCredentialsFromEnv();
 
+
 // Mount the main portfolio API routes at /portfolio
 app.use('/portfolio', portfolioRoutes);
 
@@ -63,6 +63,10 @@ app.use('/softwareeng', softwareEngRoutes);
 app.get('/test-route', (req, res) => {
   res.json({ message: 'Test route is working!', timestamp: new Date().toISOString() });
 });
+
+//stripe payment
+app.use("/checkout", checkoutRoutes);
+
 
 //jaqueline login route
 app.use("/user", userRoutes);
@@ -88,6 +92,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) =>
   res.status(200).json({ ok: true, ts: Date.now() })
 );
+
 
 /**
  * Connect to MongoDB using the connection function from utils/db.js
@@ -119,6 +124,7 @@ app.use('/auth', authRoutes);
  * @param {Function} middleware - Express static middleware
  */
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 // Serve static files from uploads directory
 app.use(
