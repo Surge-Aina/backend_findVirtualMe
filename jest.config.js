@@ -3,28 +3,21 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/setup.js'],
   testMatch: [
     '<rootDir>/tests/**/*.test.js',
-    '<rootDir>/__tests__/**/*.test.js',
-    '**/test/**/*.test.js'
+    '<rootDir>/__tests__/**/*.test.js'
   ],
   collectCoverageFrom: [
     'routes/**/*.js',
     'models/**/*.js',
     'controllers/**/*.js',
     '!**/node_modules/**',
-    '!**/coverage/**',
-    '**/*.js',
-    '!**/node_modules/**',
-    '!**/test/**'
+    '!**/coverage/**'
   ],
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
   testTimeout: 30000,
-  // Ensure tests run in isolation
-  maxWorkers: 1,
   verbose: true,
   forceExit: true,
   clearMocks: true,
   resetMocks: true,
-  resetModules: true,
-  restoreMocks: true,
+  restoreMocks: true
 };
