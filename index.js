@@ -64,8 +64,6 @@ app.get('/test-route', (req, res) => {
   res.json({ message: 'Test route is working!', timestamp: new Date().toISOString() });
 });
 
-//stripe payment
-app.use("/checkout", checkoutRoutes);
 
 
 //jaqueline login route
