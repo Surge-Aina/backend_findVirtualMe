@@ -1,5 +1,4 @@
 const express = require("express");
-const connectDB = require('./utils/db'); // Import database connection from utils
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
@@ -19,7 +18,7 @@ const photoRoutes = require("./routes/photoRoute");
 const uploadRoutes = require("./routes/uploadRoute");
 const userRoutes = require("./routes/userRoute");
 const portfolioRoutes = require("./routes/portfolioRoute");
-const softwareEngRoutes = require("./routes/portfolio");
+const softwareEngRoutes = require("./routes/softwareEng");
 const testimonialRoutes = require("./routes/testimonialRoute");
 const dashboardRoutes = require("./routes/dashboardRoute");
 const bannerRoutes = require("./routes/bannerRoutes");
@@ -49,20 +48,8 @@ app.use(
 app.use(express.json());
 setCredentialsFromEnv();
 
-// Mount the main portfolio API routes at /portfolio
-app.use('/portfolio', portfolioRoutes);
-
-// Mount the software engineering portfolio API routes at /softwareeng
-app.use('/softwareeng', softwareEngRoutes);
-
-// Test route to verify routing is working
-app.get('/test-route', (req, res) => {
-  res.json({ message: 'Test route is working!', timestamp: new Date().toISOString() });
-});
-
 //stripe payment
 app.use("/checkout", checkoutRoutes);
-
 
 //jaqueline login route
 app.use("/user", userRoutes);
@@ -90,39 +77,6 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) =>
   res.status(200).json({ ok: true, ts: Date.now() })
 );
-
-
-/**
- * Connect to MongoDB using the connection function from utils/db.js
- * @function
- * @returns {Promise<void>} Logs success or error to console
- * @notes Uses centralized database connection. Connection is required for API to function.
- */
-connectDB()
-  .then(async () => {
-    // Seed users after successful database connection
-    await seedUsers();
-  })
-  .catch(err => console.error(err)); // Log connection errors
-
-
-
-/**
- * Mount the authentication API routes at /auth
- * @function
- * @param {string} path - The base path for the routes
- * @param {Router} router - The Express router for authentication APIs
- */
-app.use('/auth', authRoutes);
-
-/**
- * Serve static files from uploads directory
- * @function
- * @param {string} path - The URL path to serve files from
- * @param {Function} middleware - Express static middleware
- */
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
 
 // Serve static files from uploads directory
 app.use(
