@@ -36,8 +36,6 @@ const seedUsers = require('./seed/users'); // Import seed users function
 const handymanTemplateRoutes = require('./routes/handymanTemplateRoutes');
 
 const telemetryRoutes = require("./routes/telemetry");
-const checkoutRoutes = require("./routes/checkoutRoutes");
-const handymanTemplateRoutes = require("./routes/handymanTemplateRoutes");
 
 const localVendorRoutes = require("./routes/localVendorRoutes");
 
