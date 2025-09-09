@@ -4,8 +4,8 @@
 const mongoose = require('mongoose');
 
 /**
- * SoftwareEngSchema defines the structure for a software engineer's portfolio document in MongoDB.
- * @typedef {Object} SoftwareEng
+ * PortfolioSchema defines the structure for a user's portfolio document in MongoDB.
+ * @typedef {Object} Portfolio
  * @property {string} ownerId - Unique identifier for the portfolio owner (user)
  * @property {string} type - Type of portfolio (e.g., 'software_engineer')
  * @property {Object} profile - User's profile information
@@ -18,7 +18,7 @@ const mongoose = require('mongoose');
  * @property {Object} uiSettings - UI customization settings
  * @notes This schema is used by Mongoose to validate and interact with portfolio documents.
  */
-const SoftwareEngSchema = new mongoose.Schema({
+const PortfolioSchema = new mongoose.Schema({
   ownerId: String, // Unique identifier for the portfolio owner (user)
   type: String, // Type of portfolio (e.g., 'software_engineer')
   profile: {
@@ -85,9 +85,9 @@ const SoftwareEngSchema = new mongoose.Schema({
 });
 
 /**
- * SoftwareEng model for interacting with the software engineer portfolios collection in MongoDB.
- * @type {Model<SoftwareEng>}
- * @returns {mongoose.Model} Mongoose model for SoftwareEng
- * @notes Used in API routes to create, read, update, and delete software engineer portfolios.
+ * Portfolio model for interacting with the portfolios collection in MongoDB.
+ * @type {Model<Portfolio>}
+ * @returns {mongoose.Model} Mongoose model for Portfolio
+ * @notes Used in API routes to create, read, update, and delete portfolios.
  */
-module.exports = mongoose.model('SoftwareEng', SoftwareEngSchema); 
+module.exports = mongoose.model('Portfolio', PortfolioSchema); 
