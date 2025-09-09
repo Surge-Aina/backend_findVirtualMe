@@ -29,6 +29,7 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const taggedImageRoutes = require("./routes/taggedImageRoutes");
 const handymanPortfolioRoutes = require("./routes/handymanPortfolioRoutes");
 const dataScientistRoutes = require("./routes/dataScientistRoutes");
+const checkoutRoutes = require("./routes/checkoutRoutes");
 const handymanTemplateRoutes = require("./routes/handymanTemplateRoutes");
 const localVendorRoutes = require("./routes/localVendorRoutes");
 
@@ -40,12 +41,15 @@ const PORT = process.env.PORT;
 
 app.use(
   cors({
-    origin: config.server.corsOrigin,
+    origin: process.env.FRONTEND_URL,
     credentials: true,
   })
 );
 app.use(express.json());
 setCredentialsFromEnv();
+
+//stripe payment
+app.use("/checkout", checkoutRoutes);
 
 //jaqueline login route
 app.use("/user", userRoutes);

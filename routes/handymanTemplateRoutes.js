@@ -2,21 +2,17 @@ const express = require('express');
 const router = express.Router();
 const { 
     getPortfolioById, 
-    getPortfolioByUserId,
     createPortfolio, 
     updatePortfolio 
 } = require('../controllers/handymanTemplateController');
 
-// Public route to view a portfolio
+// Public route to view a portfolio by its ID
 router.get('/:id', getPortfolioById);
 
-// Route to get portfolio by user id
-router.get('/user/:userId', getPortfolioByUserId);
-
-// Protected route to create a new portfolio
+// Protected route to create a new portfolio for a user
 router.post('/', createPortfolio);
 
-// Protected route to update a portfolio
+// Protected route to update a portfolio by its ID
 router.put('/:id', updatePortfolio);
 
 module.exports = router;
