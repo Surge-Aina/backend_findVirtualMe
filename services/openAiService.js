@@ -83,37 +83,39 @@ async function generatePortfolioJSON(resumeText, email) {
   return response.choices[0].message.content.trim();
 }
 
-/**
- * Generate vendor portfolio JSON from vendor description text
- * @param {string} vendorText - The vendor description text to convert
- * @returns {Promise<string>} JSON string representing the vendor portfolio
- */
-async function generateVendorPortfolioJSON(vendorText) {
-  const vendorPortfolioSchema = `{
-    "vendorInfo": { "name": "", "description": "", "contact": "", "location": "" },
-    "banner": { "title": "", "description": "", "image": "", "shape": "" },
+
+async function generateVendorAboutAndMenuJSON(vendorText) {
+  const schema = `{
+    "vendor": {
+      "name": "", 
+      "email": "", 
+      "phone": "", 
+      "businessType": "", 
+      "description": "", 
+      "logo": ""
+    },
+
     "about": {
-      "banner": { "image": "", "title": "", "description": "", "shape": "" },
+      "banner": { "image": "", "title": "", "description": "", "shape": "fullscreen" },
       "contentBlocks": [{ "heading": "", "subheading": "" }],
       "gridImages": []
     },
-    "menuItems": [{ "name": "", "description": "", "price": 0, "category": "", "isAvailable": true, "unavailableUntil": null, "image": "" }],
-    "reviews": [{ "name": "", "feedback": "", "rating": 0, "image": "", "date": null }],
-    "gallery": [{ "imageUrl": "", "caption": "" }],
-    "taggedImages": [{ "imageUrl": "", "tags": [{ "x": 0, "y": 0, "menuItem": "", "label": "" }] }]
+    "menuItems": [
+      { "name": "", "description": "", "price": 0, "category": "", "isAvailable": true, "unavailableUntil": null, "image": "" }
+    ]
   }`;
 
   const prompt = `
-  Convert this vendor description into valid JSON following EXACTLY this structure (keep all keys even if values are empty):
+  Convert this vendor profile text into valid JSON following EXACTLY this structure (keep all keys even if values are empty):
 
-  ${vendorPortfolioSchema}
+  ${schema}
 
   Rules:
   - Output ONLY valid JSON.
   - Do NOT include Markdown code fences.
   - Keep the same keys and array structures.
   - Do not add extra keys.
-  - Dates should be in YYYY-MM-DD format if available or null.
+  - Dates should be in YYYY-MM-DD format or null.
   
   Vendor description:
   ${vendorText}
@@ -126,11 +128,11 @@ async function generateVendorPortfolioJSON(vendorText) {
     max_tokens: 2000,
   });
 
-  return response.choices[0].message.content.trim();
+  return JSON.parse(response.choices[0].message.content.trim());
 }
 
 module.exports = {
   generateMatchSummary,
   generatePortfolioJSON,
-  generateVendorPortfolioJSON,
+  generateVendorAboutAndMenuJSON,
 };
