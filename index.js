@@ -29,6 +29,7 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const taggedImageRoutes = require("./routes/taggedImageRoutes");
 const handymanPortfolioRoutes = require("./routes/handymanPortfolioRoutes");
 const dataScientistRoutes = require("./routes/dataScientistRoutes");
+const telemetryRoutes = require("./routes/telemetry");
 const checkoutRoutes = require("./routes/checkoutRoutes");
 const handymanTemplateRoutes = require("./routes/handymanTemplateRoutes");
 const localVendorRoutes = require("./routes/localVendorRoutes");
@@ -39,12 +40,17 @@ const config = require("./config");
 const app = express();
 const PORT = process.env.PORT;
 
+
+// trust proxy: so req.ip / X-Forwarded-For works behind proxies
+app.set("trust proxy", true);
+
 app.use(
   cors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
   })
 );
+
 app.use(express.json());
 setCredentialsFromEnv();
 
@@ -70,6 +76,7 @@ app.use("/tagged", taggedImageRoutes);
 app.use("/vendor", localVendorRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/datascience-portfolio", dataScientistRoutes);
+app.use("/api/telemetry", telemetryRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/api/handyman-template", handymanTemplateRoutes);
 
