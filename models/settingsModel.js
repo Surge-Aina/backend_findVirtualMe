@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
 
 const settingsSchema = new mongoose.Schema({
+  portfolioId: { type: String, required: true, index: true },
   key: {
     type: String,
     required: true,
-    unique: true
   },
   value: {
     type: mongoose.Schema.Types.Mixed,

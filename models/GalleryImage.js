@@ -1,11 +1,19 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const galleryImageSchema = new mongoose.Schema({
-  imageUrl: {
-    type: String,
-    required: true
+const galleryImageSchema = new mongoose.Schema(
+  {
+    vendorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "LocalVendorPortfolio",
+      required: true,
+    },
+    imageUrl: {
+      type: String,
+      required: true,
+    },
+    caption: String,
   },
-  caption: String
-}, { timestamps: true });
+  { timestamps: true }
+);
 
-module.exports = mongoose.model('GalleryImage', galleryImageSchema);
+module.exports = mongoose.model("GalleryImage", galleryImageSchema);

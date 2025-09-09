@@ -30,6 +30,9 @@ const taggedImageRoutes = require("./routes/taggedImageRoutes");
 const handymanPortfolioRoutes = require("./routes/handymanPortfolioRoutes");
 const dataScientistRoutes = require("./routes/dataScientistRoutes");
 const telemetryRoutes = require("./routes/telemetry");
+const checkoutRoutes = require("./routes/checkoutRoutes");
+const handymanTemplateRoutes = require("./routes/handymanTemplateRoutes");
+const localVendorRoutes = require("./routes/localVendorRoutes");
 
 // Import configuration from separate file
 const config = require("./config");
@@ -37,15 +40,22 @@ const config = require("./config");
 const app = express();
 const PORT = process.env.PORT;
 
+
 // trust proxy: so req.ip / X-Forwarded-For works behind proxies
 app.set("trust proxy", true);
 
-app.use(cors({
-  origin: config.server.corsOrigin,
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 setCredentialsFromEnv();
+
+//stripe payment
+app.use("/checkout", checkoutRoutes);
 
 //jaqueline login route
 app.use("/user", userRoutes);
@@ -63,9 +73,12 @@ app.use("/menu", menuRoutes);
 app.use("/gallery", galleryRoutes);
 app.use("/reviews", reviewRoutes);
 app.use("/tagged", taggedImageRoutes);
+app.use("/vendor", localVendorRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/datascience-portfolio", dataScientistRoutes);
 app.use("/api/telemetry", telemetryRoutes);
+app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
+app.use("/api/handyman-template", handymanTemplateRoutes);
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) =>

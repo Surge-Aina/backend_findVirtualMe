@@ -8,6 +8,11 @@ const TagSchema = new mongoose.Schema({
 });
 
 const TaggedImageSchema = new mongoose.Schema({
+  vendorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "LocalVendorPortfolio",
+    required: true,
+  },
   imageUrl: String,
   tags: [TagSchema],
 });
