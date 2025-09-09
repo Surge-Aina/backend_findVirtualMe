@@ -6,8 +6,11 @@ const MenuItem = require("../models/MenuItems");
 const Review = require("../models/Review");
 const TaggedImage = require("../models/TaggedImage");
 const seedVendor = require("../models/seedVendor");
+const { generateVendorAboutAndMenuJSON } = require("../services/openAiService");
+const pdfParse = require("pdf-parse");
+const mammoth = require("mammoth");
 
-// Create vendor
+// Create vendor and add the basic info so website doesn't look blank, view seedVendor
 exports.createVendor = async (req, res) => {
   try {
     const vendor = new LocalVendorPortfolio(req.body);
@@ -92,5 +95,54 @@ exports.getFullPortfolio = async (req, res) => {
     res.json({ vendor, banners, about, gallery, menu, reviews, taggedImages });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch full portfolio" });
+  }
+};
+
+async function extractText(fileBuffer, mimeType) {
+  if (mimeType === "application/pdf") {
+    const data = await pdfParse(fileBuffer);
+    return data.text;
+  } else {
+    const { value } = await mammoth.extractRawText({ buffer: fileBuffer });
+    return value;
+  }
+}
+
+// NEW: Inject vendor + about + menu
+exports.injectVendorPortfolio = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "File is required" });
+
+    const text = await extractText(req.file.buffer, req.file.mimetype);
+    const parsed = await generateVendorAboutAndMenuJSON(text);
+
+    const vendor = await LocalVendorPortfolio.create(parsed.vendor);
+
+    await About.create({ ...parsed.about, vendorId: vendor._id });
+
+    if (parsed.menuItems && parsed.menuItems.length > 0) {
+      const menuDocs = parsed.menuItems.map((m) => ({
+        ...m,
+        vendorId: vendor._id,
+      }));
+      await MenuItem.insertMany(menuDocs);
+    }
+
+    await Banner.create({
+      vendorId: vendor._id,
+      title: "Welcome to " + (vendor.name || "Our Business"),
+      description: vendor.description || "Your banner description here.",
+      image: "https://placehold.co/1200x400", // placeholder
+      shape: "fullscreen",
+    });
+
+    res
+      .status(201)
+      .json({ vendor, about: parsed.about, menuItems: parsed.menuItems });
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .json({ error: "Failed to create vendor portfolio from document" });
   }
 };
