@@ -1,7 +1,10 @@
 const mongoose = require('mongoose');
 
 const SubscriptionSchema = new mongoose.Schema({
-  userId: { type: String, required: true },
+  email: { type: String, required: true },
+  name: { type: String },
+  customerId: { type: String },
+  priceId: { type: String },
   active: { type: Boolean },
   subscriptionType: { type: String },
   paymentLog: [
