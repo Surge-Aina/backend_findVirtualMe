@@ -1,8 +1,9 @@
 const express = require('express');
-const axios = require('axios');
 const router = express.Router();
-const payment_service_URL = process.env.PAYMENT_SERVICE_URL;
+const Stripe = require("stripe");
 
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 //payment intent
 router.post('/payment-intent', async (req, res) => {
     const { userId, amount } = req.body;
@@ -12,12 +13,16 @@ router.post('/payment-intent', async (req, res) => {
     }
 
     try {
-        const response = await axios.post(`${payment_service_URL}/create-payment-intent`, {
-            amount,
-            currency: "usd",
-        });
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount,
+        currency: "usd",
+        automatic_payment_methods: { enabled: true }, 
+      });
 
-        res.json(response.data); // returns clientSecret
+      res.json({ 
+        clientSecret: paymentIntent.client_secret,
+        id: paymentIntent.id 
+      });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -44,28 +49,30 @@ router.post('/checkout-session', async (req, res) => {
   ];
 
   try {
-    // call payment microservice to create a checkout session
-    const response = await axios.post(`${payment_service_URL}/create-checkout-session`, {
-      lineItems,
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "subscription", 
+      line_items: lineItems,
       success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.FRONTEND_URL}/payment`,
     });
 
-    res.json({ checkoutUrl: response.data.url });
+    res.json({ checkoutUrl: session.url });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+//get stripe session
 router.get("/session/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
-    const response = await axios.get(`${payment_service_URL}/stripe/session/${id}`);
-    res.json(response.data);
+    const session = await stripe.checkout.sessions.retrieve(req.params.id);
+    res.json(session);
   } catch (err) {
     console.error("Failed to retrieve session:", err.response?.data || err.message);
-    res.status(500).json({ error: "Failed to fetch session" });
+    res.status(500).json({ error: err.message, message: "Failed to fetch session" });
   }
 });
 
