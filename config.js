@@ -3,7 +3,7 @@ const config = {
   // Server Configuration
   server: {
     port: process.env.PORT || 5100,
-    corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173'
+    corsOrigin: process.env.CORS_ORIGIN || ['http://localhost:5173', 'http://localhost:5174']
   },
 
   // Database Configuration
