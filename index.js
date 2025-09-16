@@ -32,8 +32,8 @@ const dataScientistRoutes = require("./routes/dataScientistRoutes");
 const checkoutRoutes = require("./routes/checkoutRoutes");
 const handymanTemplateRoutes = require("./routes/handymanTemplateRoutes");
 const localVendorRoutes = require("./routes/localVendorRoutes");
-const adminRoutes = require("./routes/adminRoutes");
-
+const subscriptionRoutes = require("./routes/subscriptionRoutes");
+const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes");
 // Import configuration from separate file
 const config = require("./config");
 
@@ -47,14 +47,17 @@ app.use(
   })
 );
 
-//IT admin routes(must be before app.use(express.json()))
-app.use("/admin", adminRoutes);
+//stripe webhook(must be before app.use(express.json()))
+//do not call directly, stripe will call this route
+app.use("/stripe-webhook", stripeWebhookRoutes);
 
 app.use(express.json());
 setCredentialsFromEnv();
 
 //stripe payment
 app.use("/checkout", checkoutRoutes);
+//IT admin routes to handle user subscriptions
+app.use("/subscriptions", subscriptionRoutes);
 
 //jaqueline login route
 app.use("/user", userRoutes);

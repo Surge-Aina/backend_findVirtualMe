@@ -3,14 +3,23 @@ const mongoose = require('mongoose');
 const SubscriptionSchema = new mongoose.Schema({
   email: { type: String, required: true },
   name: { type: String },
-  customerId: { type: String },
-  priceId: { type: String },
-  active: { type: Boolean },
+  customerId: { type: String }, // Stripe customer ID
+  subscriptionId: { type: String, unique: true }, // Stripe subscription ID
+  priceId: { type: String }, // Stripe price ID
+  latestInvoiceId: { type: String },
+  paymentIntentId: { type: String },
+  status: { 
+    type: String, 
+    enum: ['trialing','active','past_due','canceled','unpaid'], 
+    default: 'trialing' 
+  },
   subscriptionType: { type: String },
   paymentLog: [
     {
-      payment: { type: String },
-      confirmed: {type: Boolean},
+      paymentIntentId: { type: String },
+      amount: { type: Number },
+      currency: { type: String },
+      confirmed: { type: Boolean },
       subscriptionType: { type: String },
       timestamp: { type: Date, default: Date.now }
     }
@@ -18,10 +27,11 @@ const SubscriptionSchema = new mongoose.Schema({
   modificationLogs: [
     {
       timestamp: { type: Date, default: Date.now },
-      subscriptionType: { type: String }
+      subscriptionType: { type: String },
+      status: { type: String }
     }
   ],
-  coupon: { type: String }
-});
+  coupon: { type: String },
+}, { timestamps: true });
 
-module.exports = mongoose.model('Subsription', SubscriptionSchema);
+module.exports = mongoose.model('Subscription', SubscriptionSchema);
