@@ -38,3 +38,6 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 *.sln
+
+# uploads
+.uploads/
