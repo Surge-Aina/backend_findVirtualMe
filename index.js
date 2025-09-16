@@ -36,6 +36,7 @@ const authRoutes = require('./routes/auth'); // Import authentication routes
 const seedUsers = require('./seed/users'); // Import seed users function
 const handymanTemplateRoutes = require('./routes/handymanTemplateRoutes');
 const localVendorRoutes = require("./routes/localVendorRoutes");
+const supportFormRoutes = require("./routes/supportFormRoutes");
 const onboardingRoutes = require("./routes/onboardingRoutes");
 
 // Import configuration from separate file
@@ -90,6 +91,7 @@ app.use("/vendor", localVendorRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/datascience-portfolio", dataScientistRoutes);
 app.use("/api/handyman-template", handymanTemplateRoutes);
+app.use("/support-form", supportFormRoutes);
 
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
