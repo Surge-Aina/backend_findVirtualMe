@@ -33,6 +33,7 @@ const telemetryRoutes = require("./routes/telemetry");
 const checkoutRoutes = require("./routes/checkoutRoutes");
 const handymanTemplateRoutes = require("./routes/handymanTemplateRoutes");
 const localVendorRoutes = require("./routes/localVendorRoutes");
+const supportFormRoutes = require("./routes/supportFormRoutes");
 
 // Import configuration from separate file
 const config = require("./config");
@@ -79,6 +80,7 @@ app.use("/datascience-portfolio", dataScientistRoutes);
 app.use("/api/telemetry", telemetryRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/api/handyman-template", handymanTemplateRoutes);
+app.use("/support-form", supportFormRoutes);
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) =>
