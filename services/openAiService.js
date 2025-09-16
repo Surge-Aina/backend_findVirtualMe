@@ -131,8 +131,102 @@ async function generateVendorAboutAndMenuJSON(vendorText) {
   return JSON.parse(response.choices[0].message.content.trim());
 }
 
+/**
+ * Validate and process software engineering portfolio JSON using universal schema
+ * @param {Object} portfolioData - The portfolio JSON data to validate
+ * @param {string} ownerId - The owner ID for the portfolio
+ * @returns {Promise<Object>} Validated and processed portfolio data
+ */
+async function validateSoftwareEngineerPortfolioJSON(portfolioData, ownerId) {
+  // Validate required fields
+  if (!portfolioData || typeof portfolioData !== 'object') {
+    throw new Error('Portfolio data must be a valid JSON object');
+  }
+
+  // Ensure required fields exist for universal schema
+  const requiredFields = ['about', 'education', 'skills', 'projects', 'experience', 'certificates', 'testimonials', 'extraParts'];
+  for (const field of requiredFields) {
+    if (!portfolioData[field]) {
+      portfolioData[field] = field === 'about' ? {} : [];
+    }
+  }
+
+  // Set required metadata
+  portfolioData.ownerId = ownerId;
+  portfolioData.type = 'software_engineer';
+
+  // Ensure about object exists
+  if (!portfolioData.about || typeof portfolioData.about !== 'object') {
+    portfolioData.about = {};
+  }
+
+  // Validate about object fields
+  const aboutFields = ['name', 'phone', 'address', 'linkedin', 'github', 'portfolio', 'link1', 'link2'];
+  aboutFields.forEach(field => {
+    if (!portfolioData.about[field]) {
+      portfolioData.about[field] = '';
+    }
+  });
+
+  // Validate skills array (simple strings)
+  if (Array.isArray(portfolioData.skills)) {
+    portfolioData.skills = portfolioData.skills.map(skill => skill || '');
+  }
+
+  // Validate projects array
+  if (Array.isArray(portfolioData.projects)) {
+    portfolioData.projects = portfolioData.projects.map(project => ({
+      name: project.name || '',
+      about: project.about || '',
+      time: project.time || '',
+      points: Array.isArray(project.points) ? project.points : []
+    }));
+  }
+
+  // Validate experience array
+  if (Array.isArray(portfolioData.experience)) {
+    portfolioData.experience = portfolioData.experience.map(exp => ({
+      company: exp.company || '',
+      role: exp.role || '',
+      duration: exp.duration || '',
+      points: Array.isArray(exp.points) ? exp.points : []
+    }));
+  }
+
+  // Validate education array
+  if (Array.isArray(portfolioData.education)) {
+    portfolioData.education = portfolioData.education.map(edu => ({
+      degree: edu.degree || '',
+      institution: edu.institution || '',
+      year: edu.year || '',
+      points: Array.isArray(edu.points) ? edu.points : []
+    }));
+  }
+
+  // Validate certificates array (simple strings)
+  if (Array.isArray(portfolioData.certificates)) {
+    portfolioData.certificates = portfolioData.certificates.map(cert => cert || '');
+  }
+
+  // Validate testimonials array (simple strings)
+  if (Array.isArray(portfolioData.testimonials)) {
+    portfolioData.testimonials = portfolioData.testimonials.map(testimonial => testimonial || '');
+  }
+
+  // Validate extraParts array
+  if (Array.isArray(portfolioData.extraParts)) {
+    portfolioData.extraParts = portfolioData.extraParts.map(part => ({
+      title: part.title || '',
+      content: part.content || ''
+    }));
+  }
+
+  return portfolioData;
+}
+
 module.exports = {
   generateMatchSummary,
   generatePortfolioJSON,
   generateVendorAboutAndMenuJSON,
+  validateSoftwareEngineerPortfolioJSON, 
 };
