@@ -36,7 +36,8 @@ const authRoutes = require('./routes/auth'); // Import authentication routes
 const seedUsers = require('./seed/users'); // Import seed users function
 const handymanTemplateRoutes = require('./routes/handymanTemplateRoutes');
 const localVendorRoutes = require("./routes/localVendorRoutes");
-
+const supportFormRoutes = require("./routes/supportFormRoutes");
+const onboardingRoutes = require("./routes/onboardingRoutes");
 
 // Import configuration from separate file
 const config = require("./config");
@@ -46,7 +47,7 @@ const PORT = process.env.PORT;
 
 app.use(
   cors({
-    origin: config.server.corsOrigin,
+    origin: process.env.FRONTEND_URL,
     credentials: true,
   })
 );
@@ -68,6 +69,9 @@ app.get('/test-route', (req, res) => {
 //stripe payment
 app.use("/checkout", checkoutRoutes);
 
+//onboarding
+app.use("/onboarding", onboardingRoutes);
+
 
 //jaqueline login route
 app.use("/user", userRoutes);
@@ -87,6 +91,7 @@ app.use("/vendor", localVendorRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/datascience-portfolio", dataScientistRoutes);
 app.use("/api/handyman-template", handymanTemplateRoutes);
+app.use("/support-form", supportFormRoutes);
 
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
