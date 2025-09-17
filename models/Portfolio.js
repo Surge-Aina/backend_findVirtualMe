@@ -21,6 +21,7 @@ const mongoose = require('mongoose');
 const PortfolioSchema = new mongoose.Schema({
   ownerId: String, // Unique identifier for the portfolio owner (user)
   type: String, // Type of portfolio (e.g., 'software_engineer')
+  // Legacy schema (for backward compatibility)
   profile: {
     name: String, // Full name of the user
     email: String, // Contact email
@@ -30,43 +31,40 @@ const PortfolioSchema = new mongoose.Schema({
     bio: String, // Short professional summary
     avatarUrl: String // Link to profile picture/avatar
   },
-  skills: [
-    {
-      name: String, // Name of the skill (e.g., 'JavaScript')
-      level: String, // Proficiency level (e.g., 'Expert', 'Intermediate')
-      rating: Number // Star rating (1-5)
-    }
-  ],
-  projects: [
-    {
-      title: String, // Project title
-      description: String, // Brief description of the project
-      repoUrl: String, // Link to code repository (e.g., GitHub)
-      demoUrl: String, // Link to live demo
-      techStack: [String], // List of technologies used
-      imageUrl: String // Link to project image
-    }
-  ],
-  experience: [
-    {
-      company: String, // Company name
-      role: String, // Job title/role
-      duration: String, // Time period (e.g., '2022-2023')
-      details: String // Key responsibilities/achievements
-    }
-  ],
-  education: [
-    {
-      degree: String, // Degree earned (e.g., 'B.Tech in Computer Science')
-      institution: String, // Name of the institution
-      year: String // Graduation year
-    }
-  ],
+  // Universal schema (new format)
+  about: {
+    name: String,
+    phone: String,
+    address: String,
+    linkedin: String,
+    github: String,
+    portfolio: String,
+    link1: String,
+    link2: String
+  },
+  // Skills can be either legacy format or simple strings (universal format)
+  skills: mongoose.Schema.Types.Mixed,
+  // Projects support both legacy and universal formats
+  projects: mongoose.Schema.Types.Mixed,
+  // Experience supports both legacy and universal formats
+  experience: mongoose.Schema.Types.Mixed,
+  // Education supports both legacy and universal formats
+  education: mongoose.Schema.Types.Mixed,
+  // Legacy certifications field
   certifications: [
     {
       title: String, // Certification title
       year: String, // Year obtained
       imageUrl: String // Link to certificate image
+    }
+  ],
+  // Universal schema fields
+  certificates: [String], // Simple string array for certificates
+  testimonials: [String], // Simple string array for testimonials
+  extraParts: [
+    {
+      title: String,
+      content: String
     }
   ],
   resumePdfUrl: String, // Link to downloadable resume PDF

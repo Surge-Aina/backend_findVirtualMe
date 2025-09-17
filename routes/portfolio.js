@@ -458,16 +458,18 @@ router.post('/:ownerId/resume', handlePdfUpload, async (req, res) => {
     let portfolio = await Portfolio.findOne({ ownerId: req.params.ownerId });
     
     if (portfolio) {
-      // Update existing portfolio
+      // Update existing portfolio with universal schema
       portfolio.resumePdfUrl = resumeUrl;
-      portfolio.profile = { ...portfolio.profile, ...portfolioData.profile };
+      portfolio.about = { ...portfolio.about, ...portfolioData.about };
       portfolio.skills = portfolioData.skills || portfolio.skills;
       portfolio.projects = portfolioData.projects || portfolio.projects;
       portfolio.experience = portfolioData.experience || portfolio.experience;
       portfolio.education = portfolioData.education || portfolio.education;
-      portfolio.certifications = portfolioData.certifications || portfolio.certifications;
+      portfolio.certificates = portfolioData.certificates || portfolio.certificates;
+      portfolio.testimonials = portfolioData.testimonials || portfolio.testimonials;
+      portfolio.extraParts = portfolioData.extraParts || portfolio.extraParts;
     } else {
-      // Create new portfolio
+      // Create new portfolio with universal schema
       portfolio = new Portfolio({
         ownerId: req.params.ownerId,
         type: 'software_engineer',
@@ -526,111 +528,59 @@ async function extractTextFromPDF(pdfBuffer) {
   }
 }
 
-// Helper function to convert resume text to portfolio structure
+// Helper function to convert resume text to portfolio structure using AI
 async function convertResumeToPortfolio(resumeText, ownerId) {
   try {
-    // Parse the resume text and extract structured data
-    const lines = resumeText.split('\n').filter(line => line.trim());
+    // Use the existing generatePortfolioJSON function for AI-powered conversion
+    const { generatePortfolioJSON } = require('../services/openAiService');
     
-    let profile = {
-      name: '',
-      email: '',
-      location: '',
-      github: '',
-      linkedin: '',
-      bio: ''
+    console.log('🤖 Using AI to convert resume text to portfolio JSON...');
+    
+    // Generate portfolio JSON using AI
+    const portfolioJSONString = await generatePortfolioJSON(resumeText, ownerId);
+    
+    // Parse the JSON string to object
+    const aiData = JSON.parse(portfolioJSONString);
+    
+    console.log('✅ AI conversion completed successfully');
+    
+    // Convert AI output to universal schema format
+    const portfolioData = {
+      about: {
+        name: aiData.name || '',
+        phone: aiData.phone || '',
+        address: aiData.location || '',
+        linkedin: aiData.socialLinks?.linkedin || '',
+        github: aiData.socialLinks?.github || '',
+        portfolio: aiData.socialLinks?.website || '',
+        link1: '',
+        link2: ''
+      },
+      education: (aiData.education || []).map(edu => ({
+        degree: edu.degrees?.[0] || edu.fieldOfStudy || '',
+        institution: edu.school || '',
+        year: edu.endDate || '',
+        points: edu.awards || []
+      })),
+      skills: aiData.skills || [],
+      projects: (aiData.projects || []).map(project => ({
+        name: project.name || '',
+        about: project.description || '',
+        time: '',
+        points: []
+      })),
+      experience: (aiData.experiences || []).map(exp => ({
+        company: exp.company || '',
+        role: exp.title || '',
+        duration: `${exp.startDate || ''} - ${exp.endDate || ''}`,
+        points: [exp.description || '']
+      })),
+      certificates: [],
+      testimonials: [],
+      extraParts: []
     };
     
-    let skills = [];
-    let experience = [];
-    let education = [];
-    let projects = [];
-    
-    // Extract name (usually first line)
-    if (lines[0]) {
-      profile.name = lines[0].trim();
-    }
-    
-    // Extract email
-    const emailMatch = resumeText.match(/[\w.-]+@[\w.-]+\.\w+/);
-    if (emailMatch) {
-      profile.email = emailMatch[0];
-    }
-    
-    // Extract skills (look for SKILLS section)
-    const skillsIndex = lines.findIndex(line => line.toUpperCase().includes('SKILLS'));
-    if (skillsIndex !== -1) {
-      for (let i = skillsIndex + 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line && !line.toUpperCase().includes('EXPERIENCE') && !line.toUpperCase().includes('EDUCATION')) {
-          const skillNames = line.split(',').map(skill => skill.trim());
-          skills.push(...skillNames.map(name => ({ name, level: 'Intermediate' })));
-        } else {
-          break;
-        }
-      }
-    }
-    
-    // Extract experience
-    const experienceIndex = lines.findIndex(line => line.toUpperCase().includes('EXPERIENCE'));
-    if (experienceIndex !== -1) {
-      for (let i = experienceIndex + 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line && line.includes('-')) {
-          const parts = line.split('-');
-          if (parts.length >= 2) {
-            experience.push({
-              company: parts[0].trim(),
-              role: 'Software Engineer',
-              duration: parts[1].trim(),
-              details: 'Extracted from resume'
-            });
-          }
-        }
-      }
-    }
-    
-    // Extract education
-    const educationIndex = lines.findIndex(line => line.toUpperCase().includes('EDUCATION'));
-    if (educationIndex !== -1) {
-      for (let i = educationIndex + 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line && line.includes('-')) {
-          const parts = line.split('-');
-          if (parts.length >= 2) {
-            education.push({
-              degree: parts[0].trim(),
-              institution: 'University',
-              year: parts[1].trim()
-            });
-          }
-        }
-      }
-    }
-    
-    // Create bio from summary
-    const summaryIndex = lines.findIndex(line => line.toUpperCase().includes('SUMMARY'));
-    if (summaryIndex !== -1) {
-      let bio = '';
-      for (let i = summaryIndex + 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line && !line.toUpperCase().includes('SKILLS')) {
-          bio += line + ' ';
-        } else {
-          break;
-        }
-      }
-      profile.bio = bio.trim();
-    }
-    
-    return {
-      profile,
-      skills: skills.slice(0, 10), // Limit to 10 skills
-      experience: experience.slice(0, 5), // Limit to 5 experiences
-      education: education.slice(0, 3), // Limit to 3 education entries
-      projects: projects.slice(0, 3), // Limit to 3 projects
-      certifications: []
-    };
+    return portfolioData;
     
   } catch (error) {
     console.error('Error converting resume to portfolio:', error);
@@ -797,6 +747,56 @@ router.post('/:ownerId/profile-image', handleRawUpload, async (req, res) => {
   } catch (err) {
     console.error('❌ Profile image upload error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * Create portfolio from AI-generated data
+ * POST /softwareeng/ai-generate
+ */
+router.post('/ai-generate', async (req, res) => {
+  try {
+    const { portfolioData } = req.body;
+    
+    if (!portfolioData) {
+      return res.status(400).json({ 
+        error: 'Portfolio data is required' 
+      });
+    }
+
+    // Validate required fields
+    if (!portfolioData.ownerId || !portfolioData.type) {
+      return res.status(400).json({ 
+        error: 'ownerId and type are required fields' 
+      });
+    }
+
+    // Check if portfolio already exists
+    const existingPortfolio = await Portfolio.findOne({ ownerId: portfolioData.ownerId });
+    if (existingPortfolio) {
+      return res.status(409).json({ 
+        error: 'Portfolio already exists for this owner',
+        existingPortfolio: existingPortfolio
+      });
+    }
+
+    // Create new portfolio
+    const newPortfolio = new Portfolio(portfolioData);
+    const savedPortfolio = await newPortfolio.save();
+
+    console.log('✅ AI-generated portfolio created:', savedPortfolio.ownerId);
+    res.status(201).json({
+      success: true,
+      message: 'Portfolio created successfully from AI generation',
+      portfolio: savedPortfolio
+    });
+
+  } catch (error) {
+    console.error('❌ Error creating AI-generated portfolio:', error);
+    res.status(500).json({
+      error: 'Failed to create portfolio from AI generation',
+      details: error.message
+    });
   }
 });
 
