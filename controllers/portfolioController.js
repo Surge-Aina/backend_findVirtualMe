@@ -101,20 +101,10 @@ exports.addPDF = async (req, res) => {
 
         const portfolioObj = typeof jsonPortfolio === "string" ? JSON.parse(jsonPortfolio) : jsonPortfolio;
 
-        //save portfolio - check if portfolio already exists
-        let portfolio = await Portfolio.findOne({ email: email });
-        
-        if (portfolio) {
-            // Update existing portfolio
-            Object.assign(portfolio, portfolioObj);
-            await portfolio.save();
-            res.status(200).json(portfolio);
-        } else {
-            // Create new portfolio
-            const newPortfolio = new Portfolio(portfolioObj);
-            await newPortfolio.save();
-            res.status(201).json(newPortfolio);
-        }
+        //save portfolio
+        const newPortfolio = new Portfolio(portfolioObj);
+        await newPortfolio.save();
+        res.status(201).json(newPortfolio);
 
     } catch (err) {
         console.error('Error parsing PDF:', err);

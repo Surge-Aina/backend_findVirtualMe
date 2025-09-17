@@ -1,4 +1,43 @@
-# Test Suite for Software Engineering Portfolio API
+# Backend API for FindVirtualMe Portfolio Platform
+
+This is the backend API server for the FindVirtualMe portfolio platform, built with Node.js, Express, and MongoDB.
+
+## Environment Configuration
+
+Copy `.env.example` to `.env` and configure the following variables:
+
+### Required Environment Variables
+
+```bash
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+# Database
+MONGODB_URI=mongodb://localhost:27017/findVirtualMe
+JWT_SECRET=your-jwt-secret-key-here
+```
+
+### CORS Configuration (Flexible)
+
+The CORS configuration automatically adapts based on your environment:
+
+**Development Mode:**
+- Automatically allows `http://localhost:5173` (Vite default)
+- Automatically allows `http://localhost:3000` (React default)
+- Customize ports with `FRONTEND_PORT` and `REACT_PORT`
+
+**Production Mode:**
+- Uses `FRONTEND_URL` for your deployed frontend
+- Uses `PRODUCTION_URL` for additional production domains
+
+**Custom CORS Origins:**
+```bash
+# Comma-separated list of allowed origins
+CORS_ORIGIN=http://localhost:5173,http://localhost:3000,https://yourdomain.com
+```
+
+## Test Suite
 
 This directory contains comprehensive test cases for the Software Engineering Portfolio functionality.
 
