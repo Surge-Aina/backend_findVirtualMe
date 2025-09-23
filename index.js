@@ -1,5 +1,7 @@
 const express = require("express");
+const connectDB = require('./utils/db'); // Import database connection from utils
 const cors = require("cors");
+require('dotenv').config(); // Load environment variables from .env file
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
@@ -12,27 +14,30 @@ const {
   setCredentialsFromEnv,
   listFilesInFolder,
 } = require("./oauthHandler");
-const settingsRoutes = require("./routes/settingsRoute");
-const driveRoutes = require("./routes/driveRoute");
-const photoRoutes = require("./routes/photoRoute");
-const uploadRoutes = require("./routes/uploadRoute");
+const settingsRoutes = require("./routes/photographer/settingsRoute");
+const driveRoutes = require("./routes/photographer/driveRoute");
+const photoRoutes = require("./routes/photographer/photoRoute");
+const uploadRoutes = require("./routes/photographer/uploadRoute");
 const userRoutes = require("./routes/userRoute");
-const portfolioRoutes = require("./routes/portfolioRoute");
-const softwareEngRoutes = require("./routes/softwareEng");
-const testimonialRoutes = require("./routes/testimonialRoute");
-const dashboardRoutes = require("./routes/dashboardRoute");
-const bannerRoutes = require("./routes/bannerRoutes");
-const aboutRoutes = require("./routes/aboutRoutes");
-const menuRoutes = require("./routes/menuRoutes");
-const galleryRoutes = require("./routes/galleryRoutes");
-const reviewRoutes = require("./routes/reviewRoutes");
-const taggedImageRoutes = require("./routes/taggedImageRoutes");
-const handymanPortfolioRoutes = require("./routes/handymanPortfolioRoutes");
-const dataScientistRoutes = require("./routes/dataScientistRoutes");
-const telemetryRoutes = require("./routes/telemetry");
-const checkoutRoutes = require("./routes/checkoutRoutes");
-const handymanTemplateRoutes = require("./routes/handymanTemplateRoutes");
-const localVendorRoutes = require("./routes/localVendorRoutes");
+const portfolioRoutes = require("./routes/projectManager/portfolioRoute");
+const softwareEngRoutes = require("./routes/softwareEngineer/portfolio");
+const testimonialRoutes = require("./routes/dataScientist/testimonialRoute");
+const dashboardRoutes = require("./routes/dataScientist/dashboardRoute");
+const bannerRoutes = require("./routes/localFoodVendor/bannerRoutes");
+const aboutRoutes = require("./routes/localFoodVendor/aboutRoutes");
+const menuRoutes = require("./routes/localFoodVendor/menuRoutes");
+const galleryRoutes = require("./routes/localFoodVendor/galleryRoutes");
+const reviewRoutes = require("./routes/localFoodVendor/reviewRoutes");
+const taggedImageRoutes = require("./routes/localFoodVendor/taggedImageRoutes");
+const handymanPortfolioRoutes = require("./routes/handyMan/handymanPortfolioRoutes");
+const dataScientistRoutes = require("./routes/dataScientist/dataScientistRoutes");
+const checkoutRoutes = require("./routes/stripePayment/checkoutRoutes");
+const authRoutes = require('./routes/auth'); // Import authentication routes
+const seedUsers = require('./seed/users'); // Import seed users function
+const handymanTemplateRoutes = require('./routes/handyMan/handymanTemplateRoutes');
+const localVendorRoutes = require("./routes/localFoodVendor/localVendorRoutes");
+const supportFormRoutes = require("./routes/supportFormRoutes");
+//const onboardingRoutes = require("./routes/onboardingRoutes");
 
 // Import configuration from separate file
 const config = require("./config");
@@ -40,27 +45,34 @@ const config = require("./config");
 const app = express();
 const PORT = process.env.PORT;
 
-
-// trust proxy: so req.ip / X-Forwarded-For works behind proxies
-app.set("trust proxy", true);
-
 app.use(
   cors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
   })
 );
-
 app.use(express.json());
 setCredentialsFromEnv();
+
+
+// Mount the main portfolio API routes at /portfolio
+app.use('/portfolio', portfolioRoutes);
+
+// Mount the software engineering portfolio API routes at /softwareeng
+app.use('/softwareeng', softwareEngRoutes);
+
+// Test route to verify routing is working
+app.get('/test-route', (req, res) => {
+  res.json({ message: 'Test route is working!', timestamp: new Date().toISOString() });
+});
 
 //stripe payment
 app.use("/checkout", checkoutRoutes);
 
-//jaqueline login route
-app.use("/user", userRoutes);
-app.use("/software-eng", softwareEngRoutes);
-app.use("/portfolio", portfolioRoutes);
+//onboarding
+// app.use("/onboarding", onboardingRoutes);
+
+app.use("/user", userRoutes);//onboarding now routes here
 app.use("/settings", settingsRoutes);
 app.use("/drive", driveRoutes);
 app.use("/photo", photoRoutes);
@@ -76,14 +88,47 @@ app.use("/tagged", taggedImageRoutes);
 app.use("/vendor", localVendorRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/datascience-portfolio", dataScientistRoutes);
-app.use("/api/telemetry", telemetryRoutes);
-app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/api/handyman-template", handymanTemplateRoutes);
+app.use("/support-form", supportFormRoutes);
+
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) =>
   res.status(200).json({ ok: true, ts: Date.now() })
 );
+
+
+/**
+ * Connect to MongoDB using the connection function from utils/db.js
+ * @function
+ * @returns {Promise<void>} Logs success or error to console
+ * @notes Uses centralized database connection. Connection is required for API to function.
+ */
+connectDB()
+  .then(async () => {
+    // Seed users after successful database connection
+    await seedUsers();
+  })
+  .catch(err => console.error(err)); // Log connection errors
+
+
+
+/**
+ * Mount the authentication API routes at /auth
+ * @function
+ * @param {string} path - The base path for the routes
+ * @param {Router} router - The Express router for authentication APIs
+ */
+app.use('/auth', authRoutes);
+
+/**
+ * Serve static files from uploads directory
+ * @function
+ * @param {string} path - The URL path to serve files from
+ * @param {Function} middleware - Express static middleware
+ */
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 // Serve static files from uploads directory
 app.use(
@@ -132,48 +177,68 @@ const io = socketIo(server, {
   },
 });
 
-// Socket.IO connection handling
-io.on("connection", (socket) => {
-  console.log("🔌 Client connected:", socket.id);
-
-  socket.on("join-customer-room", () => {
-    socket.join(config.websocket.rooms.customer);
-    socket.join(`${config.defaultUsers.customer.email}-updates`);
-    console.log("👥 Customer joined update room");
+/**
+ * Socket.IO connection handling for real-time updates
+ */
+io.on('connection', (socket) => {
+  console.log('🔌 Client connected:', socket.id);
+  
+  socket.on('join-customer-room', () => {
+    socket.join('customer-updates');
+    socket.join('cust@test.com-updates');
+    console.log('👥 Customer joined update room');
   });
-
-  socket.on("join-admin-room", () => {
-    socket.join(config.websocket.rooms.admin);
-    socket.join(`${config.defaultUsers.admin.email}-updates`);
-    console.log("👤 Admin joined update room");
+  
+  socket.on('join-admin-room', () => {
+    socket.join('admin-updates');
+    socket.join('admin@test.com-updates');
+    console.log('👤 Admin joined update room');
   });
-
-  socket.on("join-user-room", (userId) => {
+  
+  socket.on('join-user-room', (userId) => {
     socket.join(`${userId}-updates`);
     console.log(`👤 User ${userId} joined their specific room`);
   });
-
-  socket.on("disconnect", () => {
-    console.log("🔌 Client disconnected:", socket.id);
+  
+  socket.on('disconnect', () => {
+    console.log('🔌 Client disconnected:', socket.id);
   });
 });
 
 // Make io available to routes
-app.set("io", io);
+app.set('io', io);
 
-// Test endpoint for WebSocket events
-app.post("/test-websocket", (req, res) => {
-  const io = req.app.get("io");
+/**
+ * Test endpoint to trigger WebSocket events
+ * @route   POST /test-websocket
+ * @param   {Object} req - Express request object
+ * @param   {Object} res - Express response object
+ * @returns {Object} Success message
+ */
+app.post('/test-websocket', (req, res) => {
+  const io = req.app.get('io');
   if (io) {
-    io.emit("test-event", {
-      message: "Test WebSocket event",
-      timestamp: new Date().toISOString(),
+    io.emit('test-event', {
+      message: 'Test WebSocket event',
+      timestamp: new Date().toISOString()
     });
-    console.log("📡 Test WebSocket event emitted");
-    res.json({ message: "Test event sent" });
+    console.log('📡 Test WebSocket event emitted');
+    res.json({ message: 'Test event sent' });
   } else {
-    res.status(500).json({ error: "Socket.IO not available" });
+    res.status(500).json({ error: 'Socket.IO not available' });
   }
 });
 
-module.exports = { app, server };
+/**
+ * Start the Express server on the specified port
+ * @function
+ * @param {number} PORT - The port number to listen on
+ * @returns {void}
+ */
+
+// Only start the server if this file is run directly (not imported for testing)
+if (require.main === module) {
+  server.listen(PORT, () => console.log(`✅ Server running on PORT: ${PORT}`));
+}
+
+module.exports = { app, server }; 

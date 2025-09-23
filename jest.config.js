@@ -4,6 +4,7 @@ module.exports = {
   testMatch: [
     "<rootDir>/tests/**/*.test.js",
     "<rootDir>/__tests__/**/*.test.js",
+    "**/test/**/*.test.js",
   ],
   collectCoverageFrom: [
     "routes/**/*.js",
@@ -11,13 +12,19 @@ module.exports = {
     "controllers/**/*.js",
     "!**/node_modules/**",
     "!**/coverage/**",
+    "**/*.js",
+    "!**/node_modules/**",
+    "!**/test/**",
   ],
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov", "html"],
   testTimeout: 30000,
+  // Ensure tests run in isolation
+  maxWorkers: 1,
   verbose: true,
   forceExit: true,
   clearMocks: true,
   resetMocks: false,
+  resetModules: true,
   restoreMocks: true,
 };

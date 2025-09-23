@@ -12,12 +12,15 @@ const storage = multer.diskStorage({
   },
 });
 
-// Optional: file type filtering (e.g., only images)
+// File type filtering - allow images, PDFs, and PowerPoint files
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith("image/")) {
+  if (file.mimetype.startsWith("image/") || 
+      file.mimetype === "application/pdf" ||
+      file.mimetype === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+      file.mimetype === "application/vnd.ms-powerpoint") {
     cb(null, true);
   } else {
-    cb(new Error("Only image files are allowed!"), false);
+    cb(new Error("Only image, PDF, and PowerPoint files are allowed!"), false);
   }
 };
 
@@ -26,7 +29,7 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 2 * 1024 * 1024, // optional: 2MB max file size
+    fileSize: 10 * 1024 * 1024, // 10MB max file size for PDFs and images
   },
 });
 
