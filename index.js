@@ -37,6 +37,7 @@ const seedUsers = require('./seed/users'); // Import seed users function
 const handymanTemplateRoutes = require('./routes/handyMan/handymanTemplateRoutes');
 const localVendorRoutes = require("./routes/localFoodVendor/localVendorRoutes");
 const supportFormRoutes = require("./routes/supportFormRoutes");
+const domainRoutes = require("./routes/domainRoutes");
 //const onboardingRoutes = require("./routes/onboardingRoutes");
 
 // Import configuration from separate file
@@ -54,16 +55,18 @@ app.use(
 app.use(express.json());
 setCredentialsFromEnv();
 
-
 // Mount the main portfolio API routes at /portfolio
-app.use('/portfolio', portfolioRoutes);
+app.use("/portfolio", portfolioRoutes);
 
 // Mount the software engineering portfolio API routes at /softwareeng
-app.use('/softwareeng', softwareEngRoutes);
+app.use("/softwareeng", softwareEngRoutes);
 
 // Test route to verify routing is working
-app.get('/test-route', (req, res) => {
-  res.json({ message: 'Test route is working!', timestamp: new Date().toISOString() });
+app.get("/test-route", (req, res) => {
+  res.json({
+    message: "Test route is working!",
+    timestamp: new Date().toISOString(),
+  });
 });
 
 //stripe payment
@@ -72,7 +75,7 @@ app.use("/checkout", checkoutRoutes);
 //onboarding
 // app.use("/onboarding", onboardingRoutes);
 
-app.use("/user", userRoutes);//onboarding now routes here
+app.use("/user", userRoutes); //onboarding now routes here
 app.use("/settings", settingsRoutes);
 app.use("/drive", driveRoutes);
 app.use("/photo", photoRoutes);
@@ -90,6 +93,7 @@ app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/datascience-portfolio", dataScientistRoutes);
 app.use("/api/handyman-template", handymanTemplateRoutes);
 app.use("/support-form", supportFormRoutes);
+app.use("/api/domains", domainRoutes);
 
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
