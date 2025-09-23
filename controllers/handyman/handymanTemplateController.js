@@ -1,6 +1,12 @@
+<<<<<<< HEAD:controllers/handyman/handymanTemplateController.js
 const HandymanTemplate = require('../../models/handyMan/HandymanTemplate');
 const User = require('../../models/userModel');
 const UserModel = require("../../models/User");
+=======
+const HandymanTemplate = require('../models/HandymanTemplate');
+const UserModel = require('../models/userModel');
+
+>>>>>>> 67878f7 (Initial Commit for feature one):controllers/handymanTemplateController.js
 // Get a portfolio by its unique ID
 exports.getPortfolioById = async (req, res) => {
     try {
@@ -15,7 +21,9 @@ exports.getPortfolioById = async (req, res) => {
 };
 
 // Create a new portfolio for a user (e.g., upon signup or first time setup)
+
 exports.createPortfolio = async (req, res) => {
+<<<<<<< HEAD:controllers/handyman/handymanTemplateController.js
     try {
         //const { userId } = req.body;
 
@@ -43,6 +51,23 @@ exports.createPortfolio = async (req, res) => {
         res.status(500).json({ message: 'Error creating portfolio', error });
     }
 };
+=======
+        console.log("Logs:", req.body);
+        const id = req.body.handyman_portfolio._id;
+        const ph = req.body.handyman_portfolio.phone
+            try{
+                if(!id){
+                    return res.status(400).json({message: 'portfolio needed'});
+                }
+                const newHandymanPortfolio = new HandymanTemplate({userId:id, hero: {phoneNumber: ph}});
+                await newHandymanPortfolio.save();
+                res.status(201).json(newHandymanPortfolio);
+            }catch(error){
+                console.error("error adding portfolio", error);
+                res.status(500).json({ message: "error adding portfolio" });
+            }
+        };
+>>>>>>> 67878f7 (Initial Commit for feature one):controllers/handymanTemplateController.js
 
 // Update an existing portfolio
 exports.updatePortfolio = async (req, res) => {
