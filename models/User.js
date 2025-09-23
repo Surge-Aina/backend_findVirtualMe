@@ -49,7 +49,7 @@ const userSchema = new mongoose.Schema({
     default: "customer",
   },
   portfolios: [{ type: String }],
-  domains: [{ type: String }],
+  domains: { type: String },
   createdAt: {
     type: Date,
     default: Date.now,
