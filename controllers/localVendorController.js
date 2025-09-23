@@ -114,7 +114,37 @@ exports.injectVendorPortfolio = async (req, res) => {
     if (!req.file) return res.status(400).json({ error: "File is required" });
 
     const text = await extractText(req.file.buffer, req.file.mimetype);
-    const parsed = await generateVendorAboutAndMenuJSON(text);
+    let parsed;
+    try {
+      parsed = await generateVendorAboutAndMenuJSON(text);
+    } catch (err) {
+      console.error("OpenAI JSON parse failed:", err.message);
+      return res.status(400).json({
+        error:
+          "Could not convert the document into valid vendor data. Please check formatting.",
+      });
+    }
+
+    if (
+      !parsed.vendor ||
+      !parsed.vendor.name ||
+      !parsed.vendor.email ||
+      !parsed.vendor.phone
+    ) {
+      return res.status(400).json({
+        error:
+          "Vendor profile is missing required fields (name, email, phone). Please upload a document with complete vendor details",
+      });
+    }
+
+    const existing = await LocalVendorPortfolio.findOne({
+      email: parsed.vendor.email,
+    });
+    if (existing) {
+      return res.status(400).json({
+        error: `Vendor with email ${parsed.vendor.email} already exists.`,
+      });
+    }
 
     const vendor = await LocalVendorPortfolio.create(parsed.vendor);
 
