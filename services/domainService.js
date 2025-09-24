@@ -20,16 +20,13 @@ const domainService = {
         DomainList: domain,
       });
 
-      console.log(
-        "Final URL:",
-        `${process.env.NAMECHEAP_URL}?${params.toString()}`
-      );
       const url = `${process.env.NAMECHEAP_URL}?${params.toString()}`;
       const response = await fetch(url);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch domains. Status: ${response.status}`);
       }
+
       const xmlResponse = await response.text();
       parser.parseString(xmlResponse, (err, result) => {
         if (err) {
@@ -125,6 +122,184 @@ const domainService = {
       const user = req.user;
       const domains = user.domains;
       res.status(200).json(domains);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+  domainPrice: async (req, res) => {
+    try {
+      const ProductType = "DOMAIN";
+      const ProductCategory = "PURCHASE";
+      const Duration = "1";
+      const params = new URLSearchParams({
+        ApiUser: process.env.NAMECHEAP_USERNAME,
+        ApiKey: process.env.NAMECHEAP_API_KEY,
+        UserName: process.env.NAMECHEAP_USERNAME,
+        Command: "namecheap.domains.getPrice",
+        ClientIp: process.env.NAMECHEAP_CLIENT_IP,
+        ProductType: ProductType,
+        ProductCategory: ProductCategory,
+        Duration: Duration,
+      });
+      const url = `${process.env.NAMECHEAP_URL}?${params.toString()}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch domains. Status: ${response.status}`);
+      }
+      const xmlResponse = await response.text();
+      parser.parseString(xmlResponse, (err, result) => {
+        if (err) {
+          return res
+            .status(500)
+            .json({ error: `Failed to parse XML: ${err.message}` });
+        }
+        const apiResponse = result.ApiResponse;
+        const domainPrice = apiResponse.DomainPrice[0].$;
+        res.status(200).json(domainPrice);
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+
+  // Register domain through platform
+  registerDomain: async (req, res) => {
+    try {
+      const { domain, portfolioId, plan } = req.body;
+      const userId = req.user?.id;
+
+      if (!domain || !portfolioId) {
+        return res
+          .status(400)
+          .json({ error: "Domain and portfolioId are required" });
+      }
+      if (
+        !process.env.USER_FIRST_NAME ||
+        !process.env.USER_LAST_NAME ||
+        !process.env.USER_ADDRESS1 ||
+        !process.env.USER_CITY ||
+        !process.env.USER_STATE ||
+        !process.env.USER_ZIP ||
+        !process.env.USER_COUNTRY ||
+        !process.env.USER_PHONE ||
+        !process.env.USER_EMAIL
+      ) {
+        return res.status(400).json({ error: "Registrant info is required" });
+      }
+
+      const params = new URLSearchParams({
+        ApiUser: process.env.NAMECHEAP_USERNAME,
+        ApiKey: process.env.NAMECHEAP_API_KEY,
+        UserName: process.env.NAMECHEAP_USERNAME,
+        Command: "namecheap.domains.create",
+        ClientIp: process.env.NAMECHEAP_CLIENT_IP,
+
+        DomainName: domain,
+        Years: "1",
+
+        RegistrantFirstName: process.env.USER_FIRST_NAME,
+        RegistrantLastName: process.env.USER_LAST_NAME,
+        RegistrantAddress1: process.env.USER_ADDRESS1,
+        RegistrantCity: process.env.USER_CITY,
+        RegistrantStateProvince: process.env.USER_STATE,
+        RegistrantPostalCode: process.env.USER_ZIP,
+        RegistrantCountry: process.env.USER_COUNTRY,
+        RegistrantPhone: process.env.USER_PHONE,
+        RegistrantEmailAddress: process.env.USER_EMAIL,
+      });
+
+      const fetchRes = await fetch(process.env.NAMECHEAP_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: params.toString(),
+      });
+
+      const xmlResponse = await fetchRes.text();
+      parser.parseString(xmlResponse, async (err, result) => {
+        if (err) {
+          return res
+            .status(500)
+            .json({ error: `Failed to parse XML: ${err.message}` });
+        }
+        const apiResponse = result.ApiResponse;
+
+        if (apiResponse.$.Status === "OK") {
+          // Update user's domains in database
+          try {
+            const User = require("../models/User");
+            await User.findByIdAndUpdate(
+              userId,
+              {
+                $set: {
+                  domains: domain,
+                  [`portfolios.${portfolioId}.domain`]: domain,
+                  [`portfolios.${portfolioId}.domainStatus`]: "active",
+                },
+              },
+              { new: true }
+            );
+          } catch (dbErr) {
+            console.error("Database update error:", dbErr);
+          }
+        }
+
+        const domainRegistration =
+          apiResponse?.CommandResponse?.[0]?.DomainCreateResult?.[0]?.$;
+
+        return res.status(200).json({
+          message: "Domain registration initiated",
+          domain,
+          portfolioId,
+          plan,
+          status: apiResponse.$.Status === "OK" ? "active" : "pending",
+          apiResponse: domainRegistration,
+        });
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+
+  // Configure custom domain (BYOD)
+  configureCustomDomain: async (req, res) => {
+    try {
+      const { domain, portfolioId } = req.body;
+      const userId = req.user?.id;
+
+      if (!domain || !portfolioId) {
+        return res
+          .status(400)
+          .json({ error: "Domain and portfolioId are required" });
+      }
+
+      // TODO: Update portfolio with custom domain
+      res.status(200).json({
+        message: "Custom domain configured",
+        domain,
+        portfolioId,
+        status: "pending_verification",
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+
+  // Get user's domains
+  getUserDomains: async (req, res) => {
+    try {
+      const { userId } = req.params;
+
+      // TODO: Query database for user's domains
+      res.status(200).json({
+        domains: [],
+        message: "User domains retrieved",
+      });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: err.message });
