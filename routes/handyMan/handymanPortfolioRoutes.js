@@ -1,16 +1,12 @@
 // routes/handymanPortfolioRoutes.js
 const express = require('express');
 const multer = require('multer');
-<<<<<<< HEAD:routes/handyMan/handymanPortfolioRoutes.js
-const { getPortfolioItems, createPortfolioItem } = require('../../controllers/handyman/handymanPortfolioController');
-=======
 const {
     getPortfolioItems,
     createPortfolioItem,
     updatePortfolioItem,
     deletePortfolioItem,
-} = require('../controllers/handymanPortfolioController');
->>>>>>> 67878f7 (Initial Commit for feature one):routes/handymanPortfolioRoutes.js
+} = require('../../controllers/handyman/handymanPortfolioController');
 
 const router = express.Router();
 const storage = multer.memoryStorage();

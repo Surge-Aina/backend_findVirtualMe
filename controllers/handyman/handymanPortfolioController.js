@@ -1,11 +1,8 @@
-<<<<<<< HEAD:controllers/handyman/handymanPortfolioController.js
+// controllers/handyman/handymanPortfolioController.js
 const HandymanPortfolio = require('../../models/handyMan/handymanPortfolioModel');
-const { uploadToCloudinary } = require('../../services/cloudinaryService');
-=======
-// controllers/handymanPortfolioController.js
-const HandymanPortfolio = require('../models/handymanPortfolioModel');
-const { uploadToCloudinary } = require('../services/cloudinaryService');
->>>>>>> 67878f7 (Initial Commit for feature one):controllers/handymanPortfolioController.js
+const { uploadToS3 } = require('../../services/s3Service');
+
+const S3_PREFIX = 'Ports/HandyMan'; // keep casing consistent
 
 const getPortfolioItems = async (req, res) => {
   try {
@@ -28,16 +25,27 @@ const createPortfolioItem = async (req, res) => {
     }
 
     // Accept either uploaded files or direct URLs
-    let beforeUrl = beforeImageUrl;
-    let afterUrl = afterImageUrl;
+    let beforeUrl = beforeImageUrl || '';
+    let afterUrl  = afterImageUrl  || '';
 
     if (req.files?.beforeImage?.[0]) {
-      const r1 = await uploadToCloudinary(req.files.beforeImage[0].buffer);
-      beforeUrl = r1.secure_url;
+      const r1 = await uploadToS3(
+        req.files.beforeImage[0].buffer,
+        req.files.beforeImage[0].originalname,
+        req.files.beforeImage[0].mimetype,
+        S3_PREFIX
+      );
+      beforeUrl = r1.url; // store string URL
     }
+
     if (req.files?.afterImage?.[0]) {
-      const r2 = await uploadToCloudinary(req.files.afterImage[0].buffer);
-      afterUrl = r2.secure_url;
+      const r2 = await uploadToS3(
+        req.files.afterImage[0].buffer,
+        req.files.afterImage[0].originalname,
+        req.files.afterImage[0].mimetype,
+        S3_PREFIX
+      );
+      afterUrl = r2.url; // store string URL
     }
 
     if (!beforeUrl || !afterUrl) {
@@ -59,23 +67,35 @@ const createPortfolioItem = async (req, res) => {
   }
 };
 
-// Optional, but enables the “Save” / “Delete” buttons on existing rows
+// Enables “Save” / “Delete” on existing rows
 const updatePortfolioItem = async (req, res) => {
   try {
     const { id } = req.params;
     let update = { ...req.body };
 
     if (req.files?.beforeImage?.[0]) {
-      const r1 = await uploadToCloudinary(req.files.beforeImage[0].buffer);
-      update.beforeImageUrl = r1.secure_url;
+      const r1 = await uploadToS3(
+        req.files.beforeImage[0].buffer,
+        req.files.beforeImage[0].originalname,
+        req.files.beforeImage[0].mimetype,
+        S3_PREFIX
+      );
+      update.beforeImageUrl = r1.url; // string URL
     }
+
     if (req.files?.afterImage?.[0]) {
-      const r2 = await uploadToCloudinary(req.files.afterImage[0].buffer);
-      update.afterImageUrl = r2.secure_url;
+      const r2 = await uploadToS3(
+        req.files.afterImage[0].buffer,
+        req.files.afterImage[0].originalname,
+        req.files.afterImage[0].mimetype,
+        S3_PREFIX
+      );
+      update.afterImageUrl = r2.url; // string URL
     }
 
     const item = await HandymanPortfolio.findByIdAndUpdate(id, update, { new: true });
     if (!item) return res.status(404).json({ message: 'Not found' });
+
     res.json(item);
   } catch (error) {
     console.error('updatePortfolioItem error', error);

@@ -1,88 +1,81 @@
-<<<<<<< HEAD:controllers/handyman/handymanTemplateController.js
-const HandymanTemplate = require('../../models/handyMan/HandymanTemplate');
-const User = require('../../models/userModel');
-const UserModel = require("../../models/User");
-=======
-const HandymanTemplate = require('../models/HandymanTemplate');
-const UserModel = require('../models/userModel');
+    const HandymanTemplate = require('../../models/handyMan/HandymanTemplate');
+    const UserModel = require('../../models/userModel');
 
->>>>>>> 67878f7 (Initial Commit for feature one):controllers/handymanTemplateController.js
-// Get a portfolio by its unique ID
-exports.getPortfolioById = async (req, res) => {
+    // Get a portfolio by its unique ID
+    exports.getPortfolioById = async (req, res) => {
     try {
         const portfolio = await HandymanTemplate.findById(req.params.id);
         if (!portfolio) {
-            return res.status(404).json({ message: 'Handyman portfolio not found' });
+        return res.status(404).json({ message: 'Handyman portfolio not found' });
         }
         res.json(portfolio);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching portfolio data', error });
     }
-};
+    };
 
-// Create a new portfolio for a user (e.g., upon signup or first time setup)
-
-exports.createPortfolio = async (req, res) => {
-<<<<<<< HEAD:controllers/handyman/handymanTemplateController.js
+    // Create a new portfolio for a user (owner taken from auth token)
+    exports.createPortfolio = async (req, res) => {
     try {
-        //const { userId } = req.body;
-
-        const userId = req.body.portfolio._id
-        
-        const existingUser = await UserModel.findById(userId);
-        if (!existingUser) {
-            return res.status(404).json({ message: 'User not found' });
+        // auth middleware should set req.user.{id|userId}
+        const ownerId = req.user?.userId || req.user?.id;
+        if (!ownerId) {
+        return res.status(401).json({ message: 'Unauthorized' });
         }
 
-        const existingPortfolio = await HandymanTemplate.findOne({ userId });
-        if (existingPortfolio) {
-            return res.status(400).json({ message: 'Portfolio for this user already exists' });
-        }
+        // accept phone from a few shapes
+        const phone =
+        req.body?.handyman_portfolio?.phone ??
+        req.body?.hero?.phoneNumber ??
+        req.body?.phone ??
+        null;
 
-        const newPortfolio = new HandymanTemplate({ userId });
-        await newPortfolio.save();
+        const newHandymanPortfolio = await HandymanTemplate.create({
+        userId: String(ownerId),
+        hero: { phoneNumber: phone },
+        });
 
-        // Optionally add the portfolio ID to the user model
-        existingUser.portfolioIds.push(newPortfolio._id.toString());
-        await existingUser.save();
-
-        res.status(201).json(newPortfolio);
+        res.status(201).json(newHandymanPortfolio);
     } catch (error) {
-        res.status(500).json({ message: 'Error creating portfolio', error });
+        console.error('error adding portfolio', error);
+        res.status(500).json({ message: 'error adding portfolio' });
     }
-};
-=======
-        console.log("Logs:", req.body);
-        const id = req.body.handyman_portfolio._id;
-        const ph = req.body.handyman_portfolio.phone
-            try{
-                if(!id){
-                    return res.status(400).json({message: 'portfolio needed'});
-                }
-                const newHandymanPortfolio = new HandymanTemplate({userId:id, hero: {phoneNumber: ph}});
-                await newHandymanPortfolio.save();
-                res.status(201).json(newHandymanPortfolio);
-            }catch(error){
-                console.error("error adding portfolio", error);
-                res.status(500).json({ message: "error adding portfolio" });
-            }
-        };
->>>>>>> 67878f7 (Initial Commit for feature one):controllers/handymanTemplateController.js
+    };
 
-// Update an existing portfolio
-exports.updatePortfolio = async (req, res) => {
+    // Update an existing portfolio (only owner can update)
+    exports.updatePortfolio = async (req, res) => {
     try {
+        const ownerId = req.user?.userId || req.user?.id;
+        if (!ownerId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const existing = await HandymanTemplate.findById(req.params.id);
+        if (!existing) {
+        return res.status(404).json({ message: 'Portfolio not found' });
+        }
+
+        if (String(existing.userId) !== String(ownerId)) {
+        return res.status(403).json({ message: 'Forbidden: not your portfolio' });
+        }
+
+        // prevent takeover attempts
+        const update = { ...req.body };
+        delete update.userId;
+        // normalize phone updates if client sends hero.phone or phone
+        if (update.phone && !update.hero?.phoneNumber) {
+        update.hero = { ...(existing.hero?.toObject?.() || existing.hero || {}), phoneNumber: update.phone };
+        delete update.phone;
+        }
+
         const updatedPortfolio = await HandymanTemplate.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true, runValidators: true }
+        req.params.id,
+        update,
+        { new: true, runValidators: true }
         );
 
-        if (!updatedPortfolio) {
-            return res.status(404).json({ message: 'Portfolio not found' });
-        }
         res.json(updatedPortfolio);
     } catch (error) {
         res.status(500).json({ message: 'Error updating portfolio', error });
     }
-};
+    };
