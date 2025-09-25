@@ -1,8 +1,19 @@
 // controllers/handyman/handymanPortfolioController.js
 const HandymanPortfolio = require('../../models/handyMan/handymanPortfolioModel');
-const { uploadToS3 } = require('../../services/s3Service');
+const { uploadToS3, deleteFromS3 } = require('../../services/s3Service');
 
-const S3_PREFIX = 'Ports/HandyMan'; // keep casing consistent
+const S3_PREFIX = 'Ports/HandyMan';
+
+// helper: derive key from a URL in case older docs don’t have keys
+function keyFromUrl(url) {
+  try {
+    const u = new URL(url);
+    // /Ports/HandyMan/uuid.jpg -> remove leading slash
+    return u.pathname.replace(/^\/+/, '');
+  } catch {
+    return null;
+  }
+}
 
 const getPortfolioItems = async (req, res) => {
   try {
@@ -19,14 +30,14 @@ const getPortfolioItems = async (req, res) => {
 const createPortfolioItem = async (req, res) => {
   try {
     const { title, category, templateId, beforeImageUrl, afterImageUrl } = req.body;
-
     if (!title || !category || !templateId) {
       return res.status(400).json({ message: 'title, category and templateId are required' });
     }
 
-    // Accept either uploaded files or direct URLs
     let beforeUrl = beforeImageUrl || '';
-    let afterUrl  = afterImageUrl  || '';
+    let afterUrl  = afterImageUrl || '';
+    let beforeKey = '';
+    let afterKey  = '';
 
     if (req.files?.beforeImage?.[0]) {
       const r1 = await uploadToS3(
@@ -35,9 +46,9 @@ const createPortfolioItem = async (req, res) => {
         req.files.beforeImage[0].mimetype,
         S3_PREFIX
       );
-      beforeUrl = r1.url; // store string URL
+      beforeUrl = r1.url;
+      beforeKey = r1.key;
     }
-
     if (req.files?.afterImage?.[0]) {
       const r2 = await uploadToS3(
         req.files.afterImage[0].buffer,
@@ -45,7 +56,8 @@ const createPortfolioItem = async (req, res) => {
         req.files.afterImage[0].mimetype,
         S3_PREFIX
       );
-      afterUrl = r2.url; // store string URL
+      afterUrl = r2.url;
+      afterKey = r2.key;
     }
 
     if (!beforeUrl || !afterUrl) {
@@ -58,6 +70,8 @@ const createPortfolioItem = async (req, res) => {
       category,
       beforeImageUrl: beforeUrl,
       afterImageUrl: afterUrl,
+      beforeImageKey: beforeKey || keyFromUrl(beforeUrl),
+      afterImageKey:  afterKey  || keyFromUrl(afterUrl),
     });
 
     res.status(201).json(newItem);
@@ -67,7 +81,6 @@ const createPortfolioItem = async (req, res) => {
   }
 };
 
-// Enables “Save” / “Delete” on existing rows
 const updatePortfolioItem = async (req, res) => {
   try {
     const { id } = req.params;
@@ -80,9 +93,9 @@ const updatePortfolioItem = async (req, res) => {
         req.files.beforeImage[0].mimetype,
         S3_PREFIX
       );
-      update.beforeImageUrl = r1.url; // string URL
+      update.beforeImageUrl = r1.url;
+      update.beforeImageKey = r1.key;
     }
-
     if (req.files?.afterImage?.[0]) {
       const r2 = await uploadToS3(
         req.files.afterImage[0].buffer,
@@ -90,7 +103,16 @@ const updatePortfolioItem = async (req, res) => {
         req.files.afterImage[0].mimetype,
         S3_PREFIX
       );
-      update.afterImageUrl = r2.url; // string URL
+      update.afterImageUrl = r2.url;
+      update.afterImageKey = r2.key;
+    }
+
+    // if only URLs are provided (no new uploads), ensure keys exist for future deletes
+    if (update.beforeImageUrl && !update.beforeImageKey) {
+      update.beforeImageKey = keyFromUrl(update.beforeImageUrl);
+    }
+    if (update.afterImageUrl && !update.afterImageKey) {
+      update.afterImageKey = keyFromUrl(update.afterImageUrl);
     }
 
     const item = await HandymanPortfolio.findByIdAndUpdate(id, update, { new: true });
@@ -106,7 +128,21 @@ const updatePortfolioItem = async (req, res) => {
 const deletePortfolioItem = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // 1) find the doc to get S3 keys (or derive from URLs)
+    const item = await HandymanPortfolio.findById(id);
+    if (!item) return res.status(404).json({ message: 'Not found' });
+
+    const beforeKey = item.beforeImageKey || keyFromUrl(item.beforeImageUrl);
+    const afterKey  = item.afterImageKey  || keyFromUrl(item.afterImageUrl);
+
+    // 2) try to delete S3 objects (best-effort, don’t fail hard if one is missing)
+    try { if (beforeKey) await deleteFromS3(beforeKey); } catch (e) { console.warn('S3 delete (before) failed:', e?.message); }
+    try { if (afterKey)  await deleteFromS3(afterKey);  } catch (e) { console.warn('S3 delete (after) failed:',  e?.message); }
+
+    // 3) delete DB record
     await HandymanPortfolio.findByIdAndDelete(id);
+
     res.json({ ok: true });
   } catch (error) {
     console.error('deletePortfolioItem error', error);

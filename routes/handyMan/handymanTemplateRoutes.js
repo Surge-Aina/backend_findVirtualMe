@@ -6,6 +6,7 @@
     getPortfolioById,
     createPortfolio,
     updatePortfolio,
+    listPortfolios,
     } = require('../../controllers/handyman/handymanTemplateController');
 
     // Minimal local auth middleware for these routes only
@@ -24,6 +25,7 @@
     }
     }
 
+    router.get('/', listPortfolios);
     // Public: anyone can view a portfolio
     router.get('/:id', getPortfolioById);
 

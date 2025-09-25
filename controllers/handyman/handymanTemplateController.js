@@ -79,3 +79,16 @@
         res.status(500).json({ message: 'Error updating portfolio', error });
     }
     };
+
+    // List portfolios (optionally by userId)
+    exports.listPortfolios = async (req, res) => {
+    try {
+        const { userId } = req.query;
+        const query = userId ? { userId } : {};
+        const docs = await HandymanTemplate.find(query).sort({ createdAt: -1 });
+        res.json(docs);
+    } catch (error) {
+        res.status(500).json({ message: 'Error listing portfolios', error });
+    }
+    };
+

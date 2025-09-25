@@ -1,15 +1,15 @@
-// models/handymanPortfolioModel.js
+// models/handyMan/handymanPortfolioModel.js
 const mongoose = require('mongoose');
 
-const handymanPortfolioSchema = new mongoose.Schema({
-  templateId: { type: mongoose.Schema.Types.ObjectId, ref: 'HandymanTemplate', required: true }, // ⬅ add this
+const schema = new mongoose.Schema({
+  templateId: { type: mongoose.Schema.Types.ObjectId, ref: 'HandymanTemplate', required: true },
   title: { type: String, required: true },
   category: { type: String, required: true },
   beforeImageUrl: { type: String, required: true },
   afterImageUrl: { type: String, required: true },
-}, {
-  timestamps: true,
-  collection: 'handymanportfolios'
-});
+  // new (optional for old docs)
+  beforeImageKey: { type: String },
+  afterImageKey: { type: String },
+}, { timestamps: true });
 
-module.exports = mongoose.model('HandymanPortfolio', handymanPortfolioSchema);
+module.exports = mongoose.model('HandymanPortfolio', schema);
