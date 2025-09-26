@@ -5,6 +5,12 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+/**
+ * Generate a match summary between a resume and job description
+ * @param {Object} resumeJSON - The resume data in JSON format
+ * @param {string} jobText - The job description text
+ * @returns {Promise<string>} A summary of matches and missing areas
+ */
 async function generateMatchSummary(resumeJSON, jobText) {
   const prompt = `
     Match this resume to the job. List strong matches and missing areas briefly (max 150 words).
@@ -18,10 +24,8 @@ async function generateMatchSummary(resumeJSON, jobText) {
     Output format:
     ✓ Matches: skill1, skill2
 
-
     ✗ Missing: skill3, skill4
 
-    
     Summary: [very short overall assessment]
   `;
 
@@ -35,7 +39,15 @@ async function generateMatchSummary(resumeJSON, jobText) {
   return response.choices[0].message.content.trim();
 }
 
+
+/**
+ * Generate portfolio JSON from resume text
+ * @param {string} resumeText - The resume text to convert
+ * @param {string} email - Optional email to replace in the portfolio
+ * @returns {Promise<string>} JSON string representing the portfolio
+ */
 async function generatePortfolioJSON(resumeText, email) {
+
   const jsonAIPortfolioSchema = `{"name":"","title":"","summary":"","email":"","phone":"","location":"","skills":[],"experiences":[{"company":"","title":"","location":"","startDate":"","endDate":"","description":""}],"education":[{"school":"","gpa":"","degrees":[""],"fieldOfStudy":"","awards":[""],"startDate":"","endDate":"","description":""}],"projects":[{"name":"","description":""}],"socialLinks":{"github":"","linkedin":"","website":""}}`;
 
   const omsJSONPortfolioAPISchema =
@@ -71,6 +83,7 @@ async function generatePortfolioJSON(resumeText, email) {
   return response.choices[0].message.content.trim();
 }
 
+
 async function generateVendorAboutAndMenuJSON(vendorText) {
   const schema = `{
     "vendor": {
@@ -81,6 +94,7 @@ async function generateVendorAboutAndMenuJSON(vendorText) {
       "description": "", 
       "logo": ""
     },
+
     "about": {
       "banner": { "image": "", "title": "", "description": "", "shape": "fullscreen" },
       "contentBlocks": [{ "heading": "", "subheading": "" }],

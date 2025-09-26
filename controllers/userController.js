@@ -1,54 +1,145 @@
-const User = require('../models/userModel.js');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+const User = require("../models/User");
+//const User = require('../models/userModel');
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 // Not using the signup feature for now
-const signupUser = async(req, res) => {
-    try {
-        const {name, username, email, password } = req.body;
-        if(!name || !username || !email || !password){
-            return res.status(500).json({error: "name, username, email or password missing"});
-        }
-
-        // Can add checks with validator later to ensure email valid / password strong
-        const userExists = await User.findOne({ email });
-        if (userExists) return res.status(400).json({ message: 'User already exists' });
-
-        // Hash password
-        const hashed = await bcrypt.hash(password, 10);
-
-        // Create and save new user
-        const newUser = new User({ name, username, email, password: hashed });
-        await newUser.save();
-
-        const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        res.status(201).json({ name, username, email, token });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+exports.signupUser = async (req, res) => {
+  try {
+    const { name, username, email, password } = req.body;
+    if (!name || !username || !email || !password) {
+      return res.status(500).json({ error: "name, username, email or password missing" });
     }
+
+    // Can add checks with validator later to ensure email valid / password strong
+    const userExists = await User.findOne({ email });
+    if (userExists) return res.status(400).json({ message: "User already exists" });
+
+    // Hash password
+    const hashed = await bcrypt.hash(password, 10);
+
+    // Create and save new user
+    const newUser = new User({ name, username, email, password: hashed });
+    await newUser.save();
+
+    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    res.status(201).json({ name, username, email, token });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
-const loginUser = async(req, res) => {
-    try {
-        const { email, password, portfolioId } = req.body;
-        if (!email || !password || !portfolioId) return res.status(400).json({ message: 'All fields (including portfolioId) must be filled out'});
+exports.loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ message: "Email and Password needed" });
 
-        const user = await User.findOne({ email, portfolioId });
-        if (!user) return res.status(400).json({ message: 'User not found for this portfolio' });
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: "User not found for this portfolio" });
 
-        const valid = await bcrypt.compare(password, user.password);
-        if (!valid) return res.status(400).json({ message: 'Invalid credentials' });
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(400).json({ message: "Invalid credentials" });
 
-        const token = jwt.sign(
-            { id: user._id, isAdmin: user.isAdmin, portfolioId: user.portfolioId },
-            process.env.JWT_SECRET,
-            { expiresIn: '7d' }
-        );
-        res.status(201).json({ token, isAdmin: user.isAdmin, portfolioId: user.portfolioId });
-    } catch (err) {
-        console.log('error loggin in: ', err)
-        res.status(500).json({ error: err.message });
-    }
+    const token = jwt.sign(
+      //{ id: user._id, isAdmin: user.isAdmin },// removed this so users are not signed in as admin. ADD BACK ONLY IF NECESSARY -CarlosG
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    //res.status(201).json({ token, isAdmin: user.isAdmin, }); //this one removed as well -CarlosG
+    res.status(201).json({ message: "logged in successfully", token, user });
+  } catch (err) {
+    console.log("error loggin in: ", err);
+    res.status(500).json({ message: "error loggin in", error: err.message });
+  }
 };
 
-module.exports = { loginUser, signupUser };
+exports.addUser = async (req, res) => {
+  const { data } = req.body;
+  try {
+    if (!data) {
+      return res.status(400).json({ message: "Data not sent" });
+    }
+    const email = data.userInfo.email;
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+    //const username = (data.userInfo.username && data.userInfo.username.trim()) || email.split('@')[0];
+    const username = data.userInfo.username;
+    if (!username) {
+      return res.status(400).json({ message: "Username is required" });
+    }
+
+    const hashedPassword = await bcrypt.hash(data.userInfo.password, 10);
+
+    const userObj = {
+      firstName: data.userInfo.firstName,
+      lastName: data.userInfo.lastName,
+      username: username,
+      email: data.userInfo.email,
+      phone: data.userInfo.phone,
+      location: data.userInfo.location,
+      bio: data.userInfo.bio,
+      password: hashedPassword,
+      goal: data.goal,
+      industry: data.industry,
+      experienceLevel: data.experience,
+      skills: data.skills,
+    };
+
+    let onboardingUser;
+    try {
+      onboardingUser = new User(userObj);
+      await onboardingUser.save();
+    } catch (error) {
+      if (error.code === 11000) {
+        return res.status(400).json({ message: "Email or username already exists (onboarding)" });
+      }
+      throw error;
+    }
+    res.status(201).json({ user: onboardingUser });
+  } catch (error) {
+    console.error("AddUser error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find();
+    res.status(200).json({ users });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.status(200).json({ user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.updateUser = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.status(200).json({ user });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  try {
+    const user = await User.findByIdAndDelete(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

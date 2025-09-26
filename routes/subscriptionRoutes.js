@@ -1,14 +1,16 @@
-const express = require('express');
-const subscriptionsController = require('../controllers/adminSubscriptionsController');
+const express = require("express");
+const subscriptionsController = require("../controllers/subscriptionsController");
 const router = express.Router();
 
-//get
-router.get("/getSubscriptions", subscriptionsController.getAllSubscriptions);
-//post
+router.get("/", subscriptionsController.getAllSubscriptions);
+router.get("/:subscriptionId", subscriptionsController.getSubscriptionDetails);
+router.get("/payments/:customerId", subscriptionsController.getPaymentHistory);
 
-//patch
-router.patch("/updateSubscription", subscriptionsController.updateSubscription)
-router.patch("/cancelSubscription", subscriptionsController.cancelSubscription)
-//delete
+router.put("/update", subscriptionsController.updateSubscription);
+router.put("/cancel", subscriptionsController.cancelSubscription);
+router.put("/cancel-immediately", subscriptionsController.cancelSubscriptionImmediately);
+router.put("/reactivate", subscriptionsController.reactivateSubscription);
+
+router.post("/refund", subscriptionsController.issueRefund);
 
 module.exports = router;
