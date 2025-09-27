@@ -24,6 +24,7 @@ const SubscriptionSchema = new mongoose.Schema(
     currentPeriodStart: { type: Date },
     currentPeriodEnd: { type: Date },
     cancelAtPeriodEnd: { type: Boolean, default: false },
+    createdAt: { type: Date },
     canceledAt: { type: Date },
 
     // Subscription items

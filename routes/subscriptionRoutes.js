@@ -3,8 +3,9 @@ const subscriptionsController = require("../controllers/subscriptionsController"
 const router = express.Router();
 
 router.get("/", subscriptionsController.getAllSubscriptions);
-router.get("/:subscriptionId", subscriptionsController.getSubscriptionDetails);
 router.get("/payments/:customerId", subscriptionsController.getPaymentHistory);
+router.get("/reconcile", subscriptionsController.reconcileSubscriptions);
+router.get("/:subscriptionId", subscriptionsController.getSubscriptionDetails);
 
 router.put("/update", subscriptionsController.updateSubscription);
 router.put("/cancel", subscriptionsController.cancelSubscription);
