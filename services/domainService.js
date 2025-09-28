@@ -334,6 +334,20 @@ const domainService = {
   getUserDomains: async (req, res) => {
     try {
       const { userId } = req.params;
+      const authenticatedUserId = req.user?.id || req.user?._id;
+
+      // Authorization check: user can only access their own domains
+      // unless they have admin role
+      if (authenticatedUserId.toString() !== userId) {
+        // Check if user has admin role (if role system exists)
+        const userRole = req.user?.role;
+        if (userRole !== "admin" && userRole !== "superadmin") {
+          return res.status(403).json({
+            error: "Forbidden: You can only access your own domains",
+            code: "INSUFFICIENT_PERMISSIONS",
+          });
+        }
+      }
 
       const User = require("../models/User");
       const user = await User.findById(userId).select("domains portfolios");
@@ -350,6 +364,31 @@ const domainService = {
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: err.message });
+    }
+  },
+
+  // Get current authenticated user's domains
+  getMyDomains: async (req, res) => {
+    try {
+      const user = req.user; // Set by auth middleware
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.status(200).json({
+        user: {
+          id: user._id,
+          email: user.email,
+          username: user.username,
+        },
+        domains: user.domains || [],
+        portfolios: user.portfolios || [],
+        message: "User domains retrieved successfully",
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Internal server error" });
     }
   },
 };
