@@ -231,16 +231,31 @@ const domainService = {
           // Update user's domains in database
           try {
             const User = require("../models/User");
+
+            // Add domain to user's domains array
             await User.findByIdAndUpdate(
               userId,
               {
-                $set: {
-                  domains: domain,
-                  [`portfolios.${portfolioId}.domain`]: domain,
-                  [`portfolios.${portfolioId}.domainStatus`]: "active",
+                $push: {
+                  domains: {
+                    domain: domain,
+                    portfolioId: portfolioId,
+                    type: "platform",
+                    status: "active",
+                    registeredAt: new Date(),
+                    expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
+                    dnsConfigured: true, // Assume configured for platform domains
+                    sslIssued: true, // Assume SSL issued for platform domains
+                    subscriptionId: req.body.subscriptionId || null, // If Stripe subscription exists
+                    autoRenew: true,
+                  },
                 },
               },
               { new: true }
+            );
+
+            console.log(
+              `Domain ${domain} successfully linked to portfolio ${portfolioId} for user ${userId}`
             );
           } catch (dbErr) {
             console.error("Database update error:", dbErr);
@@ -277,12 +292,37 @@ const domainService = {
           .json({ error: "Domain and portfolioId are required" });
       }
 
-      // TODO: Update portfolio with custom domain
+      // Add BYOD domain to user's domains array
+      const User = require("../models/User");
+      await User.findByIdAndUpdate(
+        userId,
+        {
+          $push: {
+            domains: {
+              domain: domain,
+              portfolioId: portfolioId,
+              type: "byod", // Bring Your Own Domain
+              status: "pending", // Needs DNS verification
+              registeredAt: new Date(),
+              dnsConfigured: false, // User needs to configure DNS
+              sslIssued: false, // SSL pending DNS verification
+            },
+          },
+        },
+        { new: true }
+      );
+
       res.status(200).json({
-        message: "Custom domain configured",
+        message: "Custom domain configured - please verify DNS settings",
         domain,
         portfolioId,
         status: "pending_verification",
+        instructions: {
+          dns: `Add CNAME record: ${domain} -> ${
+            process.env.MAIN_DOMAIN || "findvirtualme.com"
+          }`,
+          verification: `Visit ${domain} once DNS propagates`,
+        },
       });
     } catch (err) {
       console.error(err);
@@ -295,10 +335,17 @@ const domainService = {
     try {
       const { userId } = req.params;
 
-      // TODO: Query database for user's domains
+      const User = require("../models/User");
+      const user = await User.findById(userId).select("domains portfolios");
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
       res.status(200).json({
-        domains: [],
-        message: "User domains retrieved",
+        domains: user.domains || [],
+        portfolios: user.portfolios || [],
+        message: "User domains retrieved successfully",
       });
     } catch (err) {
       console.error(err);

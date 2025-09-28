@@ -49,7 +49,33 @@ const userSchema = new mongoose.Schema({
     default: "customer",
   },
   portfolios: [{ type: String }],
-  domains: { type: String },
+
+  // Domain management
+  domains: [
+    {
+      domain: { type: String, required: true },
+      portfolioId: { type: String }, // Which portfolio this domain points to
+      type: {
+        type: String,
+        enum: ["byod", "platform"], // Bring Your Own Domain vs Platform-owned
+        default: "platform",
+      },
+      status: {
+        type: String,
+        enum: ["pending", "active", "expired", "suspended"],
+        default: "pending",
+      },
+      registeredAt: { type: Date, default: Date.now },
+      expiresAt: { type: Date },
+      dnsConfigured: { type: Boolean, default: false },
+      sslIssued: { type: Boolean, default: false },
+      // Stripe subscription info for platform domains
+      subscriptionId: { type: String },
+      lastPayment: { type: Date },
+      nextPayment: { type: Date },
+      autoRenew: { type: Boolean, default: true },
+    },
+  ],
   createdAt: {
     type: Date,
     default: Date.now,
