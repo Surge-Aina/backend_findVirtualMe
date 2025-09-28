@@ -1,55 +1,63 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
-  firstName: {
-    type: String,
-  },
-  lastName: {
-    type: String,
-  },
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    trim: true,
-  },
-  phone: {
-    type: String,
-  },
-  location: {
-    type: String,
-  },
-  password: {
-    type: String,
-    required: true,
-  },
-  bio: {
-    type: String,
-  },
-  goal: {
-    type: String,
-  },
-  industry: {
-    type: String,
-  },
-  experienceLevel: {
-    type: String,
-  },
-  skills: [{ type: String }],
-  role: {
-    type: String,
-    enum: ["admin", "customer"],
-    default: "customer",
-  },
-  portfolios: [{ type: String }],
+    firstName: { 
+        type: String 
+    },
+    lastName: { 
+        type: String 
+    },
+    username: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        lowercase: true,
+        trim: true
 
+  },
+  stripeCustomerId: {
+    type: String,
+  },
+  stripeSubscriptionId: {
+    type: String,
+  },
+    phone: { 
+        type: String 
+    },
+    location: { 
+        type: String 
+    },
+    password: {
+        type: String,
+        required: true
+    },
+    bio: { 
+        type: String 
+    },
+    goal: { 
+        type: String 
+    },
+    industry: { 
+        type: String 
+    },
+    experienceLevel: { 
+        type: String 
+    },
+    skills: [
+        { type: String }
+    ],
+    role: {
+      type: String,
+      enum: ["admin", "customer"],
+      default: "customer",
+    },
+    portfolios: [{ type: String }],
   // Domain management
   domains: [
     {
@@ -84,14 +92,13 @@ const userSchema = new mongoose.Schema({
     type: Date,
   },
 });
-
 //remove password before sending back to front end
 userSchema.set("toJSON", {
   transform: (doc, ret) => {
-    delete ret.password;   // remove password when converting to JSON
-    delete ret.__v;        // remove __v version field
+    delete ret.password; // remove password when converting to JSON
+    delete ret.__v; // remove __v version field
     return ret;
-  }
+  },
 });
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model("User", userSchema);

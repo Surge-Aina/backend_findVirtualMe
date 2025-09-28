@@ -1,19 +1,13 @@
 const express = require("express");
-const connectDB = require('./utils/db'); // Import database connection from utils
+const connectDB = require("./utils/db"); // Import database connection from utils
 const cors = require("cors");
-require('dotenv').config(); // Load environment variables from .env file
+require("dotenv").config(); // Load environment variables from .env file
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
 const socketIo = require("socket.io");
 const { google } = require("googleapis");
-const {
-  oauth2Client,
-  getAuthUrl,
-  getTokensFromCode,
-  setCredentialsFromEnv,
-  listFilesInFolder,
-} = require("./oauthHandler");
+const { oauth2Client, getAuthUrl, getTokensFromCode, setCredentialsFromEnv, listFilesInFolder } = require("./oauthHandler");
 const settingsRoutes = require("./routes/photographer/settingsRoute");
 const driveRoutes = require("./routes/photographer/driveRoute");
 const photoRoutes = require("./routes/photographer/photoRoute");
@@ -32,14 +26,16 @@ const taggedImageRoutes = require("./routes/localFoodVendor/taggedImageRoutes");
 const handymanPortfolioRoutes = require("./routes/handyMan/handymanPortfolioRoutes");
 const dataScientistRoutes = require("./routes/dataScientist/dataScientistRoutes");
 const checkoutRoutes = require("./routes/stripePayment/checkoutRoutes");
-const authRoutes = require('./routes/auth'); // Import authentication routes
-const seedUsers = require('./seed/users'); // Import seed users function
-const handymanTemplateRoutes = require('./routes/handyMan/handymanTemplateRoutes');
+const authRoutes = require("./routes/auth"); // Import authentication routes
+const seedUsers = require("./seed/users"); // Import seed users function
+const handymanTemplateRoutes = require("./routes/handyMan/handymanTemplateRoutes");
 const localVendorRoutes = require("./routes/localFoodVendor/localVendorRoutes");
+const subscriptionRoutes = require("./routes/subscriptionRoutes");
+const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes");
 const supportFormRoutes = require("./routes/supportFormRoutes");
+const roleCheck = require("./middleware/roleCheck");
+const auth = require("./middleware/auth");
 const domainRoutes = require("./routes/domainRoutes");
-//const onboardingRoutes = require("./routes/onboardingRoutes");
-
 // Import configuration from separate file
 const config = require("./config");
 
@@ -52,6 +48,11 @@ app.use(
     credentials: true,
   })
 );
+
+//stripe webhook(must be before app.use(express.json()))
+//do not call directly, stripe will call this route
+app.use("/stripe-webhook", stripeWebhookRoutes);
+
 app.use(express.json());
 setCredentialsFromEnv();
 
@@ -70,7 +71,9 @@ app.get("/test-route", (req, res) => {
 });
 
 //stripe payment
-app.use("/checkout", checkoutRoutes);
+app.use("/checkout", auth, checkoutRoutes);
+//IT admin routes to handle user subscriptions
+app.use("/subscriptions", auth, roleCheck(["admin"]), subscriptionRoutes);
 
 //onboarding
 // app.use("/onboarding", onboardingRoutes);
@@ -96,11 +99,9 @@ app.use("/support-form", supportFormRoutes);
 app.use("/api/domains", domainRoutes);
 
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.get("/health", (_req, res) =>
-  res.status(200).json({ ok: true, ts: Date.now() })
-);
 
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.get("/health", (_req, res) => res.status(200).json({ ok: true, ts: Date.now() }));
 
 /**
  * Connect to MongoDB using the connection function from utils/db.js
@@ -113,9 +114,7 @@ connectDB()
     // Seed users after successful database connection
     await seedUsers();
   })
-  .catch(err => console.error(err)); // Log connection errors
-
-
+  .catch((err) => console.error(err)); // Log connection errors
 
 /**
  * Mount the authentication API routes at /auth
@@ -123,7 +122,7 @@ connectDB()
  * @param {string} path - The base path for the routes
  * @param {Router} router - The Express router for authentication APIs
  */
-app.use('/auth', authRoutes);
+app.use("/auth", authRoutes);
 
 /**
  * Serve static files from uploads directory
@@ -131,14 +130,10 @@ app.use('/auth', authRoutes);
  * @param {string} path - The URL path to serve files from
  * @param {Function} middleware - Express static middleware
  */
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Serve static files from uploads directory
-app.use(
-  `/${config.uploads.directory}`,
-  express.static(path.join(__dirname, config.uploads.directory))
-);
+app.use(`/${config.uploads.directory}`, express.static(path.join(__dirname, config.uploads.directory)));
 
 // Make config available to the app
 app.set("config", config);
@@ -184,33 +179,33 @@ const io = socketIo(server, {
 /**
  * Socket.IO connection handling for real-time updates
  */
-io.on('connection', (socket) => {
-  console.log('🔌 Client connected:', socket.id);
-  
-  socket.on('join-customer-room', () => {
-    socket.join('customer-updates');
-    socket.join('cust@test.com-updates');
-    console.log('👥 Customer joined update room');
+io.on("connection", (socket) => {
+  console.log("🔌 Client connected:", socket.id);
+
+  socket.on("join-customer-room", () => {
+    socket.join("customer-updates");
+    socket.join("cust@test.com-updates");
+    console.log("👥 Customer joined update room");
   });
-  
-  socket.on('join-admin-room', () => {
-    socket.join('admin-updates');
-    socket.join('admin@test.com-updates');
-    console.log('👤 Admin joined update room');
+
+  socket.on("join-admin-room", () => {
+    socket.join("admin-updates");
+    socket.join("admin@test.com-updates");
+    console.log("👤 Admin joined update room");
   });
-  
-  socket.on('join-user-room', (userId) => {
+
+  socket.on("join-user-room", (userId) => {
     socket.join(`${userId}-updates`);
     console.log(`👤 User ${userId} joined their specific room`);
   });
-  
-  socket.on('disconnect', () => {
-    console.log('🔌 Client disconnected:', socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("🔌 Client disconnected:", socket.id);
   });
 });
 
 // Make io available to routes
-app.set('io', io);
+app.set("io", io);
 
 /**
  * Test endpoint to trigger WebSocket events
@@ -219,17 +214,17 @@ app.set('io', io);
  * @param   {Object} res - Express response object
  * @returns {Object} Success message
  */
-app.post('/test-websocket', (req, res) => {
-  const io = req.app.get('io');
+app.post("/test-websocket", (req, res) => {
+  const io = req.app.get("io");
   if (io) {
-    io.emit('test-event', {
-      message: 'Test WebSocket event',
-      timestamp: new Date().toISOString()
+    io.emit("test-event", {
+      message: "Test WebSocket event",
+      timestamp: new Date().toISOString(),
     });
-    console.log('📡 Test WebSocket event emitted');
-    res.json({ message: 'Test event sent' });
+    console.log("📡 Test WebSocket event emitted");
+    res.json({ message: "Test event sent" });
   } else {
-    res.status(500).json({ error: 'Socket.IO not available' });
+    res.status(500).json({ error: "Socket.IO not available" });
   }
 });
 
@@ -245,4 +240,4 @@ if (require.main === module) {
   server.listen(PORT, () => console.log(`✅ Server running on PORT: ${PORT}`));
 }
 
-module.exports = { app, server }; 
+module.exports = { app, server };
