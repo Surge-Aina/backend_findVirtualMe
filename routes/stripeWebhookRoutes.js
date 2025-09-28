@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Stripe = require("stripe");
 const Subscription = require("../models/Subscriptions");
+const User = require("../models/Subscriptions");
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -363,6 +364,16 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
             }
           );
         }
+        break;
+      }
+
+      //save stripe subscription id after user finishes checking out
+      case "checkout.session.completed": {
+        const session = event.data.object;
+        const stripeSubscriptionId = session.subscription;
+        const customerId = session.customer;
+
+        await User.findOneAndUpdate({ stripeCustomerId: customerId }, { stripeSubscriptionId });
         break;
       }
 

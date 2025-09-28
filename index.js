@@ -68,9 +68,9 @@ app.get("/test-route", (req, res) => {
 });
 
 //stripe payment
-app.use("/checkout", checkoutRoutes);
+app.use("/checkout", auth, checkoutRoutes);
 //IT admin routes to handle user subscriptions
-app.use("/subscriptions", roleCheck(["admin"]), subscriptionRoutes);
+app.use("/subscriptions", auth, roleCheck(["admin"]), subscriptionRoutes);
 
 //onboarding
 // app.use("/onboarding", onboardingRoutes);

@@ -4,7 +4,7 @@ const router = express.Router();
 
 router.get("/", subscriptionsController.getAllSubscriptions);
 router.get("/payments/:customerId", subscriptionsController.getPaymentHistory);
-router.get("/reconcile", subscriptionsController.reconcileSubscriptions);
+router.get("/reconcile", subscriptionsController.reconcileSubscriptions); //update local db with stripe records
 router.get("/:subscriptionId", subscriptionsController.getSubscriptionDetails);
 
 router.put("/update", subscriptionsController.updateSubscription);

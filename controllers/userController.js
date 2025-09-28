@@ -1,7 +1,11 @@
 const User = require("../models/User");
-//const User = require('../models/userModel');
+const Subscriptions = require("../models/Subscriptions");
 const bcrypt = require("bcrypt");
+const req = require("express/lib/request");
 const jwt = require("jsonwebtoken");
+const Stripe = require("stripe");
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Not using the signup feature for now
 exports.signupUser = async (req, res) => {
@@ -124,13 +128,65 @@ exports.getUserById = async (req, res) => {
   }
 };
 
+exports.getSubInfo = async (req, res) => {
+  try {
+    const { stripeSubscriptionId } = req.user; //obtained from auth middleware
+    //get subscription info for customer from stripe
+    const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId, {
+      expand: ["items.data.price.product"],
+    });
+
+    console.log(`fetched subscription info for ${req.user.email} from stripe`);
+    res.status(200).json({ subscription: subscription });
+  } catch (error) {
+    res.status(500).json({ message: "error getting subscription info", error: error });
+  }
+};
+
+exports.getHasSubscription = async (req, res) => {
+  try {
+    const { email } = req.user; // comes from auth middleware
+
+    // Find subscription
+    const sub = await Subscriptions.findOne({ email });
+    if (!sub) {
+      return res.status(404).json({ message: "No subscription found", hasSubscription: false });
+    }
+
+    // Find user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "No User found", hasSubscription: false });
+    }
+
+    // Update user's subscription details if needed
+    user.stripeSubscriptionId = sub.subscriptionId;
+    user.stripeCustomerId = sub.customerId;
+    await user.save();
+
+    console.log(`User ${email} does have a subscription`);
+
+    res.status(200).json({
+      hasSubscription: true,
+      subscriptionId: sub.subscriptionId,
+      customerId: sub.customerId,
+    });
+  } catch (error) {
+    console.error("Error in getHasSubscription:", error);
+    res.status(500).json({
+      message: "Error checking hasSubscription",
+      error: error.message,
+    });
+  }
+};
+
 exports.updateUser = async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!user) return res.status(404).json({ message: "User not found" });
     res.status(200).json({ user });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
