@@ -41,7 +41,6 @@ const seedUsers = require('./seed/users'); // Import seed users function
 const handymanTemplateRoutes = require('./routes/handymanTemplateRoutes');
 const localVendorRoutes = require("./routes/localVendorRoutes");
 const onboardingRoutes = require("./routes/onboardingRoutes");
-
 // Import configuration from separate file
 const config = require("./config");
 
@@ -102,7 +101,6 @@ app.use('/rooms', roomRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 
 app.use("/api/handyman-template", handymanTemplateRoutes);
-
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) =>
