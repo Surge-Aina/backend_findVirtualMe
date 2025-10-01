@@ -28,7 +28,7 @@ const HandymanTemplateSchema = new Schema({
 
   portfolioSectionTitle:   { type: String, default: 'Quality Craftsmanship You Can See' },
 
-  processSectionTitle:     { type: String, default: 'Our Simple Process' }, // shown if you want a static title
+  processSectionTitle:     { type: String, default: 'Our Simple Process' },
   testimonialsSectionTitle:{ type: String, default: 'What Our Clients Say' },
 
   contactSectionTitle:     { type: String, default: 'Contact Us' },
@@ -36,11 +36,19 @@ const HandymanTemplateSchema = new Schema({
 
   portfolioSectionTitle: { type: String, default: 'Quality Craftsmanship You Can See' },
   portfolioAllLabel:     { type: String, default: 'All' },
-  // Existing sections
+
+  // ✅ Hero fields (now include image + badges + CTA)
   hero: {
     title:       { type: String, default: 'Trusted Handyman for Home Repairs & Maintenance' },
     subtitle:    { type: String, default: 'Licensed, Insured, and Ready to Help. Call us today!' },
-    phoneNumber: { type: String, default: '(123) 456-7890' }
+    phoneNumber: { type: String, default: '(123) 456-7890' },
+
+    // NEW
+    imageUrl:    { type: String, default: '' },
+    badge1Text:  { type: String, default: 'Licensed & Insured' },
+    badge2Text:  { type: String, default: '5-Star Rated' },
+    badge3Text:  { type: String, default: '24/7 Emergency Service' },
+    ctaText:     { type: String, default: 'Request a Free Estimate' }
   },
 
   services: { 

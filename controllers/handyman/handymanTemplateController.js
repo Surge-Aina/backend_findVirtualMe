@@ -32,7 +32,8 @@
 
         const newHandymanPortfolio = await HandymanTemplate.create({
         userId: String(ownerId),
-        hero: { phoneNumber: phone },
+        // include any provided hero fields but ensure phoneNumber normalization
+        hero: { ...(req.body?.hero || {}), phoneNumber: phone ?? req.body?.hero?.phoneNumber },
         });
 
         res.status(201).json(newHandymanPortfolio);
@@ -62,10 +63,23 @@
         // prevent takeover attempts
         const update = { ...req.body };
         delete update.userId;
+
         // normalize phone updates if client sends hero.phone or phone
         if (update.phone && !update.hero?.phoneNumber) {
-        update.hero = { ...(existing.hero?.toObject?.() || existing.hero || {}), phoneNumber: update.phone };
+        update.hero = {
+            ...(existing.hero?.toObject?.() || existing.hero || {}),
+            ...(update.hero || {}),
+            phoneNumber: update.phone,
+        };
         delete update.phone;
+        }
+
+        // ✅ IMPORTANT: deep-merge hero so partial updates don't wipe other hero fields
+        if (update.hero) {
+        update.hero = {
+            ...(existing.hero?.toObject?.() || existing.hero || {}),
+            ...update.hero,
+        };
         }
 
         const updatedPortfolio = await HandymanTemplate.findByIdAndUpdate(
@@ -91,4 +105,3 @@
         res.status(500).json({ message: 'Error listing portfolios', error });
     }
     };
-
