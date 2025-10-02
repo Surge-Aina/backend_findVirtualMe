@@ -4,15 +4,29 @@ const Stripe = require("stripe");
 const Subscription = require("../models/Subscriptions");
 const User = require("../models/Subscriptions");
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripeSecretkey =
+  process.env.STRIPE_MODE === "live"
+    ? process.env.STRIPE_SECRET_KEY_LIVE
+    : process.env.STRIPE_SECRET_KEY_TEST;
+const stripe = new Stripe(stripeSecretkey);
 
 router.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   const sig = req.headers["stripe-signature"];
 
   //verify that the call came from stripe
   let event;
+  // Check if we are using stripe cli
+  let stripeWHSEC;
+  if (process.env.STRIPE_WEBHOOK_SECRET_CLI) {
+    stripeWHSEC = process.env.STRIPE_WEBHOOK_SECRET_CLI;
+  } else {
+    stripeWHSEC =
+      process.env.STRIPE_MODE === "live"
+        ? process.env.STRIPE_WEBHOOK_SECRET_LIVE
+        : process.env.STRIPE_WEBHOOK_SECRET_TEST;
+  }
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    event = stripe.webhooks.constructEvent(req.body, sig, stripeWHSEC);
   } catch (err) {
     console.error("Webhook signature verification failed.", err.message);
     return res.status(400).json({ message: `Webhook Error: ${err.message}` });
@@ -55,17 +69,24 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
           subscriptionType: subscriptionType,
           priceId: primaryPriceId,
           subscriptionItems: subscriptionItems,
-          currentPeriodStart: subscription.created ? new Date(subscription.created * 1000) : null,
-          currentPeriodEnd: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : null,
+          currentPeriodStart: subscription.created
+            ? new Date(subscription.created * 1000)
+            : null,
+          currentPeriodEnd: subscription.cancel_at
+            ? new Date(subscription.cancel_at * 1000)
+            : null,
           cancelAtPeriodEnd: subscription.cancel_at_period_end,
-          trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
+          trialEnd: subscription.trial_end
+            ? new Date(subscription.trial_end * 1000)
+            : null,
           defaultPaymentMethodId: subscription.default_payment_method,
           $push: {
             modificationLogs: {
               subscriptionType: subscriptionType,
               status: subscription.status,
               priceId: primaryPriceId,
-              action: event.type === "customer.subscription.created" ? "created" : "updated",
+              action:
+                event.type === "customer.subscription.created" ? "created" : "updated",
               metadata: {
                 itemsCount: subscriptionItems.length,
                 cancelAtPeriodEnd: subscription.cancel_at_period_end,
@@ -85,7 +106,9 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
           { upsert: true, new: true } //upsert: if no sub exists create one, new: return updated sub
         );
 
-        console.log(`Subscription ${event.type} processed for customer ${subscription.customer} - Status: ${subscription.status}`);
+        console.log(
+          `Subscription ${event.type} processed for customer ${subscription.customer} - Status: ${subscription.status}`
+        );
         break;
       }
 
@@ -124,11 +147,19 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
             subscriptionType: subscriptionType,
             priceId: primaryPriceId,
             subscriptionItems: subscriptionItems,
-            currentPeriodStart: subscription.current_period_start ? new Date(subscription.current_period_start * 1000) : null,
-            currentPeriodEnd: subscription.current_period_end ? new Date(subscription.current_period_end * 1000) : null,
+            currentPeriodStart: subscription.current_period_start
+              ? new Date(subscription.current_period_start * 1000)
+              : null,
+            currentPeriodEnd: subscription.current_period_end
+              ? new Date(subscription.current_period_end * 1000)
+              : null,
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
-            canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : new Date(),
-            trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
+            canceledAt: subscription.canceled_at
+              ? new Date(subscription.canceled_at * 1000)
+              : new Date(),
+            trialEnd: subscription.trial_end
+              ? new Date(subscription.trial_end * 1000)
+              : null,
             defaultPaymentMethodId: subscription.default_payment_method,
             $push: {
               modificationLogs: {
@@ -147,7 +178,15 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
           }
         );
 
-        console.log(`Subscription canceled for customer ${subscription.customer} - Email: ${customer.email} - Period ends: ${subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toLocaleDateString() : "N/A"}`);
+        console.log(
+          `Subscription canceled for customer ${subscription.customer} - Email: ${
+            customer.email
+          } - Period ends: ${
+            subscription.current_period_end
+              ? new Date(subscription.current_period_end * 1000).toLocaleDateString()
+              : "N/A"
+          }`
+        );
         break;
       }
 
@@ -199,7 +238,10 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
         const paymentIntent = event.data.object;
 
         // Only log subscription payments
-        if (paymentIntent.customer && paymentIntent.description?.includes("Subscription")) {
+        if (
+          paymentIntent.customer &&
+          paymentIntent.description?.includes("Subscription")
+        ) {
           const chargeId = paymentIntent.latest_charge;
 
           //get subscription info from customer
@@ -209,7 +251,8 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
             limit: 1,
           });
 
-          const subscriptionType = subscriptions.data[0]?.items?.data?.[0]?.price?.id || "unknown";
+          const subscriptionType =
+            subscriptions.data[0]?.items?.data?.[0]?.price?.id || "unknown";
 
           await Subscription.findOneAndUpdate(
             { customerId: paymentIntent.customer },
@@ -229,7 +272,13 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
             }
           );
 
-          console.log(`Payment intent succeeded: ${paymentIntent.id} with charge: ${chargeId} for customer ${paymentIntent.customer} - Amount: ${paymentIntent.amount / 100} ${paymentIntent.currency}`);
+          console.log(
+            `Payment intent succeeded: ${
+              paymentIntent.id
+            } with charge: ${chargeId} for customer ${paymentIntent.customer} - Amount: ${
+              paymentIntent.amount / 100
+            } ${paymentIntent.currency}`
+          );
         }
         break;
       }
@@ -247,7 +296,11 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
           }
         );
 
-        console.log(`Invoice payment succeeded for ${invoice.customer} - Amount: ${invoice.amount_paid / 100} ${invoice.currency}`);
+        console.log(
+          `Invoice payment succeeded for ${invoice.customer} - Amount: ${
+            invoice.amount_paid / 100
+          } ${invoice.currency}`
+        );
         break;
       }
 
@@ -282,7 +335,9 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
           }
         );
 
-        console.log(`Invoice payment failed for ${invoice.customer} - Attempt: ${invoice.attempt_count}`);
+        console.log(
+          `Invoice payment failed for ${invoice.customer} - Attempt: ${invoice.attempt_count}`
+        );
         break;
       }
 
@@ -373,7 +428,10 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
         const stripeSubscriptionId = session.subscription;
         const customerId = session.customer;
 
-        await User.findOneAndUpdate({ stripeCustomerId: customerId }, { stripeSubscriptionId });
+        await User.findOneAndUpdate(
+          { stripeCustomerId: customerId },
+          { stripeSubscriptionId }
+        );
         break;
       }
 

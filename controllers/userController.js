@@ -5,7 +5,11 @@ const req = require("express/lib/request");
 const jwt = require("jsonwebtoken");
 const Stripe = require("stripe");
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripeSecretkey =
+  process.env.STRIPE_MODE === "live"
+    ? process.env.STRIPE_SECRET_KEY_LIVE
+    : process.env.STRIPE_SECRET_KEY_TEST;
+const stripe = new Stripe(stripeSecretkey);
 
 // Not using the signup feature for now
 exports.signupUser = async (req, res) => {
@@ -26,7 +30,9 @@ exports.signupUser = async (req, res) => {
     const newUser = new User({ name, username, email, password: hashed });
     await newUser.save();
 
-    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
     res.status(201).json({ name, username, email, token });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -36,10 +42,12 @@ exports.signupUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ message: "Email and Password needed" });
+    if (!email || !password)
+      return res.status(400).json({ message: "Email and Password needed" });
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "User not found for this portfolio" });
+    if (!user)
+      return res.status(400).json({ message: "User not found for this portfolio" });
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ message: "Invalid credentials" });
@@ -98,7 +106,9 @@ exports.addUser = async (req, res) => {
       await onboardingUser.save();
     } catch (error) {
       if (error.code === 11000) {
-        return res.status(400).json({ message: "Email or username already exists (onboarding)" });
+        return res
+          .status(400)
+          .json({ message: "Email or username already exists (onboarding)" });
       }
       throw error;
     }
@@ -150,7 +160,9 @@ exports.getHasSubscription = async (req, res) => {
     // Find subscription
     const sub = await Subscriptions.findOne({ email });
     if (!sub) {
-      return res.status(404).json({ message: "No subscription found", hasSubscription: false });
+      return res
+        .status(404)
+        .json({ message: "No subscription found", hasSubscription: false });
     }
 
     // Find user
