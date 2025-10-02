@@ -25,6 +25,10 @@ const reviewRoutes = require("./routes/localFoodVendor/reviewRoutes");
 const taggedImageRoutes = require("./routes/localFoodVendor/taggedImageRoutes");
 const handymanPortfolioRoutes = require("./routes/handyMan/handymanPortfolioRoutes");
 const dataScientistRoutes = require("./routes/dataScientist/dataScientistRoutes");
+const userRoutes2 = require('./routes/userRoute2.js');
+const serviceRoutes = require('./routes/serviceRoutes.js');
+const quoteRoutes = require('./routes/quoteRoutes.js');
+const roomRoutes = require('./routes/roomRoutes.js');
 const checkoutRoutes = require("./routes/stripePayment/checkoutRoutes");
 const authRoutes = require("./routes/auth"); // Import authentication routes
 const seedUsers = require("./seed/users"); // Import seed users function
@@ -105,6 +109,10 @@ app.use("/api/domains", domainRoutes);
 
 
 
+app.use("/cleaning/user", userRoutes2);
+app.use('/services', serviceRoutes);
+app.use('/quotes', quoteRoutes);
+app.use('/rooms', roomRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) => res.status(200).json({ ok: true, ts: Date.now() }));
 
