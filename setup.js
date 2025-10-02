@@ -172,7 +172,7 @@ jest.mock("multer", () => {
   return multer;
 });
 
-jest.mock("./models/MenuItems", () => {
+jest.mock("./models/localFoodVendor/MenuItems", () => {
   const MockMenu = function (data) {
     Object.assign(this, data);
     this.save = jest.fn(async () => {
@@ -210,19 +210,19 @@ jest.mock("./models/MenuItems", () => {
   return MockMenu;
 });
 
-jest.mock("./models/LocalVendorPortfolio", () => ({
+jest.mock("./models/localFoodVendor/LocalVendorPortfolio", () => ({
   create: jest.fn(async (data) => ({ _id: "mockVendorId", ...data })),
   findOne: jest.fn(),
   deleteMany: jest.fn(),
 }));
 
-jest.mock("./models/About", () => ({
+jest.mock("./models/localFoodVendor/About", () => ({
   create: jest.fn(async (data) => ({ _id: "mockAboutId", ...data })),
   findOne: jest.fn(),
   deleteMany: jest.fn(),
 }));
 
-jest.mock("./models/Banner", () => ({
+jest.mock("./models/localFoodVendor/Banner", () => ({
   create: jest.fn(async (data) => ({ _id: "mockBannerId", ...data })),
 }));
 

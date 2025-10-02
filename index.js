@@ -28,6 +28,7 @@ const dataScientistRoutes = require("./routes/dataScientist/dataScientistRoutes"
 const checkoutRoutes = require("./routes/stripePayment/checkoutRoutes");
 const authRoutes = require("./routes/auth"); // Import authentication routes
 const seedUsers = require("./seed/users"); // Import seed users function
+const domainResolver = require("./middleware/domainResolver"); // Import domain resolver
 const handymanTemplateRoutes = require("./routes/handyMan/handymanTemplateRoutes");
 const localVendorRoutes = require("./routes/localFoodVendor/localVendorRoutes");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
@@ -54,6 +55,10 @@ app.use(
 app.use("/stripe-webhook", stripeWebhookRoutes);
 
 app.use(express.json());
+
+// Domain resolver middleware - must be before other routes
+app.use(domainResolver);
+
 setCredentialsFromEnv();
 
 // Mount the main portfolio API routes at /portfolio

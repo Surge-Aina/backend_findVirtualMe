@@ -4,29 +4,31 @@ const domainService = require('../services/domainService');
 const auth = require("../middleware/auth");
 
 // GET /api/domains/check/:domain - Check domain availability
-router.get("/check/:domain", (req, res, next) => {
-  console.log("Domain check route hit with domain:", req.params.domain);
+router.get("/check/:domain", auth, (req, res, next) => {
   domainService.getDomain(req, res, next);
 });
 
 // POST /api/domains/register - Register domain through platform
-router.post("/register", domainService.registerDomain);
+router.post("/register", auth, domainService.registerDomain);
 
 // POST /api/domains/custom - Configure custom domain (BYOD)
-router.post("/custom", domainService.configureCustomDomain);
+router.post("/custom", auth, domainService.configureCustomDomain);
 
 // GET /api/domains/user/:userId - Get user's domains (requires authentication)
-router.get("/user/:userId", auth, domainService.getUserDomains);
+//router.get("/user/:userId", auth, domainService.getUserDomains);
 
-// GET /api/domains/my-domains - Get current user's domains (requires auth)
-router.get("/my-domains", auth, domainService.getMyDomains);
+// GET /api/domains/myDomains - Get current user's domains (requires auth)
+router.get("/myDomains", auth, domainService.getMyDomains);
 
 // POST /api/domains/verify/:domain - Verify DNS configuration (placeholder)
-router.post("/verify/:domain", (req, res) => {
-  res.status(200).json({ 
+router.post("/verify/:domain", auth, (req, res) => {
+  res.status(200).json({
     message: "DNS verification not yet implemented",
-    domain: req.params.domain 
+    domain: req.params.domain,
   });
 });
+
+// GET /api/domains/lookup/:domain - Lookup portfolio by custom domain (PUBLIC with rate limiting in service)
+router.get("/lookup/:domain", domainService.lookupPortfolioByDomain);
 
 module.exports = router;

@@ -1,25 +1,24 @@
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
-    firstName: { 
-        type: String 
-    },
-    lastName: { 
-        type: String 
-    },
-    username: {
-        type: String,
-        required: true,
-        unique: true,
-        trim: true
-    },
-    email: {
-        type: String,
-        required: true,
-        unique: true,
-        lowercase: true,
-        trim: true
-
+  firstName: {
+    type: String,
+  },
+  lastName: {
+    type: String,
+  },
+  username: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    trim: true,
   },
   stripeCustomerId: {
     type: String,
@@ -27,37 +26,35 @@ const userSchema = new mongoose.Schema({
   stripeSubscriptionId: {
     type: String,
   },
-    phone: { 
-        type: String 
-    },
-    location: { 
-        type: String 
-    },
-    password: {
-        type: String,
-        required: true
-    },
-    bio: { 
-        type: String 
-    },
-    goal: { 
-        type: String 
-    },
-    industry: { 
-        type: String 
-    },
-    experienceLevel: { 
-        type: String 
-    },
-    skills: [
-        { type: String }
-    ],
-    role: {
-      type: String,
-      enum: ["admin", "customer"],
-      default: "customer",
-    },
-    portfolios: [{ type: String }],
+  phone: {
+    type: String,
+  },
+  location: {
+    type: String,
+  },
+  password: {
+    type: String,
+    required: true,
+  },
+  bio: {
+    type: String,
+  },
+  goal: {
+    type: String,
+  },
+  industry: {
+    type: String,
+  },
+  experienceLevel: {
+    type: String,
+  },
+  skills: [{ type: String }],
+  role: {
+    type: String,
+    enum: ["admin", "customer"],
+    default: "customer",
+  },
+  portfolios: [{ type: String }],
   // Domain management
   domains: [
     {
@@ -76,11 +73,7 @@ const userSchema = new mongoose.Schema({
       registeredAt: { type: Date, default: Date.now },
       expiresAt: { type: Date },
       dnsConfigured: { type: Boolean, default: false },
-      sslIssued: { type: Boolean, default: false },
-      // Stripe subscription info for platform domains
-      subscriptionId: { type: String },
-      lastPayment: { type: Date },
-      nextPayment: { type: Date },
+      // Note: SSL is automatically handled by Vercel, no need to track
       autoRenew: { type: Boolean, default: true },
     },
   ],

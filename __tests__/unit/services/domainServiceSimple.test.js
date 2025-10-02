@@ -16,12 +16,12 @@ describe('Domain Service - Database Operations', () => {
   });
 
   describe('User Domain Management', () => {
-    test('should add domain to user via database operation', async () => {
+    test("should add domain to user via database operation", async () => {
       const testUser = await User.create({
-        email: 'test@example.com',
-        username: 'testuser',
-        password: 'hashedpassword123',
-        portfolios: ['portfolio123']
+        email: "test@example.com",
+        username: "testuser",
+        password: "hashedpassword123",
+        portfolios: ["portfolio123"],
       });
 
       // Simulate domain registration database update
@@ -30,33 +30,33 @@ describe('Domain Service - Database Operations', () => {
         {
           $push: {
             domains: {
-              domain: 'testdomain.com',
-              portfolioId: 'portfolio123',
-              type: 'platform',
-              status: 'active',
+              domain: "testdomain.com",
+              portfolioId: "portfolio123",
+              type: "platform",
+              status: "active",
               registeredAt: new Date(),
               expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
               dnsConfigured: true,
-              sslIssued: true
-            }
-          }
+              // SSL automatically handled by Vercel
+            },
+          },
         },
         { new: true }
       );
 
       expect(updatedUser.domains).toHaveLength(1);
-      expect(updatedUser.domains[0].domain).toBe('testdomain.com');
-      expect(updatedUser.domains[0].portfolioId).toBe('portfolio123');
-      expect(updatedUser.domains[0].type).toBe('platform');
-      expect(updatedUser.domains[0].status).toBe('active');
+      expect(updatedUser.domains[0].domain).toBe("testdomain.com");
+      expect(updatedUser.domains[0].portfolioId).toBe("portfolio123");
+      expect(updatedUser.domains[0].type).toBe("platform");
+      expect(updatedUser.domains[0].status).toBe("active");
     });
 
-    test('should add BYOD domain to user', async () => {
+    test("should add BYOD domain to user", async () => {
       const testUser = await User.create({
-        email: 'byod@example.com',
-        username: 'byoduser',
-        password: 'hashedpassword123',
-        portfolios: ['portfolio456']
+        email: "byod@example.com",
+        username: "byoduser",
+        password: "hashedpassword123",
+        portfolios: ["portfolio456"],
       });
 
       // Simulate BYOD configuration database update
@@ -65,88 +65,88 @@ describe('Domain Service - Database Operations', () => {
         {
           $push: {
             domains: {
-              domain: 'mycustom.com',
-              portfolioId: 'portfolio456',
-              type: 'byod',
-              status: 'pending',
+              domain: "mycustom.com",
+              portfolioId: "portfolio456",
+              type: "byod",
+              status: "pending",
               registeredAt: new Date(),
               dnsConfigured: false,
-              sslIssued: false
-            }
-          }
+              // SSL automatically handled by Vercel
+            },
+          },
         },
         { new: true }
       );
 
       expect(updatedUser.domains).toHaveLength(1);
-      expect(updatedUser.domains[0].domain).toBe('mycustom.com');
-      expect(updatedUser.domains[0].portfolioId).toBe('portfolio456');
-      expect(updatedUser.domains[0].type).toBe('byod');
-      expect(updatedUser.domains[0].status).toBe('pending');
+      expect(updatedUser.domains[0].domain).toBe("mycustom.com");
+      expect(updatedUser.domains[0].portfolioId).toBe("portfolio456");
+      expect(updatedUser.domains[0].type).toBe("byod");
+      expect(updatedUser.domains[0].status).toBe("pending");
       expect(updatedUser.domains[0].dnsConfigured).toBe(false);
-      expect(updatedUser.domains[0].sslIssued).toBe(false);
+      // No need to test sslIssued - Vercel handles SSL automatically
     });
 
-    test('should find user by domain', async () => {
+    test("should find user by domain", async () => {
       const testUser = await User.create({
-        email: 'finddomain@example.com',
-        username: 'finddomainuser',
-        password: 'hashedpassword123',
+        email: "finddomain@example.com",
+        username: "finddomainuser",
+        password: "hashedpassword123",
         domains: [
           {
-            domain: 'findme.com',
-            portfolioId: 'portfolio789',
-            type: 'platform',
-            status: 'active'
-          }
-        ]
+            domain: "findme.com",
+            portfolioId: "portfolio789",
+            type: "platform",
+            status: "active",
+          },
+        ],
       });
 
       // Find user by domain
       const foundUser = await User.findOne({
-        'domains.domain': 'findme.com',
-        'domains.status': 'active'
+        "domains.domain": "findme.com",
+        "domains.status": "active",
       });
 
       expect(foundUser).toBeTruthy();
-      expect(foundUser.email).toBe('finddomain@example.com');
-      expect(foundUser.domains[0].domain).toBe('findme.com');
+      expect(foundUser.email).toBe("finddomain@example.com");
+      expect(foundUser.domains[0].domain).toBe("findme.com");
     });
 
-    test('should update domain status', async () => {
+    test("should update domain status", async () => {
       const testUser = await User.create({
-        email: 'updatestatus@example.com',
-        username: 'updatestatususer',
-        password: 'hashedpassword123',
+        email: "updatestatus@example.com",
+        username: "updatestatususer",
+        password: "hashedpassword123",
         domains: [
           {
-            domain: 'updateme.com',
-            portfolioId: 'portfolio123',
-            type: 'byod',
-            status: 'pending',
+            domain: "updateme.com",
+            portfolioId: "portfolio123",
+            type: "byod",
+            status: "pending",
             dnsConfigured: false,
-            sslIssued: false
-          }
-        ]
+            // SSL automatically handled by Vercel
+          },
+        ],
       });
 
       // Update domain status (simulate DNS verification)
       const updatedUser = await User.findOneAndUpdate(
-        { _id: testUser._id, 'domains.domain': 'updateme.com' },
+        { _id: testUser._id, "domains.domain": "updateme.com" },
         {
           $set: {
-            'domains.$.status': 'active',
-            'domains.$.dnsConfigured': true,
-            'domains.$.sslIssued': true
-          }
+            "domains.$.status": "active",
+            "domains.$.dnsConfigured": true,
+            // SSL automatically handled by Vercel
+          },
         },
         { new: true }
       );
 
       const domain = updatedUser.domains[0];
-      expect(domain.status).toBe('active');
+      expect(domain.status).toBe("active");
       expect(domain.dnsConfigured).toBe(true);
-      expect(domain.sslIssued).toBe(true);
+      // No need to test sslIssued - Vercel handles SSL automatically
     });
 
     test('should retrieve user domains and portfolios', async () => {

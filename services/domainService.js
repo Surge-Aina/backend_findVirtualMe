@@ -1,6 +1,51 @@
 const xml2js = require('xml2js');
 const parser = new xml2js.Parser();
+const User = require("../models/User");
 
+// ============================================
+// RATE LIMITING FOR PUBLIC ENDPOINTS
+// ============================================
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 20; // 20 requests per minute per IP
+
+// Clean up old rate limit entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, record] of rateLimitMap.entries()) {
+    if (now > record.resetTime) {
+      rateLimitMap.delete(ip);
+    }
+  }
+}, 300000);
+
+const checkRateLimit = (req) => {
+  const ip = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+
+  if (!rateLimitMap.has(ip)) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return { allowed: true };
+  }
+
+  const record = rateLimitMap.get(ip);
+
+  if (now > record.resetTime) {
+    record.count = 1;
+    record.resetTime = now + RATE_LIMIT_WINDOW;
+    return { allowed: true };
+  }
+
+  if (record.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return {
+      allowed: false,
+      retryAfter: Math.ceil((record.resetTime - now) / 1000),
+    };
+  }
+
+  record.count++;
+  return { allowed: true };
+};
 
 const domainService = {
   // this checks if a domain is available and if it is premium
@@ -97,18 +142,35 @@ const domainService = {
         return res.status(401).json({ error: "User not authenticated" });
       }
 
-      if (!user.domains) {
-        user.domains = domain;
-      }
+      const existingDomain = await User.findOne({
+        _id: user._id,
+        "domains.domain": domain,
+      });
 
-      // Check for duplicates
-      if (user.domains === domain) {
+      if (existingDomain) {
         return res
           .status(400)
           .json({ error: "Domain already attached to user" });
       }
 
-      await user.save();
+      await User.findByIdAndUpdate(
+        user._id,
+        {
+          $push: {
+            domains: {
+              domain: domain,
+              portfolioId: req.body.portfolioId,
+              type: "manual",
+              status: "pending",
+              registeredAt: new Date(),
+              dnsConfigured: false,
+              autoRenew: true,
+            },
+          },
+        },
+        { new: true }
+      );
+
       res.status(200).json({ message: "Domain attached to user" });
     } catch (err) {
       console.error(err);
@@ -116,17 +178,6 @@ const domainService = {
     }
   },
 
-  // this gets the domains by the user
-  getDomainsByUser: async (req, res) => {
-    try {
-      const user = req.user;
-      const domains = user.domains;
-      res.status(200).json(domains);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: err.message });
-    }
-  },
   domainPrice: async (req, res) => {
     try {
       const ProductType = "DOMAIN";
@@ -230,8 +281,6 @@ const domainService = {
         if (apiResponse.$.Status === "OK") {
           // Update user's domains in database
           try {
-            const User = require("../models/User");
-
             // Add domain to user's domains array
             await User.findByIdAndUpdate(
               userId,
@@ -245,7 +294,6 @@ const domainService = {
                     registeredAt: new Date(),
                     expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
                     dnsConfigured: true, // Assume configured for platform domains
-                    sslIssued: true, // Assume SSL issued for platform domains
                     subscriptionId: req.body.subscriptionId || null, // If Stripe subscription exists
                     autoRenew: true,
                   },
@@ -293,7 +341,6 @@ const domainService = {
       }
 
       // Add BYOD domain to user's domains array
-      const User = require("../models/User");
       await User.findByIdAndUpdate(
         userId,
         {
@@ -305,7 +352,6 @@ const domainService = {
               status: "pending", // Needs DNS verification
               registeredAt: new Date(),
               dnsConfigured: false, // User needs to configure DNS
-              sslIssued: false, // SSL pending DNS verification
             },
           },
         },
@@ -330,7 +376,7 @@ const domainService = {
     }
   },
 
-  // Get user's domains
+  /*  // Get user's domains
   getUserDomains: async (req, res) => {
     try {
       const { userId } = req.params;
@@ -366,6 +412,7 @@ const domainService = {
       res.status(500).json({ error: err.message });
     }
   },
+*/ // this is admin only
 
   // Get current authenticated user's domains
   getMyDomains: async (req, res) => {
@@ -389,6 +436,71 @@ const domainService = {
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: "Internal server error" });
+    }
+  },
+
+  // Lookup portfolio by custom domain (PUBLIC endpoint with rate limiting)
+  lookupPortfolioByDomain: async (req, res) => {
+    try {
+      const rateCheck = checkRateLimit(req);
+      if (!rateCheck.allowed) {
+        return res.status(429).json({
+          error: "Too many requests",
+          message: "Please try again later",
+          retryAfter: rateCheck.retryAfter,
+        });
+      }
+
+      const domain = req.params.domain;
+
+      const sanitizedDomain = domain.replace(/[^a-zA-Z0-9.-]/g, "");
+
+      if (!sanitizedDomain || sanitizedDomain !== domain) {
+        return res.status(400).json({
+          error: "Invalid domain format",
+          message: "Domain contains invalid characters",
+        });
+      }
+
+      console.log(`Looking up portfolio for domain: ${sanitizedDomain}`);
+
+      // Find user with this domain
+      const user = await User.findOne({
+        "domains.domain": sanitizedDomain,
+        "domains.status": "active",
+      });
+
+      if (!user) {
+        return res.status(404).json({
+          error: "Domain not found",
+          message: "No portfolio found for this domain",
+        });
+      }
+
+      // Get the domain configuration
+      const domainConfig = user.domains.find(
+        (d) => d.domain === sanitizedDomain
+      );
+
+      console.log(`Found domain for user ID: ${user._id}`);
+
+      res.json({
+        success: true,
+        domain: sanitizedDomain,
+        portfolioId: domainConfig.portfolioId,
+        user: {
+          // Only return what's needed for portfolio display
+          username: user.username,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          industry: user.industry,
+        },
+      });
+    } catch (error) {
+      console.error("Error looking up domain:", error.message);
+      res.status(500).json({
+        error: "Internal server error",
+      });
     }
   },
 };
