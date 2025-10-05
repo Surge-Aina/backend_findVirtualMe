@@ -1,6 +1,7 @@
 const xml2js = require('xml2js');
 const parser = new xml2js.Parser();
 const User = require("../models/User");
+const vercelService = require("./vercelService");
 
 // ============================================
 // RATE LIMITING FOR PUBLIC ENDPOINTS
@@ -133,11 +134,12 @@ const domainService = {
   attachDomainToUser: async (req, res) => {
     try {
       const domain = req.params.domain;
+      const user = req.user;
       if (!domain) {
         return res.status(400).json({ error: "Domain is required" });
       }
+      await vercelService.addDomain(domain, user._id, req.body.portfolioId);
 
-      const user = req.user;
       if (!user) {
         return res.status(401).json({ error: "User not authenticated" });
       }
@@ -281,6 +283,20 @@ const domainService = {
         if (apiResponse.$.Status === "OK") {
           // Update user's domains in database
           try {
+            // Add domain to Vercel project
+            let vercelResult;
+            try {
+              vercelResult = await vercelService.addDomain(
+                domain,
+                userId,
+                portfolioId
+              );
+              console.log(`Domain ${domain} added to Vercel project`);
+            } catch (vercelErr) {
+              console.error("Vercel add domain error:", vercelErr.message);
+              // Continue even if Vercel fails
+            }
+
             // Add domain to user's domains array
             await User.findByIdAndUpdate(
               userId,
@@ -290,7 +306,9 @@ const domainService = {
                     domain: domain,
                     portfolioId: portfolioId,
                     type: "platform",
-                    status: "active",
+                    status: vercelResult?.verified
+                      ? "active"
+                      : "pending_verification",
                     registeredAt: new Date(),
                     expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
                     dnsConfigured: true, // Assume configured for platform domains
@@ -340,6 +358,32 @@ const domainService = {
           .json({ error: "Domain and portfolioId are required" });
       }
 
+      // Add domain to Vercel project
+      let vercelResult;
+      try {
+        vercelResult = await vercelService.addDomain(
+          domain,
+          userId,
+          portfolioId
+        );
+        console.log(`Custom domain ${domain} added to Vercel project`);
+      } catch (vercelErr) {
+        console.error("Vercel add domain error:", vercelErr.message);
+        return res.status(500).json({
+          error: "Failed to add domain to Vercel",
+          details: vercelErr.message,
+        });
+      }
+      try {
+        await vercelService.verifyDomain(domain);
+        console.log(`Custom domain ${domain} verified in Vercel project`);
+      } catch (vercelErr) {
+        console.error("Vercel verify domain error:", vercelErr.message);
+        return res.status(500).json({
+          error: "Failed to verify domain in Vercel",
+          details: vercelErr.message,
+        });
+      }
       // Add BYOD domain to user's domains array
       await User.findByIdAndUpdate(
         userId,
@@ -349,9 +393,12 @@ const domainService = {
               domain: domain,
               portfolioId: portfolioId,
               type: "byod", // Bring Your Own Domain
-              status: "pending", // Needs DNS verification
+              status: vercelResult?.verified
+                ? "active"
+                : "pending_verification", // Needs DNS verification
               registeredAt: new Date(),
               dnsConfigured: false, // User needs to configure DNS
+              vercelVerification: vercelResult?.verification || null,
             },
           },
         },
@@ -363,6 +410,7 @@ const domainService = {
         domain,
         portfolioId,
         status: "pending_verification",
+        verification: vercelResult?.verification, // DNS records to configure
         instructions: {
           dns: `Add CNAME record: ${domain} -> ${
             process.env.MAIN_DOMAIN || "findvirtualme.com"
