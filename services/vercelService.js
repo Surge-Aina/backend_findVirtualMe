@@ -1,5 +1,9 @@
 const { Vercel } = require('@vercel/sdk');
 
+if (!process.env.VERCEL_TOKEN) {
+  throw new Error('VERCEL_TOKEN environment variable is required');
+}
+
 const vercel = new Vercel({
   bearerToken: process.env.VERCEL_TOKEN,
 });
@@ -7,7 +11,7 @@ const vercel = new Vercel({
 const projectId = process.env.VERCEL_PROJECT_ID || 'frontend-find-virtual-me';
 
 // Add domain to Vercel project
-async function addDomain(domain, userId, portfolioId) {
+async function addDomain(domain) {
   try {
     const result = await vercel.projects.addProjectDomain({
       idOrName: projectId,
@@ -70,6 +74,7 @@ async function getDomainStatus(domain) {
     const result = await vercel.projects.getProjectDomain({
       idOrName: projectId,
       domain: domain,
+      teamId: process.env.VERCEL_TEAM_ID,
     });
     
     return {
@@ -77,6 +82,7 @@ async function getDomainStatus(domain) {
       verification: result.verification,
     };
   } catch (error) {
+    console.error(`Failed to get domain status ${domain}:`, error.message);
     throw new Error(`Failed to get domain status: ${error.message}`);
   }
 }

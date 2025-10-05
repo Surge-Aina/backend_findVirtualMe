@@ -258,7 +258,6 @@ describe('customDomainHandler middleware', () => {
       mockReq.customDomainUser = null;
       mockReq.path = '/';
 
-      // Should not crash
       await expect(
         customDomainHandler(mockReq, mockRes, mockNext)
       ).rejects.toThrow();

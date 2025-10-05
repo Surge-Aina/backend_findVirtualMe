@@ -10,8 +10,10 @@ const rateLimitMap = new Map();
 const RATE_LIMIT_WINDOW = 60000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 20; // 20 requests per minute per IP
 
+let rateLimitCleanupInterval;
+
 // Clean up old rate limit entries every 5 minutes
-setInterval(() => {
+rateLimitCleanupInterval = setInterval(() => {
   const now = Date.now();
   for (const [ip, record] of rateLimitMap.entries()) {
     if (now > record.resetTime) {
@@ -19,6 +21,9 @@ setInterval(() => {
     }
   }
 }, 300000);
+
+// Optional: Export cleanup function for graceful shutdown
+// module.exports.cleanup = () => clearInterval(rateLimitCleanupInterval);
 
 const checkRateLimit = (req) => {
   const ip = req.ip || req.connection.remoteAddress;
@@ -67,7 +72,14 @@ const domainService = {
       });
 
       const url = `${process.env.NAMECHEAP_URL}?${params.toString()}`;
-      const response = await fetch(url);
+      const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout+  
+      try {
+        const response = await fetch(url, { signal: controller.signal }); } 
+          finally {    
+            qclearTimeout(timeoutId);  
+          }
+
 
       if (!response.ok) {
         throw new Error(`Failed to fetch domains. Status: ${response.status}`);
@@ -209,13 +221,18 @@ const domainService = {
         }
         const apiResponse = result.ApiResponse;
         const domainPrice = apiResponse.DomainPrice[0].$;
-        res.status(200).json(domainPrice);
-      });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: err.message });
-    }
-  },
+   const { domain, portfolioId } = req.body;
+   const userId = req.user?.id;
+
+   if (!userId) {
+     return res.status(401).json({ error: "User not authenticated" });
+   }
+
+   if (!domain || !portfolioId) {
+     return res
+       .status(400)
+       .json({ error: "Domain and portfolioId are required" });
+   }
 
   // Register domain through platform
   registerDomain: async (req, res) => {
@@ -447,7 +464,7 @@ const domainService = {
       const user = await User.findById(userId).select("domains portfolios");
 
       if (!user) {
-        return res.status(404).json({ error: "User not found" });
+        return res.status(401).json({ error: "User not found" });
       }
 
       res.status(200).json({
