@@ -21,12 +21,7 @@ router.post("/custom", auth, domainService.configureCustomDomain);
 router.get("/myDomains", auth, domainService.getMyDomains);
 
 // POST /api/domains/verify/:domain - Verify DNS configuration (placeholder)
-router.post("/verify/:domain", auth, (req, res) => {
-  res.status(200).json({
-    message: "DNS verification not yet implemented",
-    domain: req.params.domain,
-  });
-});
+router.post("/verify/:domain", auth, domainService.verifyDNS);
 
 // GET /api/domains/lookup/:domain - Lookup portfolio by custom domain (PUBLIC with rate limiting in service)
 router.get("/lookup/:domain", domainService.lookupPortfolioByDomain);

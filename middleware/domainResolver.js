@@ -49,7 +49,7 @@ const domainResolver = async (req, res, next) => {
         req.customDomainPortfolioId = domainConfig.portfolioId;
         req.customDomainPortfolioType = user.industry || 'general';
 
-        // Don't log sensitive user data in production
+       
         console.log(
           `Custom domain detected: ${hostWithoutPort} → User ID: ${user._id}`
         );
