@@ -39,12 +39,15 @@ const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes");
 const supportFormRoutes = require("./routes/supportFormRoutes");
 const roleCheck = require("./middleware/roleCheck");
 const auth = require("./middleware/auth");
+const telemetryRoutes = require("./routes/telemetry");
 
 // Import configuration from separate file
 const config = require("./config");
 
 const app = express();
 const PORT = process.env.PORT;
+
+app.set("trust proxy", true);
 
 app.use(
   cors({
@@ -104,6 +107,8 @@ app.use('/quotes', quoteRoutes);
 app.use('/rooms', roomRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) => res.status(200).json({ ok: true, ts: Date.now() }));
+
+app.use("/api/telemetry", telemetryRoutes);
 
 /**
  * Connect to MongoDB using the connection function from utils/db.js
