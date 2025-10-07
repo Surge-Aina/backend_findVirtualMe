@@ -6,7 +6,9 @@ const MenuItem = require("../../models/localFoodVendor/MenuItems");
 const Review = require("../../models/localFoodVendor/Review");
 const TaggedImage = require("../../models/localFoodVendor/TaggedImage");
 const seedVendor = require("../../models/localFoodVendor/seedVendor");
-const { generateVendorAboutAndMenuJSON } = require("../../services/openAiService");
+const {
+  generateVendorAboutAndMenuJSON,
+} = require("../../services/openAiService");
 const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
 
@@ -98,10 +100,30 @@ exports.getFullPortfolio = async (req, res) => {
   }
 };
 
+// async function extractText(fileBuffer, mimeType) {
+//   if (mimeType === "application/pdf") {
+//     const data = await pdfParse(fileBuffer);
+//     return data.text;
+//   } else {
+//     const { value } = await mammoth.extractRawText({ buffer: fileBuffer });
+//     return value;
+//   }
+// }
+
 async function extractText(fileBuffer, mimeType) {
+  console.log("MimeType:", mimeType);
+  console.log("Buffer type:", Buffer.isBuffer(fileBuffer));
+  console.log("Buffer length:", fileBuffer?.length);
+
   if (mimeType === "application/pdf") {
-    const data = await pdfParse(fileBuffer);
-    return data.text;
+    try {
+      const data = await pdfParse(fileBuffer);
+      console.log("PDF parse success, length of text:", data.text.length);
+      return data.text;
+    } catch (err) {
+      console.error("PDF parse failed:", err);
+      throw err;
+    }
   } else {
     const { value } = await mammoth.extractRawText({ buffer: fileBuffer });
     return value;
@@ -110,6 +132,8 @@ async function extractText(fileBuffer, mimeType) {
 
 // NEW: Inject vendor + about + menu
 exports.injectVendorPortfolio = async (req, res) => {
+  console.log("req.file:", req.file);
+  console.log("req.body keys:", Object.keys(req.body));
   try {
     if (!req.file) return res.status(400).json({ error: "File is required" });
 
@@ -117,6 +141,19 @@ exports.injectVendorPortfolio = async (req, res) => {
     let parsed;
     try {
       parsed = await generateVendorAboutAndMenuJSON(text);
+      console.log("===== RAW PARSED JSON FROM OPENAI =====");
+      console.dir(parsed, { depth: null });
+      parsed.vendor = {
+        ...parsed.vendor,
+        // fallback to frontend values if missing
+        name: parsed.vendor.name || req.body.name,
+        email: parsed.vendor.email || req.body.email,
+        phone: parsed.vendor.phone || req.body.phone,
+        description: parsed.vendor.description || req.body.description,
+        ...parsed.vendor,
+      };
+      console.log("===== FINAL MERGED VENDOR OBJECT =====");
+      console.dir(parsed.vendor, { depth: null });
     } catch (err) {
       console.error("OpenAI JSON parse failed:", err.message);
       return res.status(400).json({
