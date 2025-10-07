@@ -7,7 +7,13 @@ const fs = require("fs");
 const http = require("http");
 const socketIo = require("socket.io");
 const { google } = require("googleapis");
-const { oauth2Client, getAuthUrl, getTokensFromCode, setCredentialsFromEnv, listFilesInFolder } = require("./oauthHandler");
+const {
+  oauth2Client,
+  getAuthUrl,
+  getTokensFromCode,
+  setCredentialsFromEnv,
+  listFilesInFolder,
+} = require("./oauthHandler");
 const settingsRoutes = require("./routes/photographer/settingsRoute");
 const driveRoutes = require("./routes/photographer/driveRoute");
 const photoRoutes = require("./routes/photographer/photoRoute");
@@ -25,6 +31,10 @@ const reviewRoutes = require("./routes/localFoodVendor/reviewRoutes");
 const taggedImageRoutes = require("./routes/localFoodVendor/taggedImageRoutes");
 const handymanPortfolioRoutes = require("./routes/handyMan/handymanPortfolioRoutes");
 const dataScientistRoutes = require("./routes/dataScientist/dataScientistRoutes");
+const userRoutes2 = require('./routes/userRoute2.js');
+const serviceRoutes = require('./routes/serviceRoutes.js');
+const quoteRoutes = require('./routes/quoteRoutes.js');
+const roomRoutes = require('./routes/roomRoutes.js');
 const checkoutRoutes = require("./routes/stripePayment/checkoutRoutes");
 const authRoutes = require("./routes/auth"); // Import authentication routes
 const seedUsers = require("./seed/users"); // Import seed users function
@@ -35,6 +45,7 @@ const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes");
 const supportFormRoutes = require("./routes/supportFormRoutes");
 const roleCheck = require("./middleware/roleCheck");
 const auth = require("./middleware/auth");
+const telemetryRoutes = require("./routes/telemetry");
 
 // Import configuration from separate file
 const config = require("./config");
@@ -42,9 +53,23 @@ const config = require("./config");
 const app = express();
 const PORT = process.env.PORT;
 
+app.set("trust proxy", true);
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: function (origin, callback) {
+      // Allow requests with no origin: postman
+      if (!origin) return callback(null, true);
+
+      const isAllowed =
+        origin === process.env.FRONTEND_URL ||
+        origin.endsWith("surge-ainas-projects.vercel.app"); //vercel Previews
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
@@ -94,8 +119,14 @@ app.use("/datascience-portfolio", dataScientistRoutes);
 app.use("/api/handyman-template", handymanTemplateRoutes);
 app.use("/support-form", supportFormRoutes);
 
+app.use("/cleaning/user", userRoutes2);
+app.use('/services', serviceRoutes);
+app.use('/quotes', quoteRoutes);
+app.use('/rooms', roomRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) => res.status(200).json({ ok: true, ts: Date.now() }));
+
+app.use("/api/telemetry", telemetryRoutes);
 
 /**
  * Connect to MongoDB using the connection function from utils/db.js
@@ -127,7 +158,10 @@ app.use("/auth", authRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Serve static files from uploads directory
-app.use(`/${config.uploads.directory}`, express.static(path.join(__dirname, config.uploads.directory)));
+app.use(
+  `/${config.uploads.directory}`,
+  express.static(path.join(__dirname, config.uploads.directory))
+);
 
 // Make config available to the app
 app.set("config", config);

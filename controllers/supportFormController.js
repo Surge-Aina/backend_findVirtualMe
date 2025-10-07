@@ -20,7 +20,7 @@ exports.getTickets = async (req, res) => {
   try {
     const items = await SupportForm.find();
     res.json(items);
-    console.log(items);
+    //console.log(items);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching tickets' });
   }
