@@ -2,7 +2,12 @@ const express = require("express");
 const router = express.Router();
 const Stripe = require("stripe");
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripeSecretkey =
+  process.env.STRIPE_MODE === "live"
+    ? process.env.STRIPE_SECRET_KEY_LIVE
+    : process.env.STRIPE_SECRET_KEY_TEST;
+const stripe = new Stripe(stripeSecretkey);
+
 //payment intent
 router.post("/payment-intent", async (req, res) => {
   const { userId, amount } = req.body;
@@ -29,8 +34,14 @@ router.post("/payment-intent", async (req, res) => {
 
 //checkout-session: sends users to stripe payment page
 const PRICE_MAP = {
-  basic: "price_1S32zY4RRTaBgmEqhHSUxiMT", // $9/month
-  pro: "price_1S32yN4RRTaBgmEqVX7uegSs", // $29/month
+  basic:
+    process.env.STRIPE_MODE === "live"
+      ? process.env.PRICE_BASIC_LIVE
+      : process.env.PRICE_BASIC_TEST, // $9/month
+  pro:
+    process.env.STRIPE_MODE === "live"
+      ? process.env.PRICE_PRO_LIVE
+      : process.env.PRICE_PRO_TEST, // $29/month
 };
 
 router.post("/checkout-session", async (req, res) => {
@@ -104,7 +115,9 @@ router.post("/checkout-session", async (req, res) => {
     res.json({ checkoutUrl: session.url });
   } catch (err) {
     console.error("error creating checkout session: ", err);
-    res.status(500).json({ message: "error creating checkout session", error: err.message });
+    res
+      .status(500)
+      .json({ message: "error creating checkout session", error: err.message });
   }
 });
 

@@ -7,7 +7,13 @@ const fs = require("fs");
 const http = require("http");
 const socketIo = require("socket.io");
 const { google } = require("googleapis");
-const { oauth2Client, getAuthUrl, getTokensFromCode, setCredentialsFromEnv, listFilesInFolder } = require("./oauthHandler");
+const {
+  oauth2Client,
+  getAuthUrl,
+  getTokensFromCode,
+  setCredentialsFromEnv,
+  listFilesInFolder,
+} = require("./oauthHandler");
 const settingsRoutes = require("./routes/photographer/settingsRoute");
 const driveRoutes = require("./routes/photographer/driveRoute");
 const photoRoutes = require("./routes/photographer/photoRoute");
@@ -51,7 +57,19 @@ app.set("trust proxy", true);
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: function (origin, callback) {
+      // Allow requests with no origin: postman
+      if (!origin) return callback(null, true);
+
+      const isAllowed =
+        origin === process.env.FRONTEND_URL ||
+        origin.endsWith("surge-ainas-projects.vercel.app"); //vercel Previews
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
@@ -140,7 +158,10 @@ app.use("/auth", authRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Serve static files from uploads directory
-app.use(`/${config.uploads.directory}`, express.static(path.join(__dirname, config.uploads.directory)));
+app.use(
+  `/${config.uploads.directory}`,
+  express.static(path.join(__dirname, config.uploads.directory))
+);
 
 // Make config available to the app
 app.set("config", config);

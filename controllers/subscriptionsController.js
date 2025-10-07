@@ -1,11 +1,23 @@
 const Subscriptions = require("../models/Subscriptions");
 const Stripe = require("stripe");
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripeSecretkey =
+  process.env.STRIPE_MODE === "live"
+    ? process.env.STRIPE_SECRET_KEY_LIVE
+    : process.env.STRIPE_SECRET_KEY_TEST;
+const stripe = new Stripe(stripeSecretkey);
 
 const PRICE_MAP = {
-  basic: "price_1S32zY4RRTaBgmEqhHSUxiMT", // $9/month
-  pro: "price_1S32yN4RRTaBgmEqVX7uegSs", // $29/month
+  // $9/month
+  basic:
+    process.env.STRIPE_MODE === "live"
+      ? process.env.PRICE_BASIC_LIVE
+      : process.env.PRICE_BASIC_TEST,
+  // $29/month
+  pro:
+    process.env.STRIPE_MODE === "live"
+      ? process.env.PRICE_PRO_LIVE
+      : process.env.PRICE_PRO_TEST,
 };
 
 exports.getAllSubscriptions = async (req, res) => {
@@ -44,7 +56,9 @@ exports.updateSubsFromStripe = async (req, res) => {
               cancelAtPeriodEnd: stripeSub.cancel_at_period_end,
               currentPeriodStart: new Date(stripeSub.current_period_start * 1000),
               currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
-              canceledAt: stripeSub.canceled_at ? new Date(stripeSub.canceled_at * 1000) : null,
+              canceledAt: stripeSub.canceled_at
+                ? new Date(stripeSub.canceled_at * 1000)
+                : null,
               priceId: stripeSub.items.data[0]?.price.id,
             },
             { new: true } // return updated doc
@@ -80,7 +94,12 @@ exports.reconcileSubscriptions = async (req, res) => {
     while (hasMore) {
       const params = {
         limit: 100,
-        expand: ["data.customer", "data.items.data.price", "data.latest_invoice.payment_intent.charges", "data.discounts.coupon"],
+        expand: [
+          "data.customer",
+          "data.items.data.price",
+          "data.latest_invoice.payment_intent.charges",
+          "data.discounts.coupon",
+        ],
       };
       if (lastId) params.starting_after = lastId;
 
@@ -107,16 +126,22 @@ exports.reconcileSubscriptions = async (req, res) => {
           name: stripeSub.customer.name,
           status: stripeSub.status,
           cancelAtPeriodEnd: stripeSub.cancel_at_period_end,
-          currentPeriodStart: new Date(stripeSub.items.data[0].current_period_start * 1000),
+          currentPeriodStart: new Date(
+            stripeSub.items.data[0].current_period_start * 1000
+          ),
           currentPeriodEnd: new Date(stripeSub.items.data[0].current_period_end * 1000),
           createdAt: new Date(stripeSub.created * 1000),
-          canceledAt: stripeSub.canceled_at ? new Date(stripeSub.canceled_at * 1000) : null,
+          canceledAt: stripeSub.canceled_at
+            ? new Date(stripeSub.canceled_at * 1000)
+            : null,
           priceId: stripeSub.items.data[0]?.price.id,
           latestInvoiceId: stripeSub.latest_invoice?.id,
           paymentIntentId: stripeSub.latest_invoice?.payment_intent?.id,
           defaultPaymentMethodId: stripeSub.default_payment_method,
           coupon: stripeSub.discounts?.coupon?.id || null,
-          discountEnd: stripeSub.discounts?.end ? new Date(stripeSub.discounts.end * 1000) : null,
+          discountEnd: stripeSub.discounts?.end
+            ? new Date(stripeSub.discounts.end * 1000)
+            : null,
           subscriptionItems: stripeSub.items.data.map((item) => ({
             itemId: item.id,
             priceId: item.price.id,
@@ -127,7 +152,9 @@ exports.reconcileSubscriptions = async (req, res) => {
 
         if (existing) {
           // Update existing subscription
-          return await Subscriptions.findByIdAndUpdate(existing._id, updatedSub, { new: true });
+          return await Subscriptions.findByIdAndUpdate(existing._id, updatedSub, {
+            new: true,
+          });
         } else {
           // Create missing subscription
           createdRecordsCount++;
@@ -137,8 +164,14 @@ exports.reconcileSubscriptions = async (req, res) => {
     );
 
     console.log(`Total reconciled ${updatedSubs.length} subscriptions`);
-    console.log(`Created ${createdRecordsCount} new records that were missing in mongoDB`);
-    res.status(200).json({ updatedSubs, total_reconciled: updatedSubs.length, new_records: createdRecordsCount });
+    console.log(
+      `Created ${createdRecordsCount} new records that were missing in mongoDB`
+    );
+    res.status(200).json({
+      updatedSubs,
+      total_reconciled: updatedSubs.length,
+      new_records: createdRecordsCount,
+    });
   } catch (error) {
     console.error("Error reconciling subscriptions:", error);
     res.status(500).json({ message: "Error reconciling subscriptions:", error: error });
