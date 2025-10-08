@@ -31,7 +31,7 @@ const HandymanTemplateSchema = new Schema({
 
   // Projects / gallery copy
   portfolioTitle: { type: String, default: 'Quality Craftsmanship You Can See' },
-  portfolioSubtitle: { type: String, default: '' },       // <-- section sub-text
+  portfolioSubtitle: { type: String, default: '' },
   portfolioAllLabel: { type: String, default: 'All' },
 
   servicesSectionTitle: {
@@ -46,8 +46,24 @@ const HandymanTemplateSchema = new Schema({
   processSectionTitle: { type: String, default: 'Our Simple Process' },
   testimonialsSectionTitle: { type: String, default: 'What Our Clients Say' },
 
+  // (kept for backward compatibility; no longer used in the editor)
   contactSectionTitle: { type: String, default: 'Contact Us' },
   contactSectionSubtitle: { type: String, default: 'Ready to get started? Send us a message!' },
+
+  // ✅ New: fully editable Contact block used by UI & editor
+  contact: {
+    title: { type: String, default: 'Get Your Free Estimate' },
+    subtitle: {
+      type: String,
+      default:
+        'Ready to get started? Contact us today for a free, no-obligation estimate. We respond to all inquiries within 24 hours.'
+    },
+    formTitle: { type: String, default: 'Ready to get started? Send us a message!' },
+    phone: { type: String, default: '(112) 233-4455' },
+    email: { type: String, default: 'contact@prohandy.com' },
+    hours: { type: String, default: 'Mon–Fri: 7AM–7PM' },
+    note: { type: String, default: 'Weekend & emergency calls available' }
+  },
 
   hero: {
     title: { type: String, default: 'Trusted Handyman for Home Repairs & Maintenance' },
