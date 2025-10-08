@@ -164,4 +164,22 @@ router.post("/create-customer", async (req, res) => {
   }
 });
 
+router.post("/billing-session", async (req, res) => {
+  frontEndUrl = process.env.FRONTEND_URL;
+
+  try {
+    const user = req.user; // middleware auth populates this
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: user.stripeCustomerId,
+      return_url: `${frontEndUrl}/profile`,
+    });
+
+    res.json({ billingSessionUrl: session.url });
+  } catch (error) {
+    console.error("error creating stripe billing session: ", error);
+    res.status(500).json({ message: "Error creating stripe billing session", error });
+  }
+});
+
 module.exports = router;
