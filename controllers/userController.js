@@ -140,16 +140,20 @@ exports.getUserById = async (req, res) => {
 
 exports.getSubInfo = async (req, res) => {
   try {
-    const { stripeSubscriptionId } = req.user; //obtained from auth middleware
-    //get subscription info for customer from stripe
-    const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId, {
-      expand: ["items.data.price.product"],
+    const { stripeCustomerId } = req.user; // obtained from auth middleware
+    //get subscription info from stripe
+    const subscriptions = await stripe.subscriptions.list({
+      limit: 1,
+      customer: stripeCustomerId,
+      expand: ["data.plan.product"],
     });
 
     console.log(`fetched subscription info for ${req.user.email} from stripe`);
-    res.status(200).json({ subscription: subscription });
+    res.status(200).json({ subscriptionList: subscriptions.data });
   } catch (error) {
-    res.status(500).json({ message: "error getting subscription info", error: error });
+    res
+      .status(500)
+      .json({ message: "error getting subscription info", error: error.message });
   }
 };
 
