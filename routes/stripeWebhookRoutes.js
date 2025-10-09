@@ -10,6 +10,19 @@ const stripeSecretkey =
     : process.env.STRIPE_SECRET_KEY_TEST;
 const stripe = new Stripe(stripeSecretkey);
 
+const PRICE_MAP = {
+  // $10/month
+  basic:
+    process.env.STRIPE_MODE === "live"
+      ? process.env.PRICE_BASIC_LIVE
+      : process.env.PRICE_BASIC_TEST,
+  // $20/month
+  pro:
+    process.env.STRIPE_MODE === "live"
+      ? process.env.PRICE_PRO_LIVE
+      : process.env.PRICE_PRO_TEST,
+};
+
 router.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   const sig = req.headers["stripe-signature"];
 
@@ -54,9 +67,9 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
         // Determine subscription type from price ID
         const primaryPriceId = subscription.items?.data?.[0]?.price?.id;
         let subscriptionType = "unknown";
-        if (primaryPriceId === "price_1S32zY4RRTaBgmEqhHSUxiMT") {
+        if (primaryPriceId === PRICE_MAP.basic) {
           subscriptionType = "basic";
-        } else if (primaryPriceId === "price_1S32yN4RRTaBgmEqVX7uegSs") {
+        } else if (primaryPriceId === PRICE_MAP.pro) {
           subscriptionType = "pro";
         }
 
@@ -393,6 +406,9 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
       case "charge.refunded": {
         const charge = event.data.object;
         const latestRefund = charge.refunds.data[0]; // Most recent refund
+        //TODO: fix above line error Error handling webhook: TypeError: Cannot read properties of undefined (reading 'data')
+        //at /opt/render/project/src/routes/stripeWebhookRoutes.js:395:45
+        //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
         // Check if we already logged this refund
         const existing = await Subscription.findOne({
