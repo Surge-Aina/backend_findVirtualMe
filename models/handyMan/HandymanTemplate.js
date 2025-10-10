@@ -7,7 +7,8 @@ const ServiceSchema = new Schema({
   title: { type: String, default: '' },
   description: { type: String, default: '' },
   bullets: { type: [String], default: [] },
-  name: { type: String }
+  name: { type: String },
+  price: { type: Number, default: 0 }
 }, { _id: false });
 
 ServiceSchema.pre('validate', function (next) {
