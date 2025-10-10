@@ -4,8 +4,6 @@ const UserModel = require('../../models/userModel');
 const nodemailer = require('nodemailer');
 
 function buildTransporter() {
-  // Expect these in your .env
-  // SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 587),
@@ -19,32 +17,54 @@ function buildTransporter() {
 
 const createInquiry = async (req, res) => {
   try {
-    const { templateId, name, email, phone, message } = req.body;
+    const {
+      templateId, name, email, phone, message,
+      selectedServiceTitles = []   // ✅ array from form
+    } = req.body;
 
-    // 1) Persist inquiry
-    const newInquiry = await HandymanInquiry.create({
-      templateId: templateId || undefined,
-      name, email, phone, message
-    });
-
-    // 2) Resolve owner email (contact.email → owner’s email)
     let ownerEmail = null;
+    let selectedPrices = [];
+    let total = 0;
+
     if (templateId) {
-      try {
-        const tpl = await HandymanTemplate.findById(templateId).lean();
-        ownerEmail = tpl?.contact?.email || null;
-        if (!ownerEmail && tpl?.userId) {
-          const owner = await UserModel.findById(tpl.userId).lean();
-          ownerEmail = owner?.email || null;
-        }
-      } catch (_) {}
+      const tpl = await HandymanTemplate.findById(templateId).lean();
+      ownerEmail = tpl?.contact?.email || null;
+      if (!ownerEmail && tpl?.userId) {
+        const owner = await UserModel.findById(tpl.userId).lean();
+        ownerEmail = owner?.email || null;
+      }
+
+      // ✅ price lookup for each selected title
+      if (Array.isArray(selectedServiceTitles) && Array.isArray(tpl?.services)) {
+        selectedPrices = selectedServiceTitles.map(title => {
+          const match = tpl.services.find(s => (s.title || s.name) === title);
+          const p = Number(match?.price || 0);
+          total += p;
+          return p;
+        });
+      }
     }
 
-    // If no owner email resolved, we still succeed after saving the inquiry.
+    // Save inquiry with snapshot
+    await HandymanInquiry.create({
+      templateId: templateId || undefined,
+      name, email, phone, message,
+      selectedServiceTitles,
+      selectedServicePrices: selectedPrices,
+      selectedServiceTotal: total
+    });
+
     const transporter = buildTransporter();
     const from = process.env.SMTP_FROM || (process.env.SMTP_USER || 'no-reply@example.com');
 
-    // 3a) Auto-reply to visitor
+    const servicesBlock =
+      (selectedServiceTitles.length
+        ? selectedServiceTitles
+            .map((t, i) => `- ${t}${Number.isFinite(selectedPrices[i]) ? ` — $${selectedPrices[i]}` : ''}`)
+            .join('\n')
+        : '—');
+
+    // Visitor email (includes prices + total)
     if (email && transporter) {
       await transporter.sendMail({
         from,
@@ -59,6 +79,9 @@ Summary you sent:
 - Name: ${name || '—'}
 - Phone: ${phone || '—'}
 - Email: ${email}
+- Services requested:
+${servicesBlock}
+- Estimated total (owner-set): ${selectedServiceTitles.length ? `$${total}` : '—'}
 - Message: ${message || '—'}
 
 Best,
@@ -66,7 +89,7 @@ Your Handyman Team`
       });
     }
 
-    // 3b) Notify the owner (if we resolved an address)
+    // Owner email (shows chosen services; totals included)
     if (ownerEmail && transporter) {
       await transporter.sendMail({
         from,
@@ -78,6 +101,12 @@ Your Handyman Team`
 Name: ${name || '—'}
 Phone: ${phone || '—'}
 Email: ${email || '—'}
+
+Services requested:
+${servicesBlock}
+
+Total (sum of your set prices): ${selectedServiceTitles.length ? `$${total}` : '—'}
+
 Message:
 ${message || '—'}
 
