@@ -449,11 +449,12 @@ const domainService = {
 
       domain = domain.replace(/[^a-zA-Z0-9.-]/g, "");
 
-      if (!domain || domain !== domain) {
+      if (!domain) {
         return res.status(400).json({
           error: "Invalid domain format",
           message: "Domain contains invalid characters",
         });
+      }
       }
 
       console.log(`Looking up portfolio for domain: ${domain}`);
