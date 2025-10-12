@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const QuoteRequestSchema = new mongoose.Schema({
   portfolioId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Portfolio',
+    ref: 'CleaningPortfolio',
     required: true
   },
   services: [{
@@ -37,4 +37,4 @@ const QuoteRequestSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-module.exports = mongoose.model('QuoteRequest', QuoteRequestSchema);
+module.exports = mongoose.model('CleaningQuoteRequest', QuoteRequestSchema, 'cleaning_quote_requests');

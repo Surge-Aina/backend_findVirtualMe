@@ -31,7 +31,7 @@ const reviewRoutes = require("./routes/localFoodVendor/reviewRoutes");
 const taggedImageRoutes = require("./routes/localFoodVendor/taggedImageRoutes");
 const handymanPortfolioRoutes = require("./routes/handyMan/handymanPortfolioRoutes");
 const dataScientistRoutes = require("./routes/dataScientist/dataScientistRoutes");
-const userRoutes2 = require('./routes/userRoute2.js');
+const userRoutes2 = require('./routes/cleaningLady/userRoute2');
 // const serviceRoutes = require('./routes/serviceRoutes.js');
 // const quoteRoutes = require('./routes/quoteRoutes.js');
 // const roomRoutes = require('./routes/roomRoutes.js');
@@ -49,7 +49,7 @@ const auth = require("./middleware/auth");
 const telemetryRoutes = require("./routes/telemetry");
 // const settingRoutes2 = require('./routes/settingRoutes');
 
-const portfolio_Routes = require('./routes/portfolioRoutes');
+const portfolio_Routes = require('./routes/cleaningLady/portfolioRoutes');
 
 // Import configuration from separate file
 const config = require("./config");

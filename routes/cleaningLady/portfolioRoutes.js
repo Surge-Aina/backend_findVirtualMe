@@ -1,16 +1,17 @@
 // 
 const express = require('express');
 const router = express.Router();
-const cleaningController = require('../controllers/portfolioController');
-const projectManagerController = require('../controllers/projectManager/portfolioController');
-const authenticate = require('../middleware/auth');
+const cleaningController = require('../../controllers/cleaningLady/portfolioController');
+const projectManagerController = require('../../controllers/projectManager/portfolioController');
+const authenticate = require('../../middleware/auth');
 
 // ============================================
 // PUBLIC ROUTES (No authentication needed)
 // ============================================
 
 // Get all portfolios (uses projectManager controller)
-router.get('/all-portfolios', projectManagerController.getAllPortfolios);
+// router.get('/all-portfolios', projectManagerController.getAllPortfolios);
+router.get('/all-portfolios', cleaningController.getAllPortfolios)
 
 // View a portfolio by slug (uses cleaning controller)
 router.get('/public/:slug', cleaningController.getPublicPortfolio);
@@ -21,7 +22,7 @@ router.get('/public/:slug', cleaningController.getPublicPortfolio);
 
 router.get('/me-user', authenticate, async (req, res) => {
   try {
-    const User = require('../models/User');
+    const User = require('../../models/User');
     const user = await User.findById(req.user.id).select('-password');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
