@@ -10,6 +10,82 @@ const vercel = new Vercel({
 
 const projectId = process.env.VERCEL_PROJECT_ID || 'frontend-find-virtual-me';
 
+function normalizeVercelError(error) {
+  if (!error || typeof error !== "object") {
+    return { message: "Unknown Vercel error" };
+  }
+
+  const normalized = {
+    statusCode: error.statusCode || error?.response?.status,
+    body: error.body,
+    parsedBody: undefined,
+    code: error.code,
+    verification: error.verification,
+    message: error.message,
+    original: error,
+  };
+
+  const rawBody = error.body || error.parsedBody || error.response?.data;
+
+  if (typeof rawBody === "string") {
+    try {
+      normalized.parsedBody = JSON.parse(rawBody);
+    } catch {
+      normalized.parsedBody = undefined;
+    }
+  } else if (rawBody && typeof rawBody === "object") {
+    normalized.parsedBody = rawBody;
+  }
+
+  const bodyError = normalized.parsedBody?.error;
+  if (bodyError?.code && !normalized.code) {
+    normalized.code = bodyError.code;
+  }
+  if (bodyError?.message) {
+    normalized.apiMessage = bodyError.message;
+  }
+  if (!normalized.verification && normalized.parsedBody?.verification) {
+    normalized.verification = normalized.parsedBody.verification;
+  }
+
+  return normalized;
+}
+
+function buildVercelError(error, options = {}) {
+  const { defaultMessage, prefix } = options;
+  const normalized = normalizeVercelError(error);
+  const detailMessage =
+    normalized.apiMessage ||
+    normalized.message ||
+    defaultMessage ||
+    prefix ||
+    "Unknown Vercel error";
+
+  let finalMessage;
+
+  if (defaultMessage) {
+    finalMessage =
+      detailMessage === defaultMessage
+        ? defaultMessage
+        : `${defaultMessage}: ${detailMessage}`;
+  } else if (prefix) {
+    finalMessage =
+      detailMessage === prefix ? prefix : `${prefix}: ${detailMessage}`;
+  } else {
+    finalMessage = detailMessage;
+  }
+
+  const wrapped = new Error(finalMessage);
+  wrapped.name = "VercelAPIError";
+  wrapped.statusCode = normalized.statusCode;
+  wrapped.body = normalized.parsedBody ?? normalized.body;
+  wrapped.code = normalized.code;
+  wrapped.verification = normalized.verification;
+  wrapped.originalError = normalized.original;
+
+  return wrapped;
+}
+
 // Add domain to Vercel project
 async function addDomain(domain) {
   try {
@@ -31,7 +107,7 @@ async function addDomain(domain) {
     };
   } catch (error) {
     console.error(`Failed to add domain ${domain}:`, error.message);
-    throw new Error(`Vercel API error: ${error.message}`);
+    throw buildVercelError(error, { prefix: "Vercel API error" });
   }
 }
 
@@ -49,7 +125,10 @@ async function verifyDomain(domain) {
       verification: result.verification,
     };
   } catch (error) {
-    throw new Error(`Failed to verify domain: ${error.message}`);
+    console.error(`Failed to verify domain ${domain}:`, error.message);
+    throw buildVercelError(error, {
+      defaultMessage: "Failed to verify domain",
+    });
   }
 }
 
@@ -64,7 +143,10 @@ async function removeDomain(domain) {
     
     return { success: true };
   } catch (error) {
-    throw new Error(`Failed to remove domain: ${error.message}`);
+    console.error(`Failed to remove domain ${domain}:`, error.message);
+    throw buildVercelError(error, {
+      defaultMessage: "Failed to remove domain",
+    });
   }
 }
 
@@ -83,7 +165,9 @@ async function getDomainStatus(domain) {
     };
   } catch (error) {
     console.error(`Failed to get domain status ${domain}:`, error.message);
-    throw new Error(`Failed to get domain status: ${error.message}`);
+    throw buildVercelError(error, {
+      defaultMessage: "Failed to get domain status",
+    });
   }
 }
 
@@ -102,7 +186,10 @@ async function getDomainConfig(domain) {
         recommendedTXTRecords: result.recommendedTXTRecords,
     };
   } catch (error) {
-    throw new Error(`Failed to get domain config: ${error.message}`);
+    console.error(`Failed to get domain config for ${domain}:`, error.message);
+    throw buildVercelError(error, {
+      defaultMessage: "Failed to get domain config",
+    });
   }
 }
 
@@ -114,6 +201,3 @@ module.exports = {
   getDomainStatus,
   getDomainConfig,
 };
-
-
-
