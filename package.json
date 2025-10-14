@@ -35,7 +35,8 @@
         "pdf-lib": "^1.17.1",
         "pdf-parse": "^1.1.1",
         "socket.io": "^4.8.1",
-        "stripe": "^18.5.0"
+        "stripe": "^18.5.0",
+        "uuid": "^13.0.0"
     },
     "devDependencies": {
         "@babel/preset-env": "^7.28.0",
