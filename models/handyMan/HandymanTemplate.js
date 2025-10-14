@@ -18,7 +18,9 @@ ServiceSchema.pre('validate', function (next) {
 
 const TestimonialSchema = new Schema({
   quote: { type: String, required: true },
-  name: { type: String, required: true }
+  name: { type: String, required: true },
+  location: { type: String, default: '' },  
+  service:  { type: String, default: '' }
 }, { _id: false });
 
 const ProcessStepSchema = new Schema({
@@ -95,7 +97,9 @@ const HandymanTemplateSchema = new Schema({
 
   testimonials: {
     type: [TestimonialSchema],
-    default: () => [{ name: 'Jane D.', quote: 'Incredibly reliable and professional.' }]
+    default: () => [
+      { name: 'Jane D.', quote: 'Incredibly reliable and professional.', location: 'Downtown', service: 'General Repairs' }
+    ]
   }
 }, { timestamps: true });
 
