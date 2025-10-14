@@ -8,12 +8,12 @@ const stripeSecretkey =
 const stripe = new Stripe(stripeSecretkey);
 
 const PRICE_MAP = {
-  // $9/month
+  // $10/month
   basic:
     process.env.STRIPE_MODE === "live"
       ? process.env.PRICE_BASIC_LIVE
       : process.env.PRICE_BASIC_TEST,
-  // $29/month
+  // $20/month
   pro:
     process.env.STRIPE_MODE === "live"
       ? process.env.PRICE_PRO_LIVE
