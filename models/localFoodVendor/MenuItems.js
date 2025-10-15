@@ -7,7 +7,7 @@ const menuItemSchema = new mongoose.Schema(
       ref: "LocalVendorPortfolio",
       required: true,
     },
-    name: { type: String, required: true },
+    name: { type: String, required: true, default: "Undefined" },
     description: String,
     price: { type: Number, required: true, default: 0.0 },
     category: { type: String, default: "Uncategorized" },
