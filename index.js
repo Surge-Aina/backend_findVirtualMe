@@ -39,6 +39,7 @@ const checkoutRoutes = require("./routes/stripePayment/checkoutRoutes");
 const authRoutes = require("./routes/auth"); // Import authentication routes
 const seedUsers = require("./seed/users"); // Import seed users function
 const handymanTemplateRoutes = require("./routes/handyMan/handymanTemplateRoutes");
+const handymanInquiryRoutes = require("./routes/handyMan/handymanInquiryRoutes");
 const localVendorRoutes = require("./routes/localFoodVendor/localVendorRoutes");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes");
@@ -117,6 +118,7 @@ app.use("/vendor", localVendorRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/datascience-portfolio", dataScientistRoutes);
 app.use("/api/handyman-template", handymanTemplateRoutes);
+app.use('/api/handyman/inquiries', handymanInquiryRoutes);
 app.use("/support-form", supportFormRoutes);
 
 app.use("/cleaning/user", userRoutes2);
