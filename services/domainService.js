@@ -4,6 +4,49 @@ const User = require("../models/User");
 const vercelService = require("./vercelService");
 
 
+const determinePortfolioPath = ({ user, domainConfig }) => {
+  if (!user || !domainConfig) {
+    return null;
+  }
+
+  const portfolioId = domainConfig.portfolioId;
+  if (!portfolioId) {
+    return null;
+  }
+
+  const rawIndustry =
+    domainConfig.industry || user.industry || domainConfig.portfolioType || "";
+  const industry =
+    typeof rawIndustry === "string" ? rawIndustry.toLowerCase() : "";
+  const username = user.username || user.email?.split("@")[0];
+
+  switch (industry) {
+    case "handyman":
+      return `/portfolios/handyman/${portfolioId}`;
+    case "photographer":
+      return `/portfolios/photographer/${portfolioId}`;
+    case "local_vendor":
+    case "local-vendor":
+    case "vendor":
+      if (username) {
+        return `/portfolios/vendor/${username}/${portfolioId}`;
+      }
+      return `/portfolios/localVendor`;
+    case "project_manager":
+    case "project-manager":
+    case "project manager":
+      if (username) {
+        return `/portfolios/project-manager/${username}/${portfolioId}`;
+      }
+      return null;
+    default:
+      if (username && portfolioId) {
+        return `/portfolios/project-manager/${username}/${portfolioId}`;
+      }
+      return null;
+  }
+};
+
 const parseVercelErrorResponse = (error) => {
   if (!error) {
     return {};
@@ -86,24 +129,6 @@ const addDomainToUser = async (userId, domain, portfolioId, options = {}) => {
 
   return User.findByIdAndUpdate(userId, updateOps, { new: true });
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 const domainService = {
   // this checks if a domain is available and if it is premium
@@ -233,7 +258,8 @@ const domainService = {
         !process.env.USER_ZIP ||
         !process.env.USER_COUNTRY ||
         !process.env.USER_PHONE ||
-        !process.env.USER_EMAIL
+        !process.env.USER_EMAIL ||
+        !process.env.USER_NAMESERVERS
       ) {
         return res.status(400).json({ error: "Registrant info is required" });
       }
@@ -257,6 +283,7 @@ const domainService = {
         RegistrantCountry: process.env.USER_COUNTRY,
         RegistrantPhone: process.env.USER_PHONE,
         RegistrantEmailAddress: process.env.USER_EMAIL,
+        Nameservers: process.env.USER_NAMESERVERS,
       });
 
       const fetchRes = await fetch(process.env.NAMECHEAP_URL, {
@@ -331,9 +358,10 @@ const domainService = {
   },
 
   // Configure custom domain (BYOD)
+
   configureCustomDomain: async (req, res) => {
     try {
-      const { domain, portfolioId } = req.body;
+      let { domain, portfolioId } = req.body;
       const userId = req.user?.id;
 
       // Ensure domain is a string
@@ -348,7 +376,6 @@ const domainService = {
       if (Array.isArray(portfolioId)) {
         portfolioId = portfolioId[0];
       }
-      // if the domain or portfolioId is not a string, return an error
 
       if (!domain || !portfolioId) {
         return res
@@ -455,7 +482,6 @@ const domainService = {
           message: "Domain contains invalid characters",
         });
       }
-      }
 
       console.log(`Looking up portfolio for domain: ${domain}`);
 
@@ -475,12 +501,21 @@ const domainService = {
       // Get the domain configuration
       const domainConfig = user.domains.find((d) => d.domain === domain);
 
+      const portfolioPath = determinePortfolioPath({
+        user,
+        domainConfig:
+          typeof domainConfig?.toObject === "function"
+            ? domainConfig.toObject()
+            : domainConfig,
+      });
+
       console.log(`Found domain for user ID: ${user._id}`);
 
       res.json({
         success: true,
         domain: domain,
         portfolioId: domainConfig.portfolioId,
+        portfolioPath,
         user: {
           // Only return what's needed for portfolio display
           username: user.username,

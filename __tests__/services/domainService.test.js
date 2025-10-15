@@ -454,6 +454,7 @@ describe('domainService', () => {
         success: true,
         domain: 'example.com',
         portfolioId: 'portfolio123',
+        portfolioPath: '/portfolios/project-manager/johnsmith/portfolio123',
         user: {
           username: 'johnsmith',
           firstName: 'John',
