@@ -24,4 +24,5 @@ router.post("/verify/:domain", auth, domainService.verifyDNS);
 // GET /api/domains/lookup/:domain - Lookup portfolio by custom domain (PUBLIC with rate limiting in service)
 router.get("/lookup/:domain", domainService.lookupPortfolioByDomain);
 
+
 module.exports = router;

@@ -44,6 +44,8 @@ const domainRoutes = require("./routes/domainRoutes");
 // Import configuration from separate file
 const config = require("./config");
 
+const User = require("./models/User");
+
 const app = express();
 const PORT = process.env.PORT;
 const seededOrigins = [

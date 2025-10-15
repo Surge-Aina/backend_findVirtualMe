@@ -38,11 +38,10 @@ const determinePortfolioPath = ({ user, domainConfig }) => {
       if (username) {
         return `/portfolios/project-manager/${username}/${portfolioId}`;
       }
-      return null;
-    default:
       if (username && portfolioId) {
         return `/portfolios/project-manager/${username}/${portfolioId}`;
       }
+    default:
       return null;
   }
 };
