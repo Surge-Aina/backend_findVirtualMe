@@ -297,11 +297,12 @@ const domainService = {
         }
         const apiResponse = result.ApiResponse;
 
+        let vercelResult = null;
+
         if (apiResponse.$.Status === "OK") {
           // Update user's domains in database
           try {
             // Add domain to Vercel project
-            let vercelResult;
             try {
               vercelResult = await vercelService.addDomain(
                 domain,
@@ -315,12 +316,12 @@ const domainService = {
             }
 
             // Add domain to user's domains array
+            const isVerified = vercelResult?.verified === true;
+
             await addDomainToUser(userId, domain, portfolioId, {
               type: "platform",
-              dnsConfigured: vercelResult?.verified ?? true,
-              status: vercelResult?.verified
-                ? "active"
-                : "pending_verification",
+              dnsConfigured: isVerified,
+              status: isVerified ? "active" : "pending_verification",
               expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
               autoRenew: true,
             });
@@ -336,12 +337,18 @@ const domainService = {
         const domainRegistration =
           apiResponse?.CommandResponse?.[0]?.DomainCreateResult?.[0]?.$;
 
+        const isVerified = vercelResult?.verified === true;
+        const responseStatus =
+          apiResponse.$.Status === "OK" && isVerified
+            ? "active"
+            : "pending_verification";
+
         return res.status(200).json({
           message: "Domain registration initiated",
           domain: domain,
           portfolioId,
           plan,
-          status: apiResponse.$.Status === "OK" ? "active" : "pending",
+          status: responseStatus,
           apiResponse: domainRegistration,
         });
       });
@@ -413,17 +420,19 @@ const domainService = {
 
       // add the domain to the user's domains array
       // could change to bring in the type.
+      const isVerified = vercelResult?.verified === true;
+
       await addDomainToUser(userId, domain, portfolioId, {
         type: "byod",
-        dnsConfigured: Boolean(vercelResult?.verified),
-        status: vercelResult?.verified ? "active" : "pending_verification",
+        dnsConfigured: isVerified,
+        status: isVerified ? "active" : "pending_verification",
       });
 
       res.status(200).json({
         message: "Custom domain configured - please verify DNS settings",
         domain: domain,
         portfolioId: portfolioId,
-        status: vercelResult?.verified ? "active" : "pending_verification",
+        status: isVerified ? "active" : "pending_verification",
         verification: vercelResult?.verification, // DNS records to configure
         instructions: {
           dns: `Add CNAME record: ${domain} -> ${
@@ -468,7 +477,7 @@ const domainService = {
     try {
       let domain = req.params.domain;
 
-      domain = domain.replace(/[^a-zA-Z0-9.-]/g, "");
+      domain = domain.replace(/[^a-zA-Z0-9.-]/g, "").toLowerCase();
 
       if (!domain) {
         return res.status(400).json({

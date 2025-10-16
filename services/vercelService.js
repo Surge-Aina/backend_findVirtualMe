@@ -1,12 +1,21 @@
-const { Vercel } = require('@vercel/sdk');
+let vercelClient = null;
 
-if (!process.env.VERCEL_TOKEN) {
-  throw new Error('VERCEL_TOKEN environment variable is required');
+async function getVercelClient() {
+  if (vercelClient) {
+    return vercelClient;
+  }
+
+  const token = process.env.VERCEL_TOKEN;
+  if (!token) {
+    throw new Error('VERCEL_TOKEN environment variable is required');
+  }
+
+  const { Vercel } = await import('@vercel/sdk');
+  vercelClient = new Vercel({
+    bearerToken: token,
+  });
+  return vercelClient;
 }
-
-const vercel = new Vercel({
-  bearerToken: process.env.VERCEL_TOKEN,
-});
 
 const projectId = process.env.VERCEL_PROJECT_ID || 'frontend-find-virtual-me';
 
@@ -90,6 +99,7 @@ function buildVercelError(error, options = {}) {
 // Add domain to Vercel project
 async function addDomain(domain) {
   try {
+    const vercel = await getVercelClient();
     const result = await vercel.projects.addProjectDomain({
       idOrName: projectId,
       requestBody: {
@@ -115,6 +125,7 @@ async function addDomain(domain) {
 // Verify domain after DNS configured
 async function verifyDomain(domain) {
   try {
+    const vercel = await getVercelClient();
     const result = await vercel.projects.verifyProjectDomain({
       idOrName: projectId,
       domain: domain,
@@ -136,6 +147,7 @@ async function verifyDomain(domain) {
 // Remove domain from Vercel
 async function removeDomain(domain) {
   try {
+    const vercel = await getVercelClient();
     await vercel.projects.removeProjectDomain({
       idOrName: projectId,
       domain: domain,
@@ -154,6 +166,7 @@ async function removeDomain(domain) {
 // Get domain status
 async function getDomainStatus(domain) {
   try {
+    const vercel = await getVercelClient();
     const result = await vercel.projects.getProjectDomain({
       idOrName: projectId,
       domain: domain,
@@ -174,6 +187,7 @@ async function getDomainStatus(domain) {
 
 async function getDomainConfig(domain) {
     try {
+    const vercel = await getVercelClient();
     const result = await vercel.domains.getDomainConfig({
         domain: domain,
         teamId: process.env.VERCEL_TEAM_ID,

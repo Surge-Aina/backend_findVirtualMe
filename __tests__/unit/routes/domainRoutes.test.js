@@ -1,328 +1,254 @@
-const request = require('supertest');
-const express = require('express');
-const mongoose = require('mongoose');
-const { setupTestDB, teardownTestDB, clearTestDB } = require('../setup.js');
-const domainRoutes = require('../../../routes/domainRoutes.js');
-const User = require('../../../models/User.js');
+jest.mock('../../../middleware/auth', () =>
+  jest.fn((req, _res, next) => {
+    req.user = {
+      id: 'user123',
+      email: 'test@example.com',
+    };
+    next();
+  })
+);
 
-// Mock the domain service
-jest.mock('../../../services/domainService.js');
+jest.mock('../../../services/domainService.js', () => ({
+  getDomain: jest.fn(),
+  registerDomain: jest.fn(),
+  configureCustomDomain: jest.fn(),
+  getMyDomains: jest.fn(),
+  verifyDNS: jest.fn(),
+  lookupPortfolioByDomain: jest.fn(),
+}));
+
 const domainService = require('../../../services/domainService.js');
+const domainRoutes = require('../../../routes/domainRoutes.js');
 
-const app = express();
-app.use(express.json());
-app.use('/api/domains', domainRoutes);
+const findRoute = (path, method) =>
+  domainRoutes.stack.find(
+    (layer) =>
+      layer.route &&
+      layer.route.path === path &&
+      layer.route.methods[method.toLowerCase()]
+  );
 
-describe('Domain Routes Integration', () => {
-  beforeAll(async () => {
-    await setupTestDB();
+const createMockRes = () => {
+  const res = {};
+  res.statusCode = 200;
+  res.body = undefined;
+  res.status = jest.fn().mockImplementation((code) => {
+    res.statusCode = code;
+    return res;
   });
-
-  afterAll(async () => {
-    await teardownTestDB();
+  res.json = jest.fn().mockImplementation((payload) => {
+    res.body = payload;
+    return res;
   });
+  return res;
+};
 
-  beforeEach(async () => {
-    await clearTestDB();
+const runRoute = async ({
+  path,
+  method,
+  params = {},
+  body = {},
+  headers = {},
+}) => {
+  const routeLayer = findRoute(path, method);
+  if (!routeLayer) {
+    throw new Error(`Route ${method.toUpperCase()} ${path} not found`);
+  }
+
+  const middlewareStack = routeLayer.route.stack.map((layer) => layer.handle);
+  const req = {
+    params: { ...params },
+    body: { ...body },
+    headers: { ...headers },
+    method: method.toUpperCase(),
+    query: {},
+    user: undefined,
+  };
+  const res = createMockRes();
+
+  let index = 0;
+  const next = async () => {
+    const fn = middlewareStack[index++];
+    if (!fn) {
+      return;
+    }
+    await fn(req, res, next);
+  };
+
+  await next();
+
+  return { req, res };
+};
+
+describe('domainRoutes', () => {
+  beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('GET /api/domains/check/:domain', () => {
-    test('should call getDomain service with correct parameters', async () => {
-      domainService.getDomain.mockImplementation((req, res) => {
-        res.status(200).json({
-          domain: 'testdomain.com',
-          available: true,
-          isPremium: false
-        });
-      });
-
-      const response = await request(app)
-        .get('/api/domains/check/testdomain.com');
-
-      expect(response.status).toBe(200);
-      expect(response.body).toEqual({
-        domain: 'testdomain.com',
+  test('GET /api/domains/check/:domain delegates to domainService.getDomain', async () => {
+    domainService.getDomain.mockImplementation((req, res) =>
+      res.status(200).json({
+        domain: req.params.domain,
         available: true,
-        isPremium: false
-      });
-      expect(domainService.getDomain).toHaveBeenCalledTimes(1);
+        isPremium: false,
+      })
+    );
+
+    const { res, req } = await runRoute({
+      path: '/check/:domain',
+      method: 'get',
+      params: { domain: 'testdomain.com' },
     });
 
-    test('should handle domain check errors', async () => {
-      domainService.getDomain.mockImplementation((req, res) => {
-        res.status(400).json({
-          error: 'Invalid domain name'
-        });
-      });
-
-      const response = await request(app)
-        .get('/api/domains/check/invalid..domain');
-
-      expect(response.status).toBe(400);
-      expect(response.body).toEqual({
-        error: 'Invalid domain name'
-      });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      domain: 'testdomain.com',
+      available: true,
+      isPremium: false,
     });
+    expect(domainService.getDomain).toHaveBeenCalledTimes(1);
+    expect(req.user).toEqual(
+      expect.objectContaining({ id: 'user123', email: 'test@example.com' })
+    );
   });
 
-  describe('POST /api/domains/register', () => {
-    test('should call registerDomain service', async () => {
-      domainService.registerDomain.mockImplementation((req, res) => {
-        res.status(200).json({
-          message: 'Domain registration initiated',
-          domain: 'newdomain.com',
-          portfolioId: 'portfolio123',
-          status: 'active'
-        });
-      });
-
-      const response = await request(app)
-        .post('/api/domains/register')
-        .send({
-          domain: 'newdomain.com',
-          portfolioId: 'portfolio123',
-          plan: 'annual'
-        });
-
-      expect(response.status).toBe(200);
-      expect(response.body).toEqual({
+  test('POST /api/domains/register calls domainService.registerDomain', async () => {
+    domainService.registerDomain.mockImplementation((req, res) =>
+      res.status(200).json({
         message: 'Domain registration initiated',
-        domain: 'newdomain.com',
-        portfolioId: 'portfolio123',
-        status: 'active'
-      });
-      expect(domainService.registerDomain).toHaveBeenCalledTimes(1);
+        domain: req.body.domain,
+        portfolioId: req.body.portfolioId,
+        status: 'active',
+      })
+    );
+
+    const { res } = await runRoute({
+      path: '/register',
+      method: 'post',
+      body: { domain: 'example.com', portfolioId: 'portfolio123' },
     });
 
-    test('should handle registration validation errors', async () => {
-      domainService.registerDomain.mockImplementation((req, res) => {
-        res.status(400).json({
-          error: 'Domain and portfolioId are required'
-        });
-      });
-
-      const response = await request(app)
-        .post('/api/domains/register')
-        .send({
-          domain: 'test.com'
-          // missing portfolioId
-        });
-
-      expect(response.status).toBe(400);
-      expect(response.body).toEqual({
-        error: 'Domain and portfolioId are required'
-      });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      message: 'Domain registration initiated',
+      domain: 'example.com',
+      portfolioId: 'portfolio123',
+      status: 'active',
     });
+    expect(domainService.registerDomain).toHaveBeenCalledTimes(1);
   });
 
-  describe('POST /api/domains/custom', () => {
-    test('should call configureCustomDomain service', async () => {
-      domainService.configureCustomDomain.mockImplementation((req, res) => {
-        res.status(200).json({
-          message: 'Custom domain configured - please verify DNS settings',
-          domain: 'mycustom.com',
-          portfolioId: 'portfolio456',
-          status: 'pending_verification'
-        });
-      });
+  test('POST /api/domains/custom calls domainService.configureCustomDomain', async () => {
+    domainService.configureCustomDomain.mockImplementation((req, res) =>
+      res.status(200).json({
+        message: 'Custom domain configured',
+        domain: req.body.domain,
+        portfolioId: req.body.portfolioId,
+        status: 'active',
+      })
+    );
 
-      const response = await request(app)
-        .post('/api/domains/custom')
-        .send({
-          domain: 'mycustom.com',
-          portfolioId: 'portfolio456'
-        });
-
-      expect(response.status).toBe(200);
-      expect(response.body).toEqual({
-        message: 'Custom domain configured - please verify DNS settings',
-        domain: 'mycustom.com',
-        portfolioId: 'portfolio456',
-        status: 'pending_verification'
-      });
-      expect(domainService.configureCustomDomain).toHaveBeenCalledTimes(1);
+    const { res } = await runRoute({
+      path: '/custom',
+      method: 'post',
+      body: { domain: 'custom.com', portfolioId: 'portfolio456' },
     });
 
-    test('should handle custom domain validation errors', async () => {
-      domainService.configureCustomDomain.mockImplementation((req, res) => {
-        res.status(400).json({
-          error: 'Domain and portfolioId are required'
-        });
-      });
-
-      const response = await request(app)
-        .post('/api/domains/custom')
-        .send({
-          domain: 'test.com'
-          // missing portfolioId
-        });
-
-      expect(response.status).toBe(400);
-      expect(response.body).toEqual({
-        error: 'Domain and portfolioId are required'
-      });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      message: 'Custom domain configured',
+      domain: 'custom.com',
+      portfolioId: 'portfolio456',
+      status: 'active',
     });
+    expect(domainService.configureCustomDomain).toHaveBeenCalledTimes(1);
   });
 
-  describe('GET /api/domains/user/:userId', () => {
-    test('should call getUserDomains service', async () => {
-      const mockUserId = new mongoose.Types.ObjectId();
-      
-      domainService.getUserDomains.mockImplementation((req, res) => {
-        res.status(200).json({
-          domains: [
-            {
-              domain: 'user1.com',
-              portfolioId: 'portfolio123',
-              type: 'platform',
-              status: 'active'
-            }
-          ],
-          portfolios: ['portfolio123'],
-          message: 'User domains retrieved successfully'
-        });
-      });
-
-      const response = await request(app)
-        .get(`/api/domains/user/${mockUserId}`);
-
-      expect(response.status).toBe(200);
-      expect(response.body).toEqual({
-        domains: [
-          {
-            domain: 'user1.com',
-            portfolioId: 'portfolio123',
-            type: 'platform',
-            status: 'active'
-          }
-        ],
+  test('GET /api/domains/myDomains returns data from domainService.getMyDomains', async () => {
+    domainService.getMyDomains.mockImplementation((req, res) =>
+      res.status(200).json({
+        user: { id: req.user.id, email: req.user.email },
+        domains: [{ domain: 'example.com', status: 'active', type: 'platform' }],
         portfolios: ['portfolio123'],
-        message: 'User domains retrieved successfully'
-      });
-      expect(domainService.getUserDomains).toHaveBeenCalledTimes(1);
+      })
+    );
+
+    const { res } = await runRoute({
+      path: '/myDomains',
+      method: 'get',
     });
 
-    test('should handle user not found errors', async () => {
-      const mockUserId = new mongoose.Types.ObjectId();
-      
-      domainService.getUserDomains.mockImplementation((req, res) => {
-        res.status(404).json({
-          error: 'User not found'
-        });
-      });
-
-      const response = await request(app)
-        .get(`/api/domains/user/${mockUserId}`);
-
-      expect(response.status).toBe(404);
-      expect(response.body).toEqual({
-        error: 'User not found'
-      });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      user: { id: 'user123', email: 'test@example.com' },
+      domains: [{ domain: 'example.com', status: 'active', type: 'platform' }],
+      portfolios: ['portfolio123'],
     });
+    expect(domainService.getMyDomains).toHaveBeenCalledTimes(1);
   });
 
-  describe('POST /api/domains/verify/:domain', () => {
-    test('should return verification placeholder message', async () => {
-      const response = await request(app)
-        .post('/api/domains/verify/testdomain.com')
-        .send({});
+  test('POST /api/domains/verify/:domain calls domainService.verifyDNS', async () => {
+    domainService.verifyDNS.mockImplementation((req, res) =>
+      res.status(200).json({
+        message: 'Domain verified and activated',
+        domain: req.params.domain,
+      })
+    );
 
-      expect(response.status).toBe(200);
-      expect(response.body).toEqual({
-        message: 'DNS verification not yet implemented',
-        domain: 'testdomain.com'
-      });
+    const { res } = await runRoute({
+      path: '/verify/:domain',
+      method: 'post',
+      params: { domain: 'example.com' },
+      body: {},
     });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      message: 'Domain verified and activated',
+      domain: 'example.com',
+    });
+    expect(domainService.verifyDNS).toHaveBeenCalledTimes(1);
   });
 
-  describe('Route Parameter Validation', () => {
-    test('should handle invalid domain parameter format', async () => {
-      domainService.getDomain.mockImplementation((req, res) => {
-        res.status(400).json({
-          error: 'Invalid domain format'
-        });
-      });
+  test('GET /api/domains/lookup/:domain delegates to domainService.lookupPortfolioByDomain', async () => {
+    domainService.lookupPortfolioByDomain.mockImplementation((req, res) =>
+      res.status(200).json({
+        success: true,
+        domain: req.params.domain,
+        portfolioId: 'portfolio789',
+        portfolioPath: '/portfolios/project-manager/jane/portfolio789',
+      })
+    );
 
-      const response = await request(app)
-        .get('/api/domains/check/invalid-domain-format');
-
-      expect(response.status).toBe(400);
+    const { res, req } = await runRoute({
+      path: '/lookup/:domain',
+      method: 'get',
+      params: { domain: 'example.com' },
     });
 
-    test('should handle invalid userId parameter format', async () => {
-      domainService.getUserDomains.mockImplementation((req, res) => {
-        res.status(400).json({
-          error: 'Invalid user ID format'
-        });
-      });
-
-      const response = await request(app)
-        .get('/api/domains/user/invalid-user-id');
-
-      expect(response.status).toBe(400);
+    expect(req.user).toBeUndefined(); // public route
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      success: true,
+      domain: 'example.com',
+      portfolioId: 'portfolio789',
+      portfolioPath: '/portfolios/project-manager/jane/portfolio789',
     });
+    expect(domainService.lookupPortfolioByDomain).toHaveBeenCalledTimes(1);
   });
 
-  describe('Request Body Validation', () => {
-    test('should handle malformed JSON in POST requests', async () => {
-      const response = await request(app)
-        .post('/api/domains/register')
-        .send('invalid json')
-        .set('Content-Type', 'application/json');
+  test('GET /api/domains/check/:domain forwards error responses', async () => {
+    domainService.getDomain.mockImplementation((req, res) =>
+      res.status(400).json({ error: 'Invalid domain format' })
+    );
 
-      expect(response.status).toBe(400);
+    const { res } = await runRoute({
+      path: '/check/:domain',
+      method: 'get',
+      params: { domain: 'bad..domain' },
     });
 
-    test('should handle empty request body', async () => {
-      domainService.registerDomain.mockImplementation((req, res) => {
-        res.status(400).json({
-          error: 'Domain and portfolioId are required'
-        });
-      });
-
-      const response = await request(app)
-        .post('/api/domains/register')
-        .send({});
-
-      expect(response.status).toBe(400);
-    });
-  });
-
-  describe('Content-Type Handling', () => {
-    test('should handle missing Content-Type header', async () => {
-      domainService.registerDomain.mockImplementation((req, res) => {
-        res.status(200).json({
-          message: 'Domain registration initiated'
-        });
-      });
-
-      const response = await request(app)
-        .post('/api/domains/register')
-        .send({
-          domain: 'test.com',
-          portfolioId: 'portfolio123'
-        });
-
-      expect(response.status).toBe(200);
-    });
-
-    test('should handle application/json Content-Type', async () => {
-      domainService.configureCustomDomain.mockImplementation((req, res) => {
-        res.status(200).json({
-          message: 'Custom domain configured'
-        });
-      });
-
-      const response = await request(app)
-        .post('/api/domains/custom')
-        .set('Content-Type', 'application/json')
-        .send({
-          domain: 'custom.com',
-          portfolioId: 'portfolio456'
-        });
-
-      expect(response.status).toBe(200);
-    });
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toEqual({ error: 'Invalid domain format' });
   });
 });

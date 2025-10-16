@@ -46,46 +46,38 @@ const customDomainHandler = async (req, res, next) => {
   // If this is a custom domain request
   if (req.isCustomDomain && req.customDomainPortfolioId) {
     // Skip for API routes, static assets, and special paths
-    const shouldSkip = skipPaths.some(path => req.path.startsWith(path));
+    const shouldSkip = skipPaths.some((path) => req.path.startsWith(path));
 
     if (shouldSkip) {
       return next();
     }
 
-if (req.isCustomDomain && req.customDomainPortfolioId) {
-  // Ensure customDomainUser is populated
-  if (!req.customDomainUser) {
-    console.error('Custom domain user data missing');
-    return next();
-  }
+    // Ensure customDomainUser is populated
+    if (!req.customDomainUser) {
+      console.error("Custom domain user data missing");
+      return next();
+    }
 
-  const shouldSkip = SKIP_PATHS.some(path => req.path.startsWith(path));
-  // … any existing skip logic …
-
-  // Return portfolio data
-  const portfolioInfo = {
-    customDomain: true,
-    domain: req.customDomain,
-    portfolioId: req.customDomainPortfolioId,
-    portfolioType: req.customDomainPortfolioType,
-    user: {
+    // Return portfolio data
+    const portfolioInfo = {
+      customDomain: true,
+      domain: req.customDomain,
+      portfolioId: req.customDomainPortfolioId,
+      portfolioType: req.customDomainPortfolioType,
+      user: {
         id: req.customDomainUser._id,
         username: req.customDomainUser.username,
         firstName: req.customDomainUser.firstName,
         lastName: req.customDomainUser.lastName,
-        id: req.customDomainUser?._id,
-        username: req.customDomainUser?.username,
-        firstName: req.customDomainUser?.firstName,
-        lastName: req.customDomainUser?.lastName,
-        industry: req.customDomainUser?.industry,
-    },
-    message: 'Custom domain detected - portfolio should be rendered',
-  };
+        industry: req.customDomainUser.industry,
+      },
+      message: "Custom domain detected - portfolio should be rendered",
+    };
 
-  // … rest of handler …
-}
-    console.log(`Custom domain handler: serving portfolio for ${req.customDomain}`);
-    
+    console.log(
+      `Custom domain handler: serving portfolio for ${req.customDomain}`
+    );
+
     return res.status(200).json(portfolioInfo);
   }
 

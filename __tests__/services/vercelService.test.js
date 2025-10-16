@@ -27,24 +27,44 @@ jest.mock('@vercel/sdk', () => {
   };
 });
 
-const vercelService = require('../../services/vercelService');
+let vercelService;
+const ORIGINAL_ENV = {
+  VERCEL_TOKEN: process.env.VERCEL_TOKEN,
+  VERCEL_PROJECT_ID: process.env.VERCEL_PROJECT_ID,
+  VERCEL_TEAM_ID: process.env.VERCEL_TEAM_ID,
+};
 
 describe('vercelService', () => {
-  beforeEach(() => {
-    // Clear all mocks before each test
-    jest.clearAllMocks();
-    
-    // Set environment variables (or use defaults from vercelService)
-    process.env.VERCEL_TOKEN = 'test-token';
-    process.env.VERCEL_PROJECT_ID = 'frontend-find-virtual-me'; // Match default
-    process.env.VERCEL_TEAM_ID = 'test-team';
+  beforeAll(() => {
+    process.env.VERCEL_TOKEN = process.env.VERCEL_TOKEN || 'test-token';
+    process.env.VERCEL_PROJECT_ID =
+      process.env.VERCEL_PROJECT_ID || 'frontend-find-virtual-me';
+    process.env.VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID || 'test-team';
+    vercelService = require('../../services/vercelService');
   });
 
-  afterEach(() => {
-    // Clean up environment
-    delete process.env.VERCEL_TOKEN;
-    delete process.env.VERCEL_PROJECT_ID;
-    delete process.env.VERCEL_TEAM_ID;
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterAll(() => {
+    if (ORIGINAL_ENV.VERCEL_TOKEN === undefined) {
+      delete process.env.VERCEL_TOKEN;
+    } else {
+      process.env.VERCEL_TOKEN = ORIGINAL_ENV.VERCEL_TOKEN;
+    }
+
+    if (ORIGINAL_ENV.VERCEL_PROJECT_ID === undefined) {
+      delete process.env.VERCEL_PROJECT_ID;
+    } else {
+      process.env.VERCEL_PROJECT_ID = ORIGINAL_ENV.VERCEL_PROJECT_ID;
+    }
+
+    if (ORIGINAL_ENV.VERCEL_TEAM_ID === undefined) {
+      delete process.env.VERCEL_TEAM_ID;
+    } else {
+      process.env.VERCEL_TEAM_ID = ORIGINAL_ENV.VERCEL_TEAM_ID;
+    }
   });
 
   describe('addDomain', () => {
@@ -199,6 +219,7 @@ describe('vercelService', () => {
       expect(mockGetProjectDomain).toHaveBeenCalledWith({
         idOrName: 'frontend-find-virtual-me',
         domain: 'example.com',
+        teamId: 'test-team',
       });
     });
 

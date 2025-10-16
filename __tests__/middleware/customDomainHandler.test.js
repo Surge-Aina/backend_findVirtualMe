@@ -9,6 +9,7 @@ const customDomainHandler = require('../../middleware/customDomainHandler');
 describe('customDomainHandler middleware', () => {
   let mockReq, mockRes, mockNext;
   let consoleLogSpy;
+  let consoleErrorSpy;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -29,10 +30,12 @@ describe('customDomainHandler middleware', () => {
 
     // Spy on console.log
     consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
   });
 
   afterEach(() => {
     consoleLogSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 
   describe('Custom domain requests', () => {
@@ -98,6 +101,21 @@ describe('customDomainHandler middleware', () => {
         })
       );
       expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    it('should fall through when user data is missing', async () => {
+      mockReq.isCustomDomain = true;
+      mockReq.customDomain = 'missing-user.com';
+      mockReq.customDomainPortfolioId = 'portfolio999';
+      mockReq.path = '/';
+      mockReq.customDomainUser = null;
+
+      await customDomainHandler(mockReq, mockRes, mockNext);
+
+      expect(mockRes.json).not.toHaveBeenCalled();
+      expect(mockRes.status).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledTimes(1);
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Custom domain user data missing');
     });
   });
 
@@ -258,9 +276,10 @@ describe('customDomainHandler middleware', () => {
       mockReq.customDomainUser = null;
       mockReq.path = '/';
 
-      await expect(
-        customDomainHandler(mockReq, mockRes, mockNext)
-      ).rejects.toThrow();
+      await customDomainHandler(mockReq, mockRes, mockNext);
+
+      expect(mockRes.json).not.toHaveBeenCalled();
+      expect(mockNext).toHaveBeenCalledTimes(1);
     });
 
     it('should handle paths with query strings', async () => {
