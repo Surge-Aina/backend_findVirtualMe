@@ -32,13 +32,8 @@ const determinePortfolioPath = ({ user, domainConfig }) => {
         return `/portfolios/vendor/${username}/${portfolioId}`;
       }
       return `/portfolios/localVendor`;
-    case "project_manager":
     case "project-manager":
-    case "project manager":
       if (username) {
-        return `/portfolios/project-manager/${username}/${portfolioId}`;
-      }
-      if (username && portfolioId) {
         return `/portfolios/project-manager/${username}/${portfolioId}`;
       }
     default:
