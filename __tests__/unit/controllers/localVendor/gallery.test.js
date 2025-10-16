@@ -1,9 +1,9 @@
 const request = require("supertest");
-const app = require("../testapp");
+const app = require("../../../../testapp");
 const mongoose = require("mongoose");
 
 // Mock GalleryImage model
-jest.mock("../models/GalleryImage", () => {
+jest.mock("../../../../models/localFoodVendor/GalleryImage", () => {
   const mockGallery = jest.fn(function (data) {
     Object.assign(this, data);
     this.save = jest.fn();
@@ -17,7 +17,7 @@ jest.mock("../models/GalleryImage", () => {
   return mockGallery;
 });
 
-const GalleryImage = require("../models/GalleryImage");
+const GalleryImage = require("../../../../models/localFoodVendor/GalleryImage");
 
 describe("Gallery API (mocked)", () => {
   const vendorId = new mongoose.Types.ObjectId().toString();

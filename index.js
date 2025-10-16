@@ -17,7 +17,7 @@ const {
 const settingsRoutes = require("./routes/photographer/settingsRoute");
 const driveRoutes = require("./routes/photographer/driveRoute");
 const photoRoutes = require("./routes/photographer/photoRoute");
-const uploadRoutes = require("./routes/photographer/uploadRoute");
+//const uploadRoutes = require("./routes/photographer/uploadRoute");
 const userRoutes = require("./routes/userRoute");
 const portfolioRoutes = require("./routes/projectManager/portfolioRoute");
 const softwareEngRoutes = require("./routes/softwareEngineer/portfolio");
@@ -31,10 +31,10 @@ const reviewRoutes = require("./routes/localFoodVendor/reviewRoutes");
 const taggedImageRoutes = require("./routes/localFoodVendor/taggedImageRoutes");
 const handymanPortfolioRoutes = require("./routes/handyMan/handymanPortfolioRoutes");
 const dataScientistRoutes = require("./routes/dataScientist/dataScientistRoutes");
-const userRoutes2 = require('./routes/userRoute2.js');
-const serviceRoutes = require('./routes/serviceRoutes.js');
-const quoteRoutes = require('./routes/quoteRoutes.js');
-const roomRoutes = require('./routes/roomRoutes.js');
+const userRoutes2 = require("./routes/userRoute2.js");
+const serviceRoutes = require("./routes/serviceRoutes.js");
+const quoteRoutes = require("./routes/quoteRoutes.js");
+const roomRoutes = require("./routes/roomRoutes.js");
 const checkoutRoutes = require("./routes/stripePayment/checkoutRoutes");
 const authRoutes = require("./routes/auth"); // Import authentication routes
 const seedUsers = require("./seed/users"); // Import seed users function
@@ -120,9 +120,9 @@ app.use("/api/handyman-template", handymanTemplateRoutes);
 app.use("/support-form", supportFormRoutes);
 
 app.use("/cleaning/user", userRoutes2);
-app.use('/services', serviceRoutes);
-app.use('/quotes', quoteRoutes);
-app.use('/rooms', roomRoutes);
+app.use("/services", serviceRoutes);
+app.use("/quotes", quoteRoutes);
+app.use("/rooms", roomRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) => res.status(200).json({ ok: true, ts: Date.now() }));
 

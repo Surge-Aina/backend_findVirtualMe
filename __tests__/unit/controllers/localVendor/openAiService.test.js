@@ -41,13 +41,11 @@ describe("generateVendorAboutAndMenuJSON", () => {
       };
     });
 
-    ({ generateVendorAboutAndMenuJSON } = require("../services/openAiService"));
+    ({ generateVendorAboutAndMenuJSON } = require("../../../../services/openAiService"));
   });
 
   it("should return parsed vendor JSON from mocked OpenAI", async () => {
-    const result = await generateVendorAboutAndMenuJSON(
-      "Test vendor description"
-    );
+    const result = await generateVendorAboutAndMenuJSON("Test vendor description");
 
     expect(result.vendor.name).toBe("Direct Test Vendor");
     expect(result.about.banner.title).toBe("Direct About Us");
@@ -65,9 +63,7 @@ describe("generateVendorAboutAndMenuJSON", () => {
       choices: [{ message: { content: "not-json" } }],
     });
 
-    await expect(generateVendorAboutAndMenuJSON("bad text")).rejects.toThrow(
-      SyntaxError
-    );
+    await expect(generateVendorAboutAndMenuJSON("bad text")).rejects.toThrow(SyntaxError);
   });
 
   // it("should throw error if OpenAI returns no choices", async () => {

@@ -75,6 +75,9 @@ describe("LocationPing Model", () => {
 
   describe("TTL Index (createdAt)", () => {
     it("should define TTL index on createdAt with 15 days (1296000 seconds)", async () => {
+      // Ensure indexes are built in the in-memory MongoDB
+      await LocationPing.syncIndexes();
+
       // Fetch indexes from MongoDB for this collection
       const indexes = await LocationPing.collection.getIndexes({ full: true });
 
@@ -82,7 +85,6 @@ describe("LocationPing Model", () => {
       const ttlIdx = indexes.find(
         (idx) =>
           idx.key &&
-          typeof idx.key === "object" &&
           idx.key.createdAt === 1 &&
           (idx.expireAfterSeconds === 60 * 60 * 24 * 15 ||
             idx.expireAfterSeconds === 1296000)
@@ -101,7 +103,7 @@ describe("LocationPing Model", () => {
   describe("Data Types & Minimal Inserts", () => {
     it("should save minimal location info (city/region/country/page) with defaults for dates", async () => {
       const doc = await LocationPing.create({
-        city: "Unknown",   // route may pass "Unknown" when geoip fails
+        city: "Unknown", // route may pass "Unknown" when geoip fails
         region: "Unknown",
         country: "US",
         page: "/visit",

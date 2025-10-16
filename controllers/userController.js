@@ -5,11 +5,13 @@ const req = require("express/lib/request");
 const jwt = require("jsonwebtoken");
 const Stripe = require("stripe");
 
-const stripeSecretkey =
-  process.env.STRIPE_MODE === "live"
-    ? process.env.STRIPE_SECRET_KEY_LIVE
-    : process.env.STRIPE_SECRET_KEY_TEST;
-const stripe = new Stripe(stripeSecretkey);
+function getStripe() {
+  const stripeSecretkey =
+    process.env.STRIPE_MODE === "live"
+      ? process.env.STRIPE_SECRET_KEY_LIVE
+      : process.env.STRIPE_SECRET_KEY_TEST;
+  return new Stripe(stripeSecretkey);
+}
 
 // Not using the signup feature for now
 exports.signupUser = async (req, res) => {
@@ -139,6 +141,8 @@ exports.getUserById = async (req, res) => {
 };
 
 exports.getSubInfo = async (req, res) => {
+  const stripe = getStripe();
+
   try {
     const { stripeCustomerId } = req.user; // obtained from auth middleware
     //get subscription info from stripe

@@ -1,9 +1,9 @@
 const request = require("supertest");
-const app = require("../testapp");
-const LocalVendorPortfolio = require("../models/LocalVendorPortfolio");
-const openAiService = require("../services/openAiService");
+const app = require("../../../../testapp");
+const LocalVendorPortfolio = require("../../../../models/localFoodVendor/LocalVendorPortfolio");
+const openAiService = require("../../../../services/openAiService");
 
-jest.mock("../services/openAiService");
+jest.mock("../../../../services/openAiService");
 
 describe("Local Vendor Portfolio API", () => {
   beforeEach(async () => {

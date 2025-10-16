@@ -130,17 +130,15 @@ jest.mock("multer", () => {
       return (req, res, next) => {
         req.files = {};
         fieldsArray.forEach(({ name, maxCount }) => {
-          req.files[name] = Array.from({ length: maxCount || 1 }).map(
-            (_, i) => ({
-              fieldname: name,
-              originalname: `test-${name}-${i + 1}.jpg`,
-              encoding: "7bit",
-              mimetype: "image/jpeg",
-              buffer: Buffer.from("fake-image-data"),
-              size: 1024,
-              filename: `${Date.now()}-${i + 1}.jpg`,
-            })
-          );
+          req.files[name] = Array.from({ length: maxCount || 1 }).map((_, i) => ({
+            fieldname: name,
+            originalname: `test-${name}-${i + 1}.jpg`,
+            encoding: "7bit",
+            mimetype: "image/jpeg",
+            buffer: Buffer.from("fake-image-data"),
+            size: 1024,
+            filename: `${Date.now()}-${i + 1}.jpg`,
+          }));
         });
         next();
       };
@@ -172,7 +170,7 @@ jest.mock("multer", () => {
   return multer;
 });
 
-jest.mock("./models/MenuItems", () => {
+jest.mock("./models/localFoodVendor/MenuItems", () => {
   const MockMenu = function (data) {
     Object.assign(this, data);
     this.save = jest.fn(async () => {
@@ -192,10 +190,7 @@ jest.mock("./models/MenuItems", () => {
   });
 
   MockMenu.find = jest.fn(async (query) => []);
-  MockMenu.distinct = jest.fn(async (field, filter) => [
-    "Fast Food",
-    "Desserts",
-  ]);
+  MockMenu.distinct = jest.fn(async (field, filter) => ["Fast Food", "Desserts"]);
 
   MockMenu.findByIdAndUpdate = jest.fn(async (filter, update) => {
     if (filter._id === "doesNotExist") return null;
@@ -210,19 +205,19 @@ jest.mock("./models/MenuItems", () => {
   return MockMenu;
 });
 
-jest.mock("./models/LocalVendorPortfolio", () => ({
+jest.mock("./models/localFoodVendor/LocalVendorPortfolio", () => ({
   create: jest.fn(async (data) => ({ _id: "mockVendorId", ...data })),
   findOne: jest.fn(),
   deleteMany: jest.fn(),
 }));
 
-jest.mock("./models/About", () => ({
+jest.mock("./models/localFoodVendor/About", () => ({
   create: jest.fn(async (data) => ({ _id: "mockAboutId", ...data })),
   findOne: jest.fn(),
   deleteMany: jest.fn(),
 }));
 
-jest.mock("./models/Banner", () => ({
+jest.mock("./models/localFoodVendor/Banner", () => ({
   create: jest.fn(async (data) => ({ _id: "mockBannerId", ...data })),
 }));
 

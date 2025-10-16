@@ -1,9 +1,9 @@
 const request = require("supertest");
-const app = require("../testapp");
+const app = require("../../../../testapp");
 const mongoose = require("mongoose");
 
 // Mock Review model
-jest.mock("../models/Review", () => {
+jest.mock("../../../../models/localFoodVendor/Review", () => {
   const mockReview = jest.fn(function (data) {
     Object.assign(this, data);
     this.save = jest.fn();
@@ -16,7 +16,7 @@ jest.mock("../models/Review", () => {
   return mockReview;
 });
 
-const Review = require("../models/Review");
+const Review = require("../../../../models/localFoodVendor/Review");
 
 describe("Review API (mocked)", () => {
   const vendorId = new mongoose.Types.ObjectId().toString();
