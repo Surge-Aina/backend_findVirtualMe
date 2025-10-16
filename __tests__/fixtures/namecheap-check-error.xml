@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApiResponse Status="ERROR" xmlns="http://api.namecheap.com/xml.response">
+  <Errors>
+    <Error Number="2030280">
+      Invalid API Key or API Key disabled
+    </Error>
+  </Errors>
+  <Warnings />
+  <RequestedCommand>namecheap.domains.check</RequestedCommand>
+  <Server>SERVER-NAME</Server>
+  <GMTTimeDiff>--5</GMTTimeDiff>
+  <ExecutionTime>0.002</ExecutionTime>
+</ApiResponse>

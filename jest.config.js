@@ -6,6 +6,9 @@ module.exports = {
     "<rootDir>/__tests__/**/*.test.js",
     "**/test/**/*.test.js",
   ],
+  transformIgnorePatterns: [
+    "node_modules/(?!(@vercel/sdk)/)", // Transform @vercel/sdk ESM module
+  ],
   collectCoverageFrom: [
     "routes/**/*.js",
     "models/**/*.js",
