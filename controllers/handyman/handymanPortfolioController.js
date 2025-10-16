@@ -29,7 +29,7 @@ const getPortfolioItems = async (req, res) => {
 
 const createPortfolioItem = async (req, res) => {
   try {
-    const { title, category, templateId, beforeImageUrl, afterImageUrl } = req.body;
+    const { title, subtitle, category, templateId, beforeImageUrl, afterImageUrl } = req.body;
     if (!title || !category || !templateId) {
       return res.status(400).json({ message: 'title, category and templateId are required' });
     }
@@ -67,6 +67,7 @@ const createPortfolioItem = async (req, res) => {
     const newItem = await HandymanPortfolio.create({
       templateId,
       title,
+      subtitle: subtitle || '',            // <-- save subtitle
       category,
       beforeImageUrl: beforeUrl,
       afterImageUrl: afterUrl,
@@ -84,7 +85,13 @@ const createPortfolioItem = async (req, res) => {
 const updatePortfolioItem = async (req, res) => {
   try {
     const { id } = req.params;
-    let update = { ...req.body };
+
+    // Only allow the fields we expect
+    const update = {};
+    ['title', 'subtitle', 'category', 'beforeImageUrl', 'afterImageUrl', 'beforeImageKey', 'afterImageKey']
+      .forEach(k => {
+        if (req.body[k] !== undefined) update[k] = req.body[k];
+      });
 
     if (req.files?.beforeImage?.[0]) {
       const r1 = await uploadToS3(

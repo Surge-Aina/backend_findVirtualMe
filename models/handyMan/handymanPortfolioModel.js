@@ -7,6 +7,7 @@ const schema = new mongoose.Schema({
   category: { type: String, required: true },
   beforeImageUrl: { type: String, required: true },
   afterImageUrl: { type: String, required: true },
+  subtitle: { type: String, default: '' }, 
   // new (optional for old docs)
   beforeImageKey: { type: String },
   afterImageKey: { type: String },

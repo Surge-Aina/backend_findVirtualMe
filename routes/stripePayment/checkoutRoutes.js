@@ -2,7 +2,12 @@ const express = require("express");
 const router = express.Router();
 const Stripe = require("stripe");
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripeSecretkey =
+  process.env.STRIPE_MODE === "live"
+    ? process.env.STRIPE_SECRET_KEY_LIVE
+    : process.env.STRIPE_SECRET_KEY_TEST;
+const stripe = new Stripe(stripeSecretkey);
+
 //payment intent
 router.post("/payment-intent", async (req, res) => {
   const { userId, amount } = req.body;
@@ -29,8 +34,14 @@ router.post("/payment-intent", async (req, res) => {
 
 //checkout-session: sends users to stripe payment page
 const PRICE_MAP = {
-  basic: "price_1S32zY4RRTaBgmEqhHSUxiMT", // $9/month
-  pro: "price_1S32yN4RRTaBgmEqVX7uegSs", // $29/month
+  basic:
+    process.env.STRIPE_MODE === "live"
+      ? process.env.PRICE_BASIC_LIVE
+      : process.env.PRICE_BASIC_TEST, // $9/month
+  pro:
+    process.env.STRIPE_MODE === "live"
+      ? process.env.PRICE_PRO_LIVE
+      : process.env.PRICE_PRO_TEST, // $29/month
 };
 
 router.post("/checkout-session", async (req, res) => {
@@ -38,33 +49,35 @@ router.post("/checkout-session", async (req, res) => {
     const user = req.user; // middleware auth populates this
     const { plan } = req.body; //"basic" or "pro"
 
+    console.log("--------------------plan: ", plan);
+
     if (!plan || !PRICE_MAP[plan]) {
       return res.status(400).json({ error: "Invalid plan selected" });
     }
 
-    //check if stripe customer has active subscriptions
-    //redirect to billing if so
-    if (user.stripeCustomerId) {
-      const subscriptions = await stripe.subscriptions.list({
-        customer: user.stripeCustomerId,
-        status: { in: ["active", "trialing", "past_due"] },
-        limit: 1,
-      });
+    // //check if stripe customer has active subscriptions
+    // //redirect to billing if so
+    // if (user.stripeCustomerId) {
+    //   const subscriptions = await stripe.subscriptions.list({
+    //     customer: user.stripeCustomerId,
+    //     status: { in: ["active", "trialing", "past_due"] },
+    //     limit: 1,
+    //   });
 
-      //redirect to billing
-      if (subscriptions.data.length > 0) {
-        const portalSession = await stripe.billingPortal.sessions.create({
-          customer: user.stripeCustomerId,
-          return_url: `${process.env.FRONTEND_URL}/profile`,
-        });
+    //   //redirect to billing
+    //   if (subscriptions.data.length > 0) {
+    //     const portalSession = await stripe.billingPortal.sessions.create({
+    //       customer: user.stripeCustomerId,
+    //       return_url: `${process.env.FRONTEND_URL}/profile`,
+    //     });
 
-        //save subscriptionID to user
-        user.stripeSubscriptionId = subscriptions.data[0].id;
-        user.save();
+    //     //save subscriptionID to user
+    //     user.stripeSubscriptionId = subscriptions.data[0].id;
+    //     user.save();
 
-        return res.json({ checkoutUrl: portalSession.url });
-      }
-    }
+    //     return res.json({ checkoutUrl: portalSession.url });
+    //   }
+    // }
 
     //if user does not have stripe customer ID create a new customer on stripe
     //and save the id to user in mongodb
@@ -104,7 +117,9 @@ router.post("/checkout-session", async (req, res) => {
     res.json({ checkoutUrl: session.url });
   } catch (err) {
     console.error("error creating checkout session: ", err);
-    res.status(500).json({ message: "error creating checkout session", error: err.message });
+    res
+      .status(500)
+      .json({ message: "error creating checkout session", error: err.message });
   }
 });
 
@@ -148,6 +163,24 @@ router.post("/create-customer", async (req, res) => {
   } catch (error) {
     console.error("error creating stripe customer: ", error);
     res.status(500).json({ message: "Error creating stripe customer", error: error });
+  }
+});
+
+router.post("/billing-session", async (req, res) => {
+  frontEndUrl = process.env.FRONTEND_URL;
+
+  try {
+    const user = req.user; // middleware auth populates this
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: user.stripeCustomerId,
+      return_url: `${frontEndUrl}/profile`,
+    });
+
+    res.json({ billingSessionUrl: session.url });
+  } catch (error) {
+    console.error("error creating stripe billing session: ", error);
+    res.status(500).json({ message: "Error creating stripe billing session", error });
   }
 });
 
