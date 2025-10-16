@@ -1,23 +1,27 @@
-let vercelClient = null;
+let vercelClientPromise = null;
 
 async function getVercelClient() {
-  if (vercelClient) {
+  if (vercelClientPromise) {
+    return vercelClientPromise;
+  }
+
+  vercelClientPromise = (async () => {
+    const token = process.env.VERCEL_TOKEN;
+    if (!token) {
+      throw new Error("VERCEL_TOKEN environment variable is required");
+    }
+
+    const { Vercel } = await import("@vercel/sdk");
+    vercelClient = new Vercel({
+      bearerToken: token,
+    });
     return vercelClient;
-  }
+  })();
 
-  const token = process.env.VERCEL_TOKEN;
-  if (!token) {
-    throw new Error('VERCEL_TOKEN environment variable is required');
-  }
-
-  const { Vercel } = await import('@vercel/sdk');
-  vercelClient = new Vercel({
-    bearerToken: token,
-  });
-  return vercelClient;
+  return vercelClientPromise;
 }
 
-const projectId = process.env.VERCEL_PROJECT_ID || 'frontend-find-virtual-me';
+const projectId = process.env.VERCEL_PROJECT_ID || "frontend-find-virtual-me";
 
 function normalizeVercelError(error) {
   if (!error || typeof error !== "object") {
@@ -95,7 +99,6 @@ function buildVercelError(error, options = {}) {
   return wrapped;
 }
 
-
 // Add domain to Vercel project
 async function addDomain(domain) {
   try {
@@ -109,7 +112,7 @@ async function addDomain(domain) {
     });
 
     console.log(`Domain added to Vercel: ${domain}`);
-    
+
     return {
       success: true,
       domain: result.name,
@@ -131,7 +134,7 @@ async function verifyDomain(domain) {
       domain: domain,
       teamId: process.env.VERCEL_TEAM_ID,
     });
-    
+
     return {
       verified: result.verified,
       verification: result.verification,
@@ -153,7 +156,7 @@ async function removeDomain(domain) {
       domain: domain,
       teamId: process.env.VERCEL_TEAM_ID,
     });
-    
+
     return { success: true };
   } catch (error) {
     console.error(`Failed to remove domain ${domain}:`, error.message);
@@ -172,7 +175,7 @@ async function getDomainStatus(domain) {
       domain: domain,
       teamId: process.env.VERCEL_TEAM_ID,
     });
-    
+
     return {
       verified: result.verified,
       verification: result.verification,
@@ -186,19 +189,19 @@ async function getDomainStatus(domain) {
 }
 
 async function getDomainConfig(domain) {
-    try {
+  try {
     const vercel = await getVercelClient();
     const result = await vercel.domains.getDomainConfig({
-        domain: domain,
-        teamId: process.env.VERCEL_TEAM_ID,
+      domain: domain,
+      teamId: process.env.VERCEL_TEAM_ID,
     });
 
     return {
-        misconfigured: result.misconfigured,
-        configuredBy: result.configuredBy,
-        recommendedARecords: result.recommendedARecords,
-        recommendedCNAMERecords: result.recommendedCNAMERecords,
-        recommendedTXTRecords: result.recommendedTXTRecords,
+      misconfigured: result.misconfigured,
+      configuredBy: result.configuredBy,
+      recommendedARecords: result.recommendedARecords,
+      recommendedCNAMERecords: result.recommendedCNAMERecords,
+      recommendedTXTRecords: result.recommendedTXTRecords,
     };
   } catch (error) {
     console.error(`Failed to get domain config for ${domain}:`, error.message);
@@ -207,7 +210,6 @@ async function getDomainConfig(domain) {
     });
   }
 }
-
 
 module.exports = {
   addDomain,

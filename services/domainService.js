@@ -337,6 +337,18 @@ const domainService = {
         const domainRegistration =
           apiResponse?.CommandResponse?.[0]?.DomainCreateResult?.[0]?.$;
 
+        // Check for Namecheap API errors
+        if (apiResponse.$.Status === "ERROR") {
+          const errorMsg =
+            apiResponse.Errors?.[0]?.Error?.[0]?._ || "Registration failed";
+          const errorCode = apiResponse.Errors?.[0]?.Error?.[0]?.$.Number;
+          return res.status(400).json({
+            error: errorMsg,
+            code: errorCode,
+            details: "Namecheap domain registration error",
+          });
+        }
+
         const isVerified = vercelResult?.verified === true;
         const responseStatus =
           apiResponse.$.Status === "OK" && isVerified

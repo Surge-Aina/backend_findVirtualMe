@@ -218,7 +218,6 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) =>
   res.status(200).json({ ok: true, ts: Date.now() })
 );
-app.get("/health", (_req, res) => res.status(200).json({ ok: true, ts: Date.now() }));
 
 app.use("/api/telemetry", telemetryRoutes);
 
