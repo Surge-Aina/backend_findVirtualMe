@@ -31,10 +31,10 @@ const reviewRoutes = require("./routes/localFoodVendor/reviewRoutes");
 const taggedImageRoutes = require("./routes/localFoodVendor/taggedImageRoutes");
 const handymanPortfolioRoutes = require("./routes/handyMan/handymanPortfolioRoutes");
 const dataScientistRoutes = require("./routes/dataScientist/dataScientistRoutes");
-const userRoutes2 = require('./routes/userRoute2.js');
-const serviceRoutes = require('./routes/serviceRoutes.js');
-const quoteRoutes = require('./routes/quoteRoutes.js');
-const roomRoutes = require('./routes/roomRoutes.js');
+const userRoutes2 = require('./routes/cleaningLady/userRoute2');
+// const serviceRoutes = require('./routes/serviceRoutes.js');
+// const quoteRoutes = require('./routes/quoteRoutes.js');
+// const roomRoutes = require('./routes/roomRoutes.js');
 const checkoutRoutes = require("./routes/stripePayment/checkoutRoutes");
 const authRoutes = require("./routes/auth"); // Import authentication routes
 const seedUsers = require("./seed/users"); // Import seed users function
@@ -47,6 +47,9 @@ const supportFormRoutes = require("./routes/supportFormRoutes");
 const roleCheck = require("./middleware/roleCheck");
 const auth = require("./middleware/auth");
 const telemetryRoutes = require("./routes/telemetry");
+// const settingRoutes2 = require('./routes/settingRoutes');
+
+const portfolio_Routes = require('./routes/cleaningLady/portfolioRoutes');
 
 // Import configuration from separate file
 const config = require("./config");
@@ -74,12 +77,14 @@ app.use(
     credentials: true,
   })
 );
-
+// app.use('/settings', settingRoutes2);
 //stripe webhook(must be before app.use(express.json()))
 //do not call directly, stripe will call this route
 app.use("/stripe-webhook", stripeWebhookRoutes);
 
 app.use(express.json());
+app.use('/api/portfolios', portfolio_Routes);
+
 setCredentialsFromEnv();
 
 // Mount the main portfolio API routes at /portfolio
@@ -121,10 +126,10 @@ app.use("/api/handyman-template", handymanTemplateRoutes);
 app.use('/api/handyman/inquiries', handymanInquiryRoutes);
 app.use("/support-form", supportFormRoutes);
 
-app.use("/cleaning/user", userRoutes2);
-app.use('/services', serviceRoutes);
-app.use('/quotes', quoteRoutes);
-app.use('/rooms', roomRoutes);
+// app.use("/cleaning/user", userRoutes2);
+// app.use('/services', serviceRoutes);
+// app.use('/quotes', quoteRoutes);
+// app.use('/rooms', roomRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) => res.status(200).json({ ok: true, ts: Date.now() }));
 
@@ -160,11 +165,8 @@ app.use("/auth", authRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Serve static files from uploads directory
-app.use(
-  `/${config.uploads.directory}`,
-  express.static(path.join(__dirname, config.uploads.directory))
-);
-
+app.use(`/${config.uploads.directory}`, express.static(path.join(__dirname, config.uploads.directory)));
+// app.use('/api/settings', settingRoutes2);
 // Make config available to the app
 app.set("config", config);
 

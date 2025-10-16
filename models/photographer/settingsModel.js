@@ -15,5 +15,8 @@ const settingsSchema = new mongoose.Schema({
     default: Date.now
   }
 });
-
+settingsSchema.index(
+  { portfolioId: 1, key: 1 },
+  { unique: true, name: 'portfolioId_key_unique' }
+);
 module.exports = mongoose.model('Settings', settingsSchema);
