@@ -1,9 +1,15 @@
+jest.mock("../../../../utils/multer", () => ({
+  single: () => (req, res, next) => next(),
+  fields: () => (req, res, next) => next(),
+  array: () => (req, res, next) => next(),
+}));
+
 const request = require("supertest");
-const app = require("../testapp");
+const app = require("../../../../testapp");
 const mongoose = require("mongoose");
 
 // Import the mocked MenuItems model from setup.js
-const MenuItems = require("../models/MenuItems");
+const MenuItems = require("../../../../models/localFoodVendor/MenuItems");
 
 describe("Menu API (mocked)", () => {
   const vendorId = new mongoose.Types.ObjectId().toString();
@@ -38,23 +44,17 @@ describe("Menu API (mocked)", () => {
   });
 
   it("should fetch unique categories", async () => {
-    MenuItems.distinct = jest
-      .fn()
-      .mockResolvedValueOnce(["Fast Food", "Desserts"]);
+    MenuItems.distinct = jest.fn().mockResolvedValueOnce(["Fast Food", "Desserts"]);
 
     const res = await request(app).get(`/menu/${vendorId}/categories`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual(
-      expect.arrayContaining(["All", "Fast Food", "Desserts"])
-    );
+    expect(res.body).toEqual(expect.arrayContaining(["All", "Fast Food", "Desserts"]));
     expect(MenuItems.distinct).toHaveBeenCalledWith("category", { vendorId });
   });
 
   it("should update an existing menu item", async () => {
-    const res = await request(app)
-      .put(`/menu/${vendorId}/mockId3`)
-      .send({ price: 12 });
+    const res = await request(app).put(`/menu/${vendorId}/mockId3`).send({ price: 12 });
 
     expect(res.status).toBe(200);
     expect(res.body.price).toBe(12);

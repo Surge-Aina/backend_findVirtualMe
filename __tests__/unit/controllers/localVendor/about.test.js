@@ -1,7 +1,7 @@
 const request = require("supertest");
-const app = require("../testapp");
+const app = require("../../../../testapp");
 const mongoose = require("mongoose");
-const About = require("../models/About");
+const About = require("../../../../models/localFoodVendor/About");
 
 beforeEach(() => {
   jest.clearAllMocks();

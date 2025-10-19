@@ -8,7 +8,7 @@ const fetch =
   global.fetch ||
   ((...args) => import("node-fetch").then(({ default: f }) => f(...args)));
 
-const USE_FALLBACK = process.env.NODE_ENV !== "production";  // Use the online fallback only in non-production environments.
+const USE_FALLBACK = false; //process.env.NODE_ENV !== "production";  // Use the online fallback only in non-production environments.
 // it‘s better that it is changed to false
 //const USE_FALLBACK = false
 
@@ -25,7 +25,9 @@ async function lookupCityFallback(ip, base) {
   if (base?.city && base.city !== "Unknown") return base;
 
   try {
-    const resp = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city`);
+    const resp = await fetch(
+      `http://ip-api.com/json/${ip}?fields=status,country,regionName,city`
+    );
     const data = await resp.json();
     if (data?.status === "success") {
       return {
@@ -40,7 +42,7 @@ async function lookupCityFallback(ip, base) {
   return base;
 }
 
-// Called by FE only when cookie_consent = accepted. 
+// Called by FE only when cookie_consent = accepted.
 router.post("/visit", async (req, res) => {
   try {
     const ip = getClientIp(req);

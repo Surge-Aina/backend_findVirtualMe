@@ -1,7 +1,20 @@
+jest.mock("../../../../utils/multer", () => ({
+  single: () => (req, res, next) => {
+    req.file = {
+      filename: "test.jpg",
+      originalname: "test.jpg",
+      mimetype: "image/jpeg",
+    };
+    next();
+  },
+  fields: () => (req, res, next) => next(),
+  array: () => (req, res, next) => next(),
+}));
+
 const request = require("supertest");
-const app = require("../testapp");
+const app = require("../../../../testapp");
 const mongoose = require("mongoose");
-const TaggedImage = require("../models/TaggedImage");
+const TaggedImage = require("../../../../models/localFoodVendor/TaggedImage");
 
 describe("TaggedImage API (mocked)", () => {
   const vendorId = new mongoose.Types.ObjectId().toString();
@@ -74,9 +87,7 @@ describe("TaggedImage API (mocked)", () => {
     };
     TaggedImage.findOne.mockResolvedValueOnce(fakeImage);
 
-    const res = await request(app).delete(
-      `/tagged-image/${vendorId}/img4/tags/0`
-    );
+    const res = await request(app).delete(`/tagged-image/${vendorId}/img4/tags/0`);
 
     expect(res.status).toBe(200);
     expect(fakeImage.tags.length).toBe(0);
