@@ -104,7 +104,7 @@ app.use("/user", userRoutes); //onboarding now routes here
 app.use("/settings", settingsRoutes);
 app.use("/drive", driveRoutes);
 app.use("/photo", photoRoutes);
-app.use("/upload", uploadRoutes);
+//app.use("/upload", uploadRoutes);
 app.use("/testimonials", testimonialRoutes);
 app.use("/dashboard", dashboardRoutes);
 app.use("/banner", bannerRoutes);
@@ -134,34 +134,34 @@ app.use("/api/telemetry", telemetryRoutes);
  * @returns {Promise<void>} Logs success or error to console
  * @notes Uses centralized database connection. Connection is required for API to function.
  */
-connectDB()
-  .then(async () => {
-    // Seed users after successful database connection
-    await seedUsers();
-  })
-  .catch((err) => console.error(err)); // Log connection errors
+// connectDB()
+//   .then(async () => {
+//     // Seed users after successful database connection
+//     await seedUsers();
+//   })
+//   .catch((err) => console.error(err)); // Log connection errors
 
-/**
- * Mount the authentication API routes at /auth
- * @function
- * @param {string} path - The base path for the routes
- * @param {Router} router - The Express router for authentication APIs
- */
-app.use("/auth", authRoutes);
+// /**
+//  * Mount the authentication API routes at /auth
+//  * @function
+//  * @param {string} path - The base path for the routes
+//  * @param {Router} router - The Express router for authentication APIs
+//  */
+// app.use("/auth", authRoutes);
 
-/**
- * Serve static files from uploads directory
- * @function
- * @param {string} path - The URL path to serve files from
- * @param {Function} middleware - Express static middleware
- */
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// /**
+//  * Serve static files from uploads directory
+//  * @function
+//  * @param {string} path - The URL path to serve files from
+//  * @param {Function} middleware - Express static middleware
+//  */
+// app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Serve static files from uploads directory
-app.use(
-  `/${config.uploads.directory}`,
-  express.static(path.join(__dirname, config.uploads.directory))
-);
+// // Serve static files from uploads directory
+// app.use(
+//   `/${config.uploads.directory}`,
+//   express.static(path.join(__dirname, config.uploads.directory))
+// );
 
 // Make config available to the app
 app.set("config", config);
@@ -195,45 +195,45 @@ app.get("/oauth2callback", async (req, res) => {
   }
 });
 
-// Create HTTP server with Socket.IO
-const server = http.createServer(app);
-const io = socketIo(server, {
-  cors: {
-    origin: config.server.corsOrigin,
-    methods: ["GET", "POST"],
-  },
-});
+// // Create HTTP server with Socket.IO
+// const server = http.createServer(app);
+// const io = socketIo(server, {
+//   cors: {
+//     origin: config.server.corsOrigin,
+//     methods: ["GET", "POST"],
+//   },
+// });
 
 /**
  * Socket.IO connection handling for real-time updates
  */
-io.on("connection", (socket) => {
-  console.log("🔌 Client connected:", socket.id);
+// io.on("connection", (socket) => {
+//   console.log("🔌 Client connected:", socket.id);
 
-  socket.on("join-customer-room", () => {
-    socket.join("customer-updates");
-    socket.join("cust@test.com-updates");
-    console.log("👥 Customer joined update room");
-  });
+//   socket.on("join-customer-room", () => {
+//     socket.join("customer-updates");
+//     socket.join("cust@test.com-updates");
+//     console.log("👥 Customer joined update room");
+//   });
 
-  socket.on("join-admin-room", () => {
-    socket.join("admin-updates");
-    socket.join("admin@test.com-updates");
-    console.log("👤 Admin joined update room");
-  });
+//   socket.on("join-admin-room", () => {
+//     socket.join("admin-updates");
+//     socket.join("admin@test.com-updates");
+//     console.log("👤 Admin joined update room");
+//   });
 
-  socket.on("join-user-room", (userId) => {
-    socket.join(`${userId}-updates`);
-    console.log(`👤 User ${userId} joined their specific room`);
-  });
+//   socket.on("join-user-room", (userId) => {
+//     socket.join(`${userId}-updates`);
+//     console.log(`👤 User ${userId} joined their specific room`);
+//   });
 
-  socket.on("disconnect", () => {
-    console.log("🔌 Client disconnected:", socket.id);
-  });
-});
+//   socket.on("disconnect", () => {
+//     console.log("🔌 Client disconnected:", socket.id);
+//   });
+// });
 
-// Make io available to routes
-app.set("io", io);
+// // Make io available to routes
+// app.set("io", io);
 
 /**
  * Test endpoint to trigger WebSocket events
@@ -242,19 +242,19 @@ app.set("io", io);
  * @param   {Object} res - Express response object
  * @returns {Object} Success message
  */
-app.post("/test-websocket", (req, res) => {
-  const io = req.app.get("io");
-  if (io) {
-    io.emit("test-event", {
-      message: "Test WebSocket event",
-      timestamp: new Date().toISOString(),
-    });
-    console.log("📡 Test WebSocket event emitted");
-    res.json({ message: "Test event sent" });
-  } else {
-    res.status(500).json({ error: "Socket.IO not available" });
-  }
-});
+// app.post("/test-websocket", (req, res) => {
+//   const io = req.app.get("io");
+//   if (io) {
+//     io.emit("test-event", {
+//       message: "Test WebSocket event",
+//       timestamp: new Date().toISOString(),
+//     });
+//     console.log("📡 Test WebSocket event emitted");
+//     res.json({ message: "Test event sent" });
+//   } else {
+//     res.status(500).json({ error: "Socket.IO not available" });
+//   }
+// });
 
 /**
  * Start the Express server on the specified port
@@ -264,8 +264,8 @@ app.post("/test-websocket", (req, res) => {
  */
 
 // Only start the server if this file is run directly (not imported for testing)
-if (require.main === module) {
-  server.listen(PORT, () => console.log(`✅ Server running on PORT: ${PORT}`));
-}
+// if (require.main === module) {
+//   server.listen(PORT, () => console.log(`✅ Server running on PORT: ${PORT}`));
+// }
 
-module.exports = { app, server };
+module.exports = app;

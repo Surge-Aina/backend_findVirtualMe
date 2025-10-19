@@ -6,9 +6,7 @@ const MenuItem = require("../../models/localFoodVendor/MenuItems");
 const Review = require("../../models/localFoodVendor/Review");
 const TaggedImage = require("../../models/localFoodVendor/TaggedImage");
 const seedVendor = require("../../models/localFoodVendor/seedVendor");
-const {
-  generateVendorAboutAndMenuJSON,
-} = require("../../services/openAiService");
+const { generateVendorAboutAndMenuJSON } = require("../../services/openAiService");
 const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
 
@@ -66,9 +64,7 @@ exports.updateVendor = async (req, res) => {
 // Delete vendor
 exports.deleteVendor = async (req, res) => {
   try {
-    const deleted = await LocalVendorPortfolio.findByIdAndDelete(
-      req.params.vendorId
-    );
+    const deleted = await LocalVendorPortfolio.findByIdAndDelete(req.params.vendorId);
     if (!deleted) return res.status(404).json({ error: "Vendor not found" });
     res.json({ message: "Vendor deleted" });
   } catch (err) {
@@ -84,15 +80,14 @@ exports.getFullPortfolio = async (req, res) => {
     if (!vendor) return res.status(404).json({ error: "Vendor not found" });
 
     // fetch all linked data in parallel
-    const [banners, about, gallery, menu, reviews, taggedImages] =
-      await Promise.all([
-        Banner.find({ vendorId }),
-        About.findOne({ vendorId }),
-        GalleryImage.find({ vendorId }),
-        MenuItem.find({ vendorId }),
-        Review.find({ vendorId }),
-        TaggedImage.find({ vendorId }).populate("tags.menuItem"),
-      ]);
+    const [banners, about, gallery, menu, reviews, taggedImages] = await Promise.all([
+      Banner.find({ vendorId }),
+      About.findOne({ vendorId }),
+      GalleryImage.find({ vendorId }),
+      MenuItem.find({ vendorId }),
+      Review.find({ vendorId }),
+      TaggedImage.find({ vendorId }).populate("tags.menuItem"),
+    ]);
 
     res.json({ vendor, banners, about, gallery, menu, reviews, taggedImages });
   } catch (err) {
@@ -203,13 +198,9 @@ exports.injectVendorPortfolio = async (req, res) => {
       shape: "fullscreen",
     });
 
-    res
-      .status(201)
-      .json({ vendor, about: parsed.about, menuItems: parsed.menuItems });
+    res.status(201).json({ vendor, about: parsed.about, menuItems: parsed.menuItems });
   } catch (err) {
     console.error(err);
-    res
-      .status(500)
-      .json({ error: "Failed to create vendor portfolio from document" });
+    res.status(500).json({ error: "Failed to create vendor portfolio from document" });
   }
 };

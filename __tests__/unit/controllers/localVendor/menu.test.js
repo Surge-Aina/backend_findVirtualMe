@@ -1,3 +1,9 @@
+jest.mock("../../../../utils/multer", () => ({
+  single: () => (req, res, next) => next(),
+  fields: () => (req, res, next) => next(),
+  array: () => (req, res, next) => next(),
+}));
+
 const request = require("supertest");
 const app = require("../../../../testapp");
 const mongoose = require("mongoose");

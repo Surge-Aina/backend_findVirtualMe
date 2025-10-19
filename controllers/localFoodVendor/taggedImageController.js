@@ -42,7 +42,7 @@ exports.addTag = async (req, res) => {
 // Update a tag by image ID and tag index
 exports.updateTag = async (req, res) => {
   const { x, y, label, menuItemId } = req.body;
-  //const { imageId, tagIndex } = req.params;
+  const { imageId, tagIndex } = req.params;
   console.log("PUT /api/tagged/:imageId/tags/:tagIndex", req.params, req.body);
 
   try {

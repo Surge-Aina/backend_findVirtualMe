@@ -1,3 +1,15 @@
+jest.mock("../../../../utils/multer", () => ({
+  single: () => (req, res, next) => {
+    req.file = { filename: "test.jpg" }; // simulate multer's output
+    next();
+  },
+  fields: () => (req, res, next) => next(),
+  array: () => (req, res, next) => {
+    req.files = [{ filename: "1.jpg" }, { filename: "2.jpg" }]; // simulate uploaded files
+    next();
+  },
+}));
+
 const request = require("supertest");
 const app = require("../../../../testapp");
 const mongoose = require("mongoose");

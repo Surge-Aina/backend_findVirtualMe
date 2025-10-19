@@ -28,12 +28,12 @@ if (!process.env.PORT) {
 }
 
 // Mock console methods to reduce noise in tests
-global.console = {
-  ...console,
-  log: jest.fn(),
-  error: jest.fn(),
-  warn: jest.fn(),
-};
+// global.console = {
+//   ...console,
+//   log: jest.fn(),
+//   error: jest.fn(),
+//   warn: jest.fn(),
+// };
 
 // Ensure no port conflicts with main application
 process.env.PORT = undefined;
