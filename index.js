@@ -38,6 +38,7 @@ const userRoutes2 = require('./routes/cleaningLady/userRoute2');
 const checkoutRoutes = require("./routes/stripePayment/checkoutRoutes");
 const authRoutes = require("./routes/auth"); // Import authentication routes
 const seedUsers = require("./seed/users"); // Import seed users function
+const domainResolver = require("./middleware/domainResolver"); // Import domain resolver
 const handymanTemplateRoutes = require("./routes/handyMan/handymanTemplateRoutes");
 const handymanInquiryRoutes = require("./routes/handyMan/handymanInquiryRoutes");
 const localVendorRoutes = require("./routes/localFoodVendor/localVendorRoutes");
@@ -46,6 +47,7 @@ const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes");
 const supportFormRoutes = require("./routes/supportFormRoutes");
 const roleCheck = require("./middleware/roleCheck");
 const auth = require("./middleware/auth");
+const domainRoutes = require("./routes/domainRoutes");
 const telemetryRoutes = require("./routes/telemetry");
 // const settingRoutes2 = require('./routes/settingRoutes');
 
@@ -54,35 +56,117 @@ const portfolio_Routes = require('./routes/cleaningLady/portfolioRoutes');
 // Import configuration from separate file
 const config = require("./config");
 
+const User = require("./models/User");
+
 const app = express();
 const PORT = process.env.PORT;
+const seededOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.ADMIN_FRONTEND_URL,
+  process.env.PUBLIC_APP_URL,
+  process.env.CORS_ADDITIONAL_ORIGINS,
+  "https://findvirtualme.com",
+  "https://www.findvirtualme.com",
+  "https://findvirtual.me",
+  "https://www.findvirtual.me",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://dannizhou.me:5173",
+]
+  .filter(Boolean)
+  .flatMap((entry) =>
+    entry
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+  );
+
+const staticOriginSet = new Set();
+const staticHostnameSet = new Set();
+
+for (const origin of seededOrigins) {
+  try {
+    const url = new URL(origin);
+    const normalizedOrigin = `${url.protocol}//${url.host}`.toLowerCase();
+    staticOriginSet.add(normalizedOrigin);
+    staticHostnameSet.add(url.hostname.toLowerCase());
+
+    if (url.protocol === "https:") {
+      staticOriginSet.add(`http://${url.host}`.toLowerCase());
+    }
+  } catch (error) {
+    console.warn(
+      `[cors] Skipping invalid configured origin "${origin}": ${error.message}`
+    );
+  }
+}
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) {
+      return callback(null, true);
+    }
+
+    let parsed;
+    try {
+      parsed = new URL(origin);
+    } catch (error) {
+      console.warn(`[cors] Rejecting malformed origin "${origin}"`);
+      return callback(new Error("Invalid origin"));
+    }
+
+    const normalizedOrigin = `${parsed.protocol}//${parsed.host}`.toLowerCase();
+    const hostname = parsed.hostname.toLowerCase();
+
+    if (hostname.endsWith("surge-ainas-projects.vercel.app")) {
+      return callback(null, true);
+    }
+
+    if (
+      staticOriginSet.has(normalizedOrigin) ||
+      staticHostnameSet.has(hostname)
+    ) {
+      return callback(null, true);
+    }
+
+    User.exists({
+      "domains.domain": hostname,
+      "domains.status": "active",
+    })
+      .then((match) => {
+        if (match) {
+          staticOriginSet.add(normalizedOrigin);
+          staticHostnameSet.add(hostname);
+          return callback(null, true);
+        }
+
+        console.warn(
+          `[cors] Blocked origin "${origin}" (no matching active domain)`
+        );
+        return callback(new Error("Not allowed by CORS"));
+      })
+      .catch((error) => {
+        console.error(
+          `[cors] Failed checking origin "${origin}": ${error.message}`
+        );
+        return callback(new Error("Not allowed by CORS"));
+      });
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 
 app.set("trust proxy", true);
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin: postman
-      if (!origin) return callback(null, true);
-
-      const isAllowed =
-        origin === process.env.FRONTEND_URL ||
-        origin.endsWith("surge-ainas-projects.vercel.app"); //vercel Previews
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  })
-);
-// app.use('/settings', settingRoutes2);
 //stripe webhook(must be before app.use(express.json()))
 //do not call directly, stripe will call this route
 app.use("/stripe-webhook", stripeWebhookRoutes);
 
 app.use(express.json());
+
+// Domain resolver middleware - must be before other routes
+app.use(domainResolver);
 app.use('/api/portfolios', portfolio_Routes);
 
 setCredentialsFromEnv();
@@ -95,7 +179,10 @@ app.use("/softwareeng", softwareEngRoutes);
 
 // Test route to verify routing is working
 app.get("/test-route", (req, res) => {
-  res.json({ message: "Test route is working!", timestamp: new Date().toISOString() });
+  res.json({
+    message: "Test route is working!",
+    timestamp: new Date().toISOString(),
+  });
 });
 
 //stripe payment
@@ -125,13 +212,16 @@ app.use("/datascience-portfolio", dataScientistRoutes);
 app.use("/api/handyman-template", handymanTemplateRoutes);
 app.use('/api/handyman/inquiries', handymanInquiryRoutes);
 app.use("/support-form", supportFormRoutes);
+app.use("/api/domains", domainRoutes);
 
 // app.use("/cleaning/user", userRoutes2);
 // app.use('/services', serviceRoutes);
 // app.use('/quotes', quoteRoutes);
 // app.use('/rooms', roomRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.get("/health", (_req, res) => res.status(200).json({ ok: true, ts: Date.now() }));
+app.get("/health", (_req, res) =>
+  res.status(200).json({ ok: true, ts: Date.now() })
+);
 
 app.use("/api/telemetry", telemetryRoutes);
 
