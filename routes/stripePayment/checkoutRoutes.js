@@ -55,8 +55,6 @@ router.post("/checkout-session", async (req, res) => {
       return res.status(400).json({ error: "Invalid plan selected" });
     }
 
-<<<<<<< HEAD
-=======
     // //check if stripe customer has active subscriptions
     // //redirect to billing if so
     // if (user.stripeCustomerId) {
@@ -81,7 +79,6 @@ router.post("/checkout-session", async (req, res) => {
     //   }
     // }
 
->>>>>>> main
     //if user does not have stripe customer ID create a new customer on stripe
     //and save the id to user in mongodb
     if (!user.stripeCustomerId) {
