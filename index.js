@@ -31,17 +31,10 @@ const reviewRoutes = require("./routes/localFoodVendor/reviewRoutes");
 const taggedImageRoutes = require("./routes/localFoodVendor/taggedImageRoutes");
 const handymanPortfolioRoutes = require("./routes/handyMan/handymanPortfolioRoutes");
 const dataScientistRoutes = require("./routes/dataScientist/dataScientistRoutes");
-<<<<<<< HEAD
-const userRoutes2 = require("./routes/userRoute2.js");
-const serviceRoutes = require("./routes/serviceRoutes.js");
-const quoteRoutes = require("./routes/quoteRoutes.js");
-const roomRoutes = require("./routes/roomRoutes.js");
-=======
-const userRoutes2 = require('./routes/cleaningLady/userRoute2');
+const userRoutes2 = require("./routes/cleaningLady/userRoute2");
 // const serviceRoutes = require('./routes/serviceRoutes.js');
 // const quoteRoutes = require('./routes/quoteRoutes.js');
 // const roomRoutes = require('./routes/roomRoutes.js');
->>>>>>> main
 const checkoutRoutes = require("./routes/stripePayment/checkoutRoutes");
 const authRoutes = require("./routes/auth"); // Import authentication routes
 const seedUsers = require("./seed/users"); // Import seed users function
@@ -58,7 +51,7 @@ const domainRoutes = require("./routes/domainRoutes");
 const telemetryRoutes = require("./routes/telemetry");
 // const settingRoutes2 = require('./routes/settingRoutes');
 
-const portfolio_Routes = require('./routes/cleaningLady/portfolioRoutes');
+const portfolio_Routes = require("./routes/cleaningLady/portfolioRoutes");
 
 // Import configuration from separate file
 const config = require("./config");
@@ -129,10 +122,7 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    if (
-      staticOriginSet.has(normalizedOrigin) ||
-      staticHostnameSet.has(hostname)
-    ) {
+    if (staticOriginSet.has(normalizedOrigin) || staticHostnameSet.has(hostname)) {
       return callback(null, true);
     }
 
@@ -147,15 +137,11 @@ const corsOptions = {
           return callback(null, true);
         }
 
-        console.warn(
-          `[cors] Blocked origin "${origin}" (no matching active domain)`
-        );
+        console.warn(`[cors] Blocked origin "${origin}" (no matching active domain)`);
         return callback(new Error("Not allowed by CORS"));
       })
       .catch((error) => {
-        console.error(
-          `[cors] Failed checking origin "${origin}": ${error.message}`
-        );
+        console.error(`[cors] Failed checking origin "${origin}": ${error.message}`);
         return callback(new Error("Not allowed by CORS"));
       });
   },
@@ -174,7 +160,7 @@ app.use(express.json());
 
 // Domain resolver middleware - must be before other routes
 app.use(domainResolver);
-app.use('/api/portfolios', portfolio_Routes);
+app.use("/api/portfolios", portfolio_Routes);
 
 setCredentialsFromEnv();
 
@@ -217,25 +203,16 @@ app.use("/vendor", localVendorRoutes);
 app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/datascience-portfolio", dataScientistRoutes);
 app.use("/api/handyman-template", handymanTemplateRoutes);
-app.use('/api/handyman/inquiries', handymanInquiryRoutes);
+app.use("/api/handyman/inquiries", handymanInquiryRoutes);
 app.use("/support-form", supportFormRoutes);
 app.use("/api/domains", domainRoutes);
 
-<<<<<<< HEAD
-app.use("/cleaning/user", userRoutes2);
-app.use("/services", serviceRoutes);
-app.use("/quotes", quoteRoutes);
-app.use("/rooms", roomRoutes);
-=======
 // app.use("/cleaning/user", userRoutes2);
 // app.use('/services', serviceRoutes);
 // app.use('/quotes', quoteRoutes);
 // app.use('/rooms', roomRoutes);
->>>>>>> main
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.get("/health", (_req, res) =>
-  res.status(200).json({ ok: true, ts: Date.now() })
-);
+app.get("/health", (_req, res) => res.status(200).json({ ok: true, ts: Date.now() }));
 
 app.use("/api/telemetry", telemetryRoutes);
 
@@ -268,18 +245,12 @@ app.use("/api/telemetry", telemetryRoutes);
 //  */
 // app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-<<<<<<< HEAD
-// // Serve static files from uploads directory
-// app.use(
-//   `/${config.uploads.directory}`,
-//   express.static(path.join(__dirname, config.uploads.directory))
-// );
-
-=======
 // Serve static files from uploads directory
-app.use(`/${config.uploads.directory}`, express.static(path.join(__dirname, config.uploads.directory)));
+app.use(
+  `/${config.uploads.directory}`,
+  express.static(path.join(__dirname, config.uploads.directory))
+);
 // app.use('/api/settings', settingRoutes2);
->>>>>>> main
 // Make config available to the app
 app.set("config", config);
 
