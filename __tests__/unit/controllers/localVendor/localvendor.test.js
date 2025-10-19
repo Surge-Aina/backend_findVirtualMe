@@ -1,9 +1,16 @@
+require("../../../../setup"); // Make sure this is first
 const request = require("supertest");
-const app = require("../testapp");
-const LocalVendorPortfolio = require("../models/LocalVendorPortfolio");
-const openAiService = require("../services/openAiService");
+const app = require("../../../../testapp");
+const LocalVendorPortfolio = require("../../../../models/localFoodVendor/LocalVendorPortfolio");
+const openAiService = require("../../../../services/openAiService");
 
-jest.mock("../services/openAiService");
+jest.mock("../../../../services/openAiService");
+
+// Optional: catch any unexpected errors and log for debugging
+app.use((err, req, res, next) => {
+  console.error("Express error:", err);
+  res.status(500).json({ error: err.message });
+});
 
 describe("Local Vendor Portfolio API", () => {
   beforeEach(async () => {
@@ -13,7 +20,7 @@ describe("Local Vendor Portfolio API", () => {
 
   it("should create a vendor portfolio from a valid PDF upload", async () => {
     openAiService.generateVendorAboutAndMenuJSON.mockResolvedValue({
-      vendor: { name: "Test Vendor", email: "test@example.com" },
+      vendor: { name: "Test Vendor", email: "test@example.com", phone: "1234567890" },
       about: {
         banner: { title: "About Us" },
         contentBlocks: [],
@@ -24,7 +31,7 @@ describe("Local Vendor Portfolio API", () => {
 
     const res = await request(app)
       .post("/vendor/inject")
-      .attach("file", Buffer.from("dummy pdf text"), {
+      .attach("file", Buffer.from("ignored-by-mock"), {
         filename: "test.pdf",
         contentType: "application/pdf",
       })
@@ -36,14 +43,14 @@ describe("Local Vendor Portfolio API", () => {
 
   it("should reject when vendor JSON is missing required fields", async () => {
     openAiService.generateVendorAboutAndMenuJSON.mockResolvedValue({
-      vendor: { email: "bad@test.com" }, // missing name
+      vendor: { name: "", email: "bad@test.com", phone: "" }, // missing name & phone
       about: { banner: { title: "Bad" }, contentBlocks: [], gridImages: [] },
       menuItems: [],
     });
 
     const res = await request(app)
       .post("/vendor/inject")
-      .attach("file", Buffer.from("dummy pdf text"), {
+      .attach("file", Buffer.from("ignored-by-mock"), {
         filename: "bad.pdf",
         contentType: "application/pdf",
       })
@@ -53,25 +60,36 @@ describe("Local Vendor Portfolio API", () => {
   });
 
   it("should reject duplicate vendor creation by email", async () => {
+    // Create existing vendor first
     await LocalVendorPortfolio.create({
       name: "Existing Vendor",
       email: "duplicate@test.com",
+      phone: "",
     });
 
     openAiService.generateVendorAboutAndMenuJSON.mockResolvedValue({
-      vendor: { name: "New Vendor", email: "duplicate@test.com" },
+      vendor: { name: "New Vendor", email: "duplicate@test.com", phone: "1234567890" },
       about: { banner: { title: "Dup" }, contentBlocks: [], gridImages: [] },
       menuItems: [],
     });
 
     const res = await request(app)
       .post("/vendor/inject")
-      .attach("file", Buffer.from("dummy pdf text"), {
+      .attach("file", Buffer.from("ignored-by-mock"), {
         filename: "dup.pdf",
         contentType: "application/pdf",
       })
       .expect(400);
 
     expect(res.body.error).toMatch(/already exists/i);
+  });
+
+  it("should reject when no file is uploaded", async () => {
+    const res = await request(app)
+      .post("/vendor/inject")
+      .set("x-test-no-file", "true")
+      .expect(400);
+
+    expect(res.body.error).toMatch(/file is required/i);
   });
 });

@@ -92,7 +92,6 @@ describe("telemetry routes", () => {
 
   test("POST /visit when geoip returns null -> uses 'Unknown' values", async () => {
     geoip.lookup.mockReturnValue(null);
-
     const res = await request(app)
       .post("/api/telemetry/visit")
       .set("X-Forwarded-For", "203.0.113.5")
@@ -125,8 +124,8 @@ describe("telemetry routes", () => {
     const rows = res.body;
     expect(Array.isArray(rows)).toBe(true);
 
-    const seattle = rows.find(r => r.city === "Seattle" && r.country === "US");
-    const paris = rows.find(r => r.city === "Paris" && r.country === "FR");
+    const seattle = rows.find((r) => r.city === "Seattle" && r.country === "US");
+    const paris = rows.find((r) => r.city === "Paris" && r.country === "FR");
 
     expect(seattle?.count).toBe(2);
     expect(paris?.count).toBe(1);

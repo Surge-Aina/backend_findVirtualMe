@@ -28,12 +28,12 @@ if (!process.env.PORT) {
 }
 
 // Mock console methods to reduce noise in tests
-global.console = {
-  ...console,
-  log: jest.fn(),
-  error: jest.fn(),
-  warn: jest.fn(),
-};
+// global.console = {
+//   ...console,
+//   log: jest.fn(),
+//   error: jest.fn(),
+//   warn: jest.fn(),
+// };
 
 // Ensure no port conflicts with main application
 process.env.PORT = undefined;
@@ -130,17 +130,15 @@ jest.mock("multer", () => {
       return (req, res, next) => {
         req.files = {};
         fieldsArray.forEach(({ name, maxCount }) => {
-          req.files[name] = Array.from({ length: maxCount || 1 }).map(
-            (_, i) => ({
-              fieldname: name,
-              originalname: `test-${name}-${i + 1}.jpg`,
-              encoding: "7bit",
-              mimetype: "image/jpeg",
-              buffer: Buffer.from("fake-image-data"),
-              size: 1024,
-              filename: `${Date.now()}-${i + 1}.jpg`,
-            })
-          );
+          req.files[name] = Array.from({ length: maxCount || 1 }).map((_, i) => ({
+            fieldname: name,
+            originalname: `test-${name}-${i + 1}.jpg`,
+            encoding: "7bit",
+            mimetype: "image/jpeg",
+            buffer: Buffer.from("fake-image-data"),
+            size: 1024,
+            filename: `${Date.now()}-${i + 1}.jpg`,
+          }));
         });
         next();
       };
@@ -192,10 +190,7 @@ jest.mock("./models/localFoodVendor/MenuItems", () => {
   });
 
   MockMenu.find = jest.fn(async (query) => []);
-  MockMenu.distinct = jest.fn(async (field, filter) => [
-    "Fast Food",
-    "Desserts",
-  ]);
+  MockMenu.distinct = jest.fn(async (field, filter) => ["Fast Food", "Desserts"]);
 
   MockMenu.findByIdAndUpdate = jest.fn(async (filter, update) => {
     if (filter._id === "doesNotExist") return null;
