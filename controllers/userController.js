@@ -52,6 +52,8 @@ exports.loginUser = async(req, res) => {
 
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return res.status(400).json({ message: "Invalid credentials" });
+ console.log('🔍 User found:', user._id);
+    console.log('🔍 Creating token with id:', user._id);
 
         const token = jwt.sign(
             //{ id: user._id, isAdmin: user.isAdmin },// removed this so users are not signed in as admin. ADD BACK ONLY IF NECESSARY -CarlosG
@@ -67,6 +69,24 @@ exports.loginUser = async(req, res) => {
     }
 };
 
+exports.getMe = async (req, res) => {
+  try {
+    console.log('🔍 getMe called, req.user:', req.user);
+    
+    const user = await User.findById(req.user.id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    console.log('✅ User found:', user.email);
+    res.status(200).json({ user });
+    
+  } catch (error) {
+    console.error('❌ Error in getMe:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
 exports.addUser = async(req, res) => {
     const { data } = req.body;
     try {
@@ -221,4 +241,23 @@ exports.deleteUser = async(req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
+};
+
+exports.getMe = async (req, res) => {
+  try {
+    console.log('🔍 getMe called, req.user:', req.user);
+    
+    const user = await User.findById(req.user.id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    console.log('✅ User found:', user.email);
+    res.status(200).json({ user });
+    
+  } catch (error) {
+    console.error('❌ Error in getMe:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
