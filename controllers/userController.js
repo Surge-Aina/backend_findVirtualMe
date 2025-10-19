@@ -4,14 +4,13 @@ const bcrypt = require("bcrypt");
 const req = require("express/lib/request");
 const jwt = require("jsonwebtoken");
 const Stripe = require("stripe");
+const Portfolio = require("../models/projectManager/portfolioModel");
 
-function getStripe() {
-  const stripeSecretkey =
-    process.env.STRIPE_MODE === "live"
-      ? process.env.STRIPE_SECRET_KEY_LIVE
-      : process.env.STRIPE_SECRET_KEY_TEST;
-  return new Stripe(stripeSecretkey);
-}
+const stripeSecretkey =
+  process.env.STRIPE_MODE === "live"
+    ? process.env.STRIPE_SECRET_KEY_LIVE
+    : process.env.STRIPE_SECRET_KEY_TEST;
+const stripe = new Stripe(stripeSecretkey);
 
 // Not using the signup feature for now
 exports.signupUser = async (req, res) => {
@@ -53,6 +52,8 @@ exports.loginUser = async (req, res) => {
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ message: "Invalid credentials" });
+    console.log("🔍 User found:", user._id);
+    console.log("🔍 Creating token with id:", user._id);
 
     const token = jwt.sign(
       //{ id: user._id, isAdmin: user.isAdmin },// removed this so users are not signed in as admin. ADD BACK ONLY IF NECESSARY -CarlosG
@@ -69,6 +70,23 @@ exports.loginUser = async (req, res) => {
   }
 };
 
+exports.getMe = async (req, res) => {
+  try {
+    console.log("🔍 getMe called, req.user:", req.user);
+
+    const user = await User.findById(req.user.id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    console.log("✅ User found:", user.email);
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error("❌ Error in getMe:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 exports.addUser = async (req, res) => {
   const { data } = req.body;
   try {
@@ -106,6 +124,16 @@ exports.addUser = async (req, res) => {
     try {
       onboardingUser = new User(userObj);
       await onboardingUser.save();
+
+      // attach portfolios by sessionId
+      const sessionId = data.sessionId;
+      if (sessionId) {
+        await Portfolio.updateMany(
+          { sessionId },
+          { $set: { email: onboardingUser.email, sessionId: null } }
+        );
+      }
+      // end sessionId linking
     } catch (error) {
       if (error.code === 11000) {
         return res
@@ -141,8 +169,6 @@ exports.getUserById = async (req, res) => {
 };
 
 exports.getSubInfo = async (req, res) => {
-  const stripe = getStripe();
-
   try {
     const { stripeCustomerId } = req.user; // obtained from auth middleware
     //get subscription info from stripe
@@ -217,5 +243,23 @@ exports.deleteUser = async (req, res) => {
     res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getMe = async (req, res) => {
+  try {
+    console.log("🔍 getMe called, req.user:", req.user);
+
+    const user = await User.findById(req.user.id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    console.log("✅ User found:", user.email);
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error("❌ Error in getMe:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
