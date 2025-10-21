@@ -21,8 +21,20 @@ const supportFormSchema = new mongoose.Schema(
       default: "Normal" 
     },
     completionTime: { type: Date, default: null },
-    replies: { type: [String], default: [] }
+    replies: { type: [String], default: [] },
+    // ✅ ADD THESE TWO FIELDS: (check if req is coming from logged in user or guest user)
+    userStatus: {
+      type: String,
+      enum: ['Guest User', 'Logged In User'],
+      default: 'Guest User'
+    },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    }
   },
+  
   { timestamps: true }
 );
 

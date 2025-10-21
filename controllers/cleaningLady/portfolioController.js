@@ -1,5 +1,5 @@
 
-
+const {sendQuoteEmails} = require('../../services/emailService')
 const mongoose = require('mongoose');
 
 const Portfolio = require('../../models/cleaningLady/Portfolio');
@@ -449,10 +449,49 @@ exports.updateRoomPricing = async (req, res) => {
 // QUOTES MANAGEMENT
 // ============================================
 
+// exports.submitQuote = async (req, res) => {
+//   try {
+//     const { services, details, dueDate, name, email, phone, portfolioId } = req.body;
+    
+//     if (!services || !services.length) {
+//       return res.status(400).json({ message: 'Services are required' });
+//     }
+    
+//     if (!name || !email || !phone || !dueDate) {
+//       return res.status(400).json({ message: 'All contact fields are required' });
+//     }
+    
+//     const newQuote = await QuoteRequest.create({
+//       portfolioId,
+//       services,
+//       details: details || '',
+//       dueDate,
+//       name,
+//       email,
+//       phone,
+//       status: 'new'
+//     });
+    
+//     console.log('✅ Quote submitted:', newQuote);
+    
+//     res.status(201).json({
+//       message: 'Quote request submitted successfully',
+//       quote: newQuote
+//     });
+    
+//   } catch (error) {
+//     console.error('❌ Error submitting quote:', error);
+//     res.status(500).json({ message: 'Server error' });
+//   }
+// };
+
 exports.submitQuote = async (req, res) => {
   try {
+    console.log('🔵 submitQuote called');
+    console.log('📥 Request body:', req.body);
     const { services, details, dueDate, name, email, phone, portfolioId } = req.body;
     
+    // Validation
     if (!services || !services.length) {
       return res.status(400).json({ message: 'Services are required' });
     }
@@ -461,6 +500,26 @@ exports.submitQuote = async (req, res) => {
       return res.status(400).json({ message: 'All contact fields are required' });
     }
     
+     console.log('🔍 Looking for portfolio:', portfolioId);
+    // Get portfolio to fetch owner email and business name
+    const portfolio = await Portfolio.findById(portfolioId)
+      .populate('userId', 'email');
+    
+    if (!portfolio) {
+       console.log('❌ Portfolio not found');
+      return res.status(404).json({ message: 'Portfolio not found' });
+    }
+        console.log('✅ Portfolio found:', portfolio.businessName);
+    console.log('📧 Owner email:', portfolio.userId?.email);
+    
+    const ownerEmail = portfolio.userId?.email;
+    const businessName = portfolio.businessName || 'Cleaning Service';
+    
+    if (!ownerEmail) {
+      console.warn('⚠️ Owner email not found, emails will not be sent');
+    }
+    
+    // Save quote to database
     const newQuote = await QuoteRequest.create({
       portfolioId,
       services,
@@ -472,8 +531,32 @@ exports.submitQuote = async (req, res) => {
       status: 'new'
     });
     
-    console.log('✅ Quote submitted:', newQuote);
+    console.log('✅ Quote saved to database:', newQuote._id);
     
+    // Send emails (non-blocking - don't wait for completion)
+    if (ownerEmail) {
+          console.log('📧 Preparing to send emails...');
+      const formData = {
+        name,
+        email,
+        phone,
+        services,
+        dueDate,
+        details: details || ''
+      };
+      
+      // Send emails asynchronously
+      sendQuoteEmails(formData, ownerEmail, businessName)
+        .then(() => {
+          console.log('✅ All emails sent successfully');
+        })
+        .catch((error) => {
+          console.error('❌ Error sending emails:', error.message);
+          // Don't fail the request if emails fail
+        });
+    }
+    
+    // Respond immediately (don't wait for emails)
     res.status(201).json({
       message: 'Quote request submitted successfully',
       quote: newQuote
@@ -484,6 +567,7 @@ exports.submitQuote = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 exports.getMyQuotes = async (req, res) => {
   try {
