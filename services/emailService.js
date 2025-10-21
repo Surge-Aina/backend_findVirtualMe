@@ -563,4 +563,374 @@ async function sendProjectManagerContactEmails(formData, ownerEmail, ownerName) 
     throw error;
   }
 }
-module.exports = { sendQuoteEmails,sendSupportFormEmails,sendProjectManagerContactEmails};
+
+// Data Scientist Contact Emails (Visitor, Owner, Admin)
+async function sendDataScientistContactEmails(formData, ownerEmail, ownerName) {
+  try {
+    console.log('📧 Starting data scientist contact email sequence...');
+    
+    const businessName = ownerName || 'Data Scientist';
+    
+    // 1. Send confirmation email to VISITOR
+    const visitorHtmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #8B5CF6; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+          .info-box { background: white; padding: 15px; margin: 15px 0; border-left: 4px solid #8B5CF6; }
+          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>📊 Message Received!</h1>
+          </div>
+          <div class="content">
+            <p>Hi <strong>${formData.name}</strong>,</p>
+            <p>Thank you for reaching out to <strong>${businessName}</strong>! Your message has been received and will be reviewed shortly.</p>
+            
+            <div class="info-box">
+              <h3>Your Message:</h3>
+              <p><strong>Name:</strong> ${formData.name}</p>
+              <p><strong>Email:</strong> ${formData.email}</p>
+              <p><strong>Message:</strong><br>${formData.message}</p>
+            </div>
+            
+            <p><strong>Expected Response Time:</strong> Within 24-48 hours</p>
+            <p>You can reach ${businessName} directly at <a href="mailto:${ownerEmail}">${ownerEmail}</a></p>
+            
+            <div class="footer">
+              <p>Best regards,<br>${businessName}</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    await transporter.sendMail({
+      from: `"${businessName}" <${process.env.SMTP_USER}>`,
+      to: formData.email,
+      subject: `Message Received - ${businessName}`,
+      html: visitorHtmlContent
+    });
+    
+    console.log('✅ Visitor confirmation email sent');
+    
+    // Wait 2-4 seconds
+    await delay(randomDelay());
+    
+    // 2. Send notification to OWNER
+    const ownerHtmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #10B981; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+          .highlight { background: #FEF3C7; padding: 15px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #F59E0B; }
+          .info-box { background: white; padding: 15px; margin: 15px 0; border-left: 4px solid #10B981; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎉 New Contact Message!</h1>
+          </div>
+          <div class="content">
+            <p>You have a new message from your Data Scientist portfolio.</p>
+            
+            <div class="highlight">
+              <h3>📞 Contact Details</h3>
+              <p><strong>Name:</strong> ${formData.name}</p>
+              <p><strong>Email:</strong> <a href="mailto:${formData.email}">${formData.email}</a></p>
+            </div>
+            
+            <div class="info-box">
+              <h3>💬 Message:</h3>
+              <p>${formData.message}</p>
+            </div>
+            
+            <p style="color: #DC2626; font-weight: bold;">⏰ Respond quickly for best results!</p>
+            <p><strong>Received:</strong> ${new Date().toLocaleString()}</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    await transporter.sendMail({
+      from: `"Portfolio System" <${process.env.SMTP_USER}>`,
+      to: ownerEmail,
+      subject: `🔔 New Message from ${formData.name}`,
+      html: ownerHtmlContent
+    });
+    
+    console.log('✅ Owner notification email sent');
+    
+    // Wait 2-4 seconds
+    await delay(randomDelay());
+    
+    // 3. Send notification to ADMIN
+    const adminHtmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #6366F1; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+          .info-box { background: white; padding: 15px; margin: 15px 0; border-left: 4px solid #6366F1; }
+          table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+          td { padding: 8px; border-bottom: 1px solid #ddd; }
+          td:first-child { font-weight: bold; width: 150px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>📊 Admin: New DS Contact</h1>
+          </div>
+          <div class="content">
+            <h3>Portfolio: ${businessName}</h3>
+            
+            <div class="info-box">
+              <h4>Owner Information:</h4>
+              <table>
+                <tr><td>Owner Name:</td><td>${businessName}</td></tr>
+                <tr><td>Owner Email:</td><td><a href="mailto:${ownerEmail}">${ownerEmail}</a></td></tr>
+              </table>
+            </div>
+            
+            <div class="info-box">
+              <h4>Visitor Information:</h4>
+              <table>
+                <tr><td>Name:</td><td>${formData.name}</td></tr>
+                <tr><td>Email:</td><td><a href="mailto:${formData.email}">${formData.email}</a></td></tr>
+              </table>
+            </div>
+            
+            <div class="info-box">
+              <h4>Message Details:</h4>
+              <table>
+                <tr><td>Timestamp:</td><td>${new Date().toLocaleString()}</td></tr>
+                <tr><td>Message:</td><td>${formData.message}</td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    await transporter.sendMail({
+      from: `"DS Portfolio System" <${process.env.SMTP_USER}>`,
+      to: process.env.ADMIN_EMAIL,
+      subject: `[ADMIN] New DS Contact - ${businessName}`,
+      html: adminHtmlContent
+    });
+    
+    console.log('✅ Admin notification email sent');
+    console.log('🎉 All data scientist contact emails sent successfully!');
+    
+    return { success: true };
+    
+  } catch (error) {
+    console.error('❌ Data scientist contact email failed:', error);
+    throw error;
+  }
+}
+
+// Photographer Contact Emails (Visitor, Owner, Admin)
+async function sendPhotographerContactEmails(formData, ownerEmail, ownerName) {
+  try {
+    console.log('📧 Starting photographer contact email sequence...');
+    
+    const businessName = ownerName || 'Photographer';
+    
+    // 1. Send confirmation email to VISITOR
+    const visitorHtmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #1F2937; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+          .info-box { background: white; padding: 15px; margin: 15px 0; border-left: 4px solid #1F2937; }
+          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>📸 Message Received!</h1>
+          </div>
+          <div class="content">
+            <p>Hi <strong>${formData.name}</strong>,</p>
+            <p>Thank you for reaching out to <strong>${businessName}</strong>! Your message has been received and will be reviewed shortly.</p>
+            
+            <div class="info-box">
+              <h3>Your Message:</h3>
+              <p><strong>Name:</strong> ${formData.name}</p>
+              <p><strong>Email:</strong> ${formData.email}</p>
+              <p><strong>Message:</strong><br>${formData.message}</p>
+            </div>
+            
+            <p><strong>Expected Response Time:</strong> Within 24-48 hours</p>
+            <p>You can reach ${businessName} directly at <a href="mailto:${ownerEmail}">${ownerEmail}</a></p>
+            
+            <div class="footer">
+              <p>Best regards,<br>${businessName}</p>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    await transporter.sendMail({
+      from: `"${businessName}" <${process.env.SMTP_USER}>`,
+      to: formData.email,
+      subject: `Message Received - ${businessName}`,
+      html: visitorHtmlContent
+    });
+    
+    console.log('✅ Visitor confirmation email sent');
+    
+    // Wait 2-4 seconds
+    await delay(randomDelay());
+    
+    // 2. Send notification to OWNER
+    const ownerHtmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #10B981; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+          .highlight { background: #FEF3C7; padding: 15px; margin: 15px 0; border-radius: 8px; border-left: 4px solid #F59E0B; }
+          .info-box { background: white; padding: 15px; margin: 15px 0; border-left: 4px solid #10B981; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎉 New Contact Message!</h1>
+          </div>
+          <div class="content">
+            <p>You have a new message from your Photography portfolio.</p>
+            
+            <div class="highlight">
+              <h3>📞 Contact Details</h3>
+              <p><strong>Name:</strong> ${formData.name}</p>
+              <p><strong>Email:</strong> <a href="mailto:${formData.email}">${formData.email}</a></p>
+            </div>
+            
+            <div class="info-box">
+              <h3>💬 Message:</h3>
+              <p>${formData.message}</p>
+            </div>
+            
+            <p style="color: #DC2626; font-weight: bold;">⏰ Respond quickly for best results!</p>
+            <p><strong>Received:</strong> ${new Date().toLocaleString()}</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    await transporter.sendMail({
+      from: `"Portfolio System" <${process.env.SMTP_USER}>`,
+      to: ownerEmail,
+      subject: `🔔 New Message from ${formData.name}`,
+      html: ownerHtmlContent
+    });
+    
+    console.log('✅ Owner notification email sent');
+    
+    // Wait 2-4 seconds
+    await delay(randomDelay());
+    
+    // 3. Send notification to ADMIN
+    const adminHtmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: #6366F1; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; }
+          .info-box { background: white; padding: 15px; margin: 15px 0; border-left: 4px solid #6366F1; }
+          table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+          td { padding: 8px; border-bottom: 1px solid #ddd; }
+          td:first-child { font-weight: bold; width: 150px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>📊 Admin: New Photographer Contact</h1>
+          </div>
+          <div class="content">
+            <h3>Portfolio: ${businessName}</h3>
+            
+            <div class="info-box">
+              <h4>Owner Information:</h4>
+              <table>
+                <tr><td>Owner Name:</td><td>${businessName}</td></tr>
+                <tr><td>Owner Email:</td><td><a href="mailto:${ownerEmail}">${ownerEmail}</a></td></tr>
+              </table>
+            </div>
+            
+            <div class="info-box">
+              <h4>Visitor Information:</h4>
+              <table>
+                <tr><td>Name:</td><td>${formData.name}</td></tr>
+                <tr><td>Email:</td><td><a href="mailto:${formData.email}">${formData.email}</a></td></tr>
+              </table>
+            </div>
+            
+            <div class="info-box">
+              <h4>Message Details:</h4>
+              <table>
+                <tr><td>Timestamp:</td><td>${new Date().toLocaleString()}</td></tr>
+                <tr><td>Message:</td><td>${formData.message}</td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    await transporter.sendMail({
+      from: `"Photographer Portfolio System" <${process.env.SMTP_USER}>`,
+      to: process.env.ADMIN_EMAIL,
+      subject: `[ADMIN] New Photographer Contact - ${businessName}`,
+      html: adminHtmlContent
+    });
+    
+    console.log('✅ Admin notification email sent');
+    console.log('🎉 All photographer contact emails sent successfully!');
+    
+    return { success: true };
+    
+  } catch (error) {
+    console.error('❌ Photographer contact email failed:', error);
+    throw error;
+  }
+}
+module.exports = { sendQuoteEmails,sendSupportFormEmails,sendProjectManagerContactEmails,sendDataScientistContactEmails,sendPhotographerContactEmails};

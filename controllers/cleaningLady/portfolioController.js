@@ -490,15 +490,16 @@ exports.submitQuote = async (req, res) => {
     console.log('🔵 submitQuote called');
     console.log('📥 Request body:', req.body);
     const { services, details, dueDate, name, email, phone, portfolioId } = req.body;
-    
     // Validation
-    if (!services || !services.length) {
-      return res.status(400).json({ message: 'Services are required' });
-    }
-    
-    if (!name || !email || !phone || !dueDate) {
-      return res.status(400).json({ message: 'All contact fields are required' });
-    }
+// Allow empty services array (some portfolios only have room pricing)
+if (!Array.isArray(services)) {
+  return res.status(400).json({ message: 'Services must be an array' });
+}
+
+if (!name || !email || !phone || !dueDate) {
+  return res.status(400).json({ message: 'All contact fields are required' });
+}
+   
     
      console.log('🔍 Looking for portfolio:', portfolioId);
     // Get portfolio to fetch owner email and business name
