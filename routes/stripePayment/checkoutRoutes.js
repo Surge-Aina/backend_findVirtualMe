@@ -49,33 +49,35 @@ router.post("/checkout-session", async (req, res) => {
     const user = req.user; // middleware auth populates this
     const { plan } = req.body; //"basic" or "pro"
 
+    console.log("--------------------plan: ", plan);
+
     if (!plan || !PRICE_MAP[plan]) {
       return res.status(400).json({ error: "Invalid plan selected" });
     }
 
-    //check if stripe customer has active subscriptions
-    //redirect to billing if so
-    if (user.stripeCustomerId) {
-      const subscriptions = await stripe.subscriptions.list({
-        customer: user.stripeCustomerId,
-        status: { in: ["active", "trialing", "past_due"] },
-        limit: 1,
-      });
+    // //check if stripe customer has active subscriptions
+    // //redirect to billing if so
+    // if (user.stripeCustomerId) {
+    //   const subscriptions = await stripe.subscriptions.list({
+    //     customer: user.stripeCustomerId,
+    //     status: { in: ["active", "trialing", "past_due"] },
+    //     limit: 1,
+    //   });
 
-      //redirect to billing
-      if (subscriptions.data.length > 0) {
-        const portalSession = await stripe.billingPortal.sessions.create({
-          customer: user.stripeCustomerId,
-          return_url: `${process.env.FRONTEND_URL}/profile`,
-        });
+    //   //redirect to billing
+    //   if (subscriptions.data.length > 0) {
+    //     const portalSession = await stripe.billingPortal.sessions.create({
+    //       customer: user.stripeCustomerId,
+    //       return_url: `${process.env.FRONTEND_URL}/profile`,
+    //     });
 
-        //save subscriptionID to user
-        user.stripeSubscriptionId = subscriptions.data[0].id;
-        user.save();
+    //     //save subscriptionID to user
+    //     user.stripeSubscriptionId = subscriptions.data[0].id;
+    //     user.save();
 
-        return res.json({ checkoutUrl: portalSession.url });
-      }
-    }
+    //     return res.json({ checkoutUrl: portalSession.url });
+    //   }
+    // }
 
     //if user does not have stripe customer ID create a new customer on stripe
     //and save the id to user in mongodb

@@ -18,12 +18,16 @@ exports.createBanner = async (req, res) => {
       shape: req.body.shape || "fullscreen",
       image: req.file ? `/uploads/${req.file.filename}` : null,
     });
-
     const saved = await newBanner.save();
     res.status(201).json(saved);
   } catch (err) {
     console.error("Create Banner Error:", err);
-    res.status(400).json({ error: "Failed to create banner" });
+    // RETURN the error message so you can see it in tests
+    res.status(400).json({
+      error: "Failed to create banner",
+      message: err.message,
+      stack: err.stack,
+    });
   }
 };
 

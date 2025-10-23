@@ -60,6 +60,28 @@ const userSchema = new mongoose.Schema({
     unique: true
   },
   portfolios: [{ type: String }],
+  // Domain management
+  domains: [
+    {
+      domain: { type: String, required: true },
+      portfolioId: { type: String }, // Which portfolio this domain points to
+      type: {
+        type: String,
+        enum: ["byod", "platform"], // Bring Your Own Domain vs Platform-owned
+        default: "platform",
+      },
+      status: {
+        type: String,
+        enum: ["pending", "active", "expired", "suspended"],
+        default: "pending",
+      },
+      registeredAt: { type: Date, default: Date.now },
+      expiresAt: { type: Date },
+      dnsConfigured: { type: Boolean, default: false },
+      // Note: SSL is automatically handled by Vercel, no need to track
+      autoRenew: { type: Boolean, default: true },
+    },
+  ],
   createdAt: {
     type: Date,
     default: Date.now,
@@ -72,7 +94,6 @@ const userSchema = new mongoose.Schema({
     default: true
   }
 });
-
 //remove password before sending back to front end
 userSchema.set("toJSON", {
   transform: (doc, ret) => {
