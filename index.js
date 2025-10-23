@@ -14,6 +14,7 @@ const {
   setCredentialsFromEnv,
   listFilesInFolder,
 } = require("./oauthHandler");
+const healthcareRoutes = require("./routes/healthcare/healthcare_routes");
 const settingsRoutes = require("./routes/photographer/settingsRoute");
 const driveRoutes = require("./routes/photographer/driveRoute");
 const photoRoutes = require("./routes/photographer/photoRoute");
@@ -56,22 +57,7 @@ const PORT = process.env.PORT;
 app.set("trust proxy", true);
 
 app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin: postman
-      if (!origin) return callback(null, true);
-
-      const isAllowed =
-        origin === process.env.FRONTEND_URL ||
-        origin.endsWith("surge-ainas-projects.vercel.app"); //vercel Previews
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  })
+  cors()
 );
 
 //stripe webhook(must be before app.use(express.json()))
@@ -125,7 +111,7 @@ app.use('/quotes', quoteRoutes);
 app.use('/rooms', roomRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) => res.status(200).json({ ok: true, ts: Date.now() }));
-
+app.use("/healthcare", healthcareRoutes);
 app.use("/api/telemetry", telemetryRoutes);
 
 /**
