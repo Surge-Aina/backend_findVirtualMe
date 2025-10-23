@@ -14,6 +14,7 @@ const {
   setCredentialsFromEnv,
   listFilesInFolder,
 } = require("./oauthHandler");
+const healthcareRoutes = require("./routes/healthcare/healthcare_routes");
 const settingsRoutes = require("./routes/photographer/settingsRoute");
 const driveRoutes = require("./routes/photographer/driveRoute");
 const photoRoutes = require("./routes/photographer/photoRoute");
@@ -213,7 +214,7 @@ app.use("/api/domains", domainRoutes);
 // app.use('/rooms', roomRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) => res.status(200).json({ ok: true, ts: Date.now() }));
-
+app.use("/healthcare", healthcareRoutes);
 app.use("/api/telemetry", telemetryRoutes);
 
 /**
