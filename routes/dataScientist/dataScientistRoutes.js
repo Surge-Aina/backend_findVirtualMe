@@ -9,9 +9,12 @@ const {
   getTestimonials,
   submitTestimonial
 } = require('../../controllers/dataScientist/dataScientistController');
+const { submitContact } = require('../../controllers/dataScientist/dataScientistContactController'); 
+
 
 // Main portfolio routes
 router.get('/', getPortfolio);
+router.post('/contact', submitContact);
 
 // Section-specific routes
 router.post('/:section', addPortfolioItem);

@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const dashboardController = require('../../controllers/dataScientist/dashboardController');
 
-
 // Get dashboard data (public)
 router.get('/', dashboardController.getDashboard);
 
@@ -14,5 +13,4 @@ router.post('/', dashboardController.createDashboard);
 
 // Delete dashboard (admin only)
 router.delete('/:id', dashboardController.deleteDashboard);
-
 module.exports = router;
