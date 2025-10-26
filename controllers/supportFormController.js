@@ -1,8 +1,9 @@
 const SupportForm = require("../models/supportForm/SupportForm");
-
+const { sendSupportFormEmails } = require('../services/emailService');
 // Create support form
 exports.createSupportForm = async (req, res) => {
   try {
+    
     const sf = new SupportForm(req.body);
     await sf.save();
 
@@ -15,7 +16,70 @@ exports.createSupportForm = async (req, res) => {
     res.status(400).json({ error: "Failed to create support form" });
   }
 };
-
+// NEW function - just for frontend support form with emails
+exports.submitSupportFormWithEmail = async (req, res) => {
+  try {
+    console.log('🔵 Support form with email submitted');
+    console.log('📥 Request body:', req.body);
+    
+    const { name, email, phone, requestType, portfolioId, message } = req.body;
+    
+    // Validation
+    if (!name || !email || !requestType || !message) {
+      return res.status(400).json({ 
+        error: 'Name, email, request type, and message are required' 
+      });
+    }
+    
+    // Determine user status
+    let userStatus = 'Guest User';
+    let userId = null;
+    
+    if (req.user) {
+      userStatus = 'Logged In User';
+      userId = req.user.id;
+    }
+    
+    // Save to database
+    const sf = new SupportForm({
+      ...req.body,
+      userStatus,
+      userId
+    });
+    
+    await sf.save();
+    
+    console.log('✅ Support request saved');
+    console.log('📝 Ticket ID:', sf.ticketID);
+    
+    // Prepare email data
+    const formData = {
+      name: sf.name,
+      email: sf.email,
+      phone: sf.phone || '',
+      requestType: sf.requestType,
+      portfolioId: sf.portfolioId || 'Not specified',
+      message: sf.message,
+      userStatus
+    };
+    
+    // Send emails (non-blocking)
+    sendSupportFormEmails(formData)
+      .then(() => {
+        console.log('✅ Support emails sent successfully');
+      })
+      .catch((error) => {
+        console.error('❌ Error sending support emails:', error.message);
+      });
+    
+    // Respond
+    res.status(201).json(sf);
+    
+  } catch (err) {
+    console.log(err);
+    res.status(400).json({ error: "Failed to create support form" });
+  }
+};
 exports.getTickets = async (req, res) => {
   try {
     const items = await SupportForm.find();

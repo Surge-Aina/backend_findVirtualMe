@@ -56,7 +56,6 @@ const userSchema = new mongoose.Schema({
   },
   practiceId: {
     type: String,
-    required: true,
     unique: true
   },
   portfolios: [{ type: String }],
