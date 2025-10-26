@@ -54,6 +54,10 @@ const userSchema = new mongoose.Schema({
     enum: ["admin", "customer"],
     default: "customer",
   },
+  practiceId: {
+    type: String,
+    unique: true
+  },
   portfolios: [{ type: String }],
   // Domain management
   domains: [
@@ -84,6 +88,10 @@ const userSchema = new mongoose.Schema({
   lastLogin: {
     type: Date,
   },
+   isActive: {
+    type: Boolean,
+    default: true
+  }
 });
 //remove password before sending back to front end
 userSchema.set("toJSON", {
