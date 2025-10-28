@@ -2,9 +2,9 @@ name: CI (backend)
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ main, Staging ]
   push:
-    branches: [ main ]  # keeps checks green after merge
+    branches: [ main, Staging ]  # keeps checks green after merge
 
 jobs:
   build-backend:
