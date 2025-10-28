@@ -14,6 +14,7 @@ const TaggedImageSchema = new mongoose.Schema({
     required: true,
   },
   imageUrl: String,
+  key: String, // <-- add this for S3 cleanup
   tags: [TagSchema],
 });
 
