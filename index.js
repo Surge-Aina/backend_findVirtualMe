@@ -51,6 +51,7 @@ const auth = require("./middleware/auth");
 const domainRoutes = require("./routes/domainRoutes");
 const telemetryRoutes = require("./routes/telemetry");
 // const settingRoutes2 = require('./routes/settingRoutes');
+const guestUserRoutes = require("./microservices/guestLogin/guestUser.routes");
 
 const portfolio_Routes = require("./routes/cleaningLady/portfolioRoutes");
 
@@ -216,6 +217,9 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) => res.status(200).json({ ok: true, ts: Date.now() }));
 app.use("/healthcare", healthcareRoutes);
 app.use("/api/telemetry", telemetryRoutes);
+
+//microservices
+app.use("/guestUser", guestUserRoutes);
 
 /**
  * Connect to MongoDB using the connection function from utils/db.js
