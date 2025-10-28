@@ -11,7 +11,11 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: >
+      ${{
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'staging'
+      }}
     name: deploy-backend-staging
     runs-on: ubuntu-latest
     environment:
