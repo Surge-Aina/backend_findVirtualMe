@@ -3,9 +3,10 @@ module.exports = {
   setupFilesAfterEnv: ["<rootDir>/setup.js"],
   testMatch: [
     "<rootDir>/tests/**/*.test.js",
-    "<rootDir>/__tests__/**/*.test.js",
+    "<rootDir>/**/__tests__/**/*.test.js", // <- include nested __tests__
     "**/test/**/*.test.js",
   ],
+  transformIgnorePatterns: ["node_modules/(?!(@vercel/sdk)/)"],
   collectCoverageFrom: [
     "routes/**/*.js",
     "models/**/*.js",
@@ -19,7 +20,6 @@ module.exports = {
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov", "html"],
   testTimeout: 30000,
-  // Ensure tests run in isolation
   maxWorkers: 1,
   verbose: true,
   forceExit: true,
