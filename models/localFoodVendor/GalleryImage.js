@@ -11,6 +11,7 @@ const galleryImageSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    key: String, // <-- Added for S3 cleanup tracking
     caption: String,
   },
   { timestamps: true }

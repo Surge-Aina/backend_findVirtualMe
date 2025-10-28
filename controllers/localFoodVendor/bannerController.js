@@ -1,4 +1,16 @@
 const Banner = require("../../models/localFoodVendor/Banner");
+const { uploadToS3, deleteFromS3 } = require("../../services/s3Service");
+
+const S3_PREFIX = "Ports/HandyMan";
+
+function keyFromUrl(url) {
+  try {
+    const u = new URL(url);
+    return u.pathname.replace(/^\/+/, "");
+  } catch {
+    return null;
+  }
+}
 
 exports.getAllBanners = async (req, res) => {
   try {
@@ -11,12 +23,27 @@ exports.getAllBanners = async (req, res) => {
 
 exports.createBanner = async (req, res) => {
   try {
+    let imageUrl = null;
+    let imageKey = null;
+
+    if (req.file) {
+      const uploaded = await uploadToS3(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype,
+        S3_PREFIX
+      );
+      imageUrl = uploaded.url;
+      imageKey = uploaded.key;
+    }
+
     const newBanner = new Banner({
       vendorId: req.params.vendorId,
       title: req.body.title,
       description: req.body.description,
       shape: req.body.shape || "fullscreen",
-      image: req.file ? `/uploads/${req.file.filename}` : null,
+      image: imageUrl,
+      key: imageKey || keyFromUrl(imageUrl),
     });
     const saved = await newBanner.save();
     res.status(201).json(saved);
@@ -33,25 +60,41 @@ exports.createBanner = async (req, res) => {
 
 exports.updateBanner = async (req, res) => {
   try {
-    const updateData = {
-      title: req.body.title,
-      description: req.body.description,
-      shape: req.body.shape,
-    };
+    const banner = await Banner.findOne({
+      _id: req.params.id,
+      vendorId: req.params.vendorId,
+    });
+    if (!banner) return res.status(404).json({ error: "Banner not found" });
 
+    // Text updates
+    if (req.body.title !== undefined) banner.title = req.body.title;
+    if (req.body.description !== undefined)
+      banner.description = req.body.description;
+    if (req.body.shape !== undefined) banner.shape = req.body.shape;
+
+    // Image replacement + cleanup
     if (req.file) {
-      updateData.image = `/uploads/${req.file.filename}`;
+      // Delete old image from S3 if exists
+      if (banner.key) {
+        try {
+          await deleteFromS3(banner.key);
+          console.log("Old banner deleted:", banner.key);
+        } catch (err) {
+          console.warn("Old banner delete failed:", err.message);
+        }
+      }
+
+      const uploaded = await uploadToS3(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype,
+        S3_PREFIX
+      );
+      banner.image = uploaded.url;
+      banner.key = uploaded.key;
     }
 
-    const updated = await Banner.findOneAndUpdate(
-      { _id: req.params.id, vendorId: req.params.vendorId },
-      updateData,
-      {
-        new: true,
-      }
-    );
-
-    if (!updated) return res.status(404).json({ error: "Banner not found" });
+    const updated = await banner.save();
     res.json(updated);
   } catch (err) {
     console.error("Update Banner Error:", err);
@@ -66,6 +109,18 @@ exports.deleteBanner = async (req, res) => {
       vendorId: req.params.vendorId,
     });
     if (!deleted) return res.status(404).json({ error: "Banner not found" });
+
+    // Delete associated S3 object if available
+    const key = deleted.key || keyFromUrl(deleted.image);
+    if (key) {
+      try {
+        await deleteFromS3(key);
+        console.log("Banner image deleted from S3:", key);
+      } catch (err) {
+        console.warn("S3 delete failed:", err.message);
+      }
+    }
+
     res.json({ message: "Banner deleted" });
   } catch (err) {
     res.status(500).json({ error: "Failed to delete banner" });

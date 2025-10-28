@@ -14,6 +14,7 @@ const bannerSchema = new mongoose.Schema(
     },
     description: String,
     image: String,
+    key: String, // S3 object key for cleanup
     shape: {
       type: String,
       enum: ["blob", "oval", "square", "fullscreen"], // you can expand this

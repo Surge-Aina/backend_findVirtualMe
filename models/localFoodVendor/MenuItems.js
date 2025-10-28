@@ -19,7 +19,8 @@ const menuItemSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    image: String, // optional for future use
+    imageUrl: String, // ✅ full S3 URL
+    imageKey: String, // ✅ S3 key for safe deletion
   },
   { timestamps: true }
 );
