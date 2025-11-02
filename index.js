@@ -54,7 +54,7 @@ const telemetryRoutes = require("./routes/telemetry");
 const guestUserRoutes = require("./microservices/guestLogin/guestUser.routes");
 
 const portfolio_Routes = require("./routes/cleaningLady/portfolioRoutes");
-
+const socialLinksRoutes = require("./microservices/socialLinks/socialLinks.routes");
 // Import configuration from separate file
 const config = require("./config");
 
@@ -150,7 +150,8 @@ const corsOptions = {
   credentials: true,
 };
 
-app.use(cors(corsOptions));
+// app.use(cors(corsOptions));
+app.use(cors());
 
 app.set("trust proxy", true);
 
@@ -158,7 +159,7 @@ app.set("trust proxy", true);
 //do not call directly, stripe will call this route
 app.use("/stripe-webhook", stripeWebhookRoutes);
 
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 
 // Domain resolver middleware - must be before other routes
 app.use(domainResolver);
@@ -220,6 +221,29 @@ app.use("/api/telemetry", telemetryRoutes);
 
 //microservices
 app.use("/guestUser", guestUserRoutes);
+app.use("/social-links", socialLinksRoutes);
+//aiPortfolioCreator
+const contactRouter = require("./microservices/aiPortfolioCreator/aiPortfolioCreator.routes");
+app.use("/api/contact", contactRouter);
+const execRouter = require("./microservices/aiPortfolioCreator/exec.routes");
+app.use("/api/exec", execRouter);
+const userAiPortfolioCreatorRouter = require("./microservices/aiPortfolioCreator/user.routes");
+app.use("/api/user", userAiPortfolioCreatorRouter);
+const projectsRouter = require("./microservices/aiPortfolioCreator/projects.routes");
+app.use("/api/projects", projectsRouter);
+const userAciveRouter = require("./microservices/aiPortfolioCreator/userActive.routes.js");
+app.use("/api/active", userAciveRouter);
+const promoRouter = require("./microservices/aiPortfolioCreator/promo.routes");
+app.use("/api/promo", promoRouter);
+const userRouter = require("./microservices/aiPortfolioCreator/name.routes");
+app.use("/name", userRouter);
+const mongoose = require("mongoose");
+const nowIso = () => new Date().toISOString();
+app.get("/api/health", (_req, res) => {
+  const readyState = mongoose.connection.readyState; // 0: disconnected, 1: connected, 2: connecting, 3: disconnecting
+  const mongo = readyState === 1 ? "connected" : "disconnected";
+  res.json({ ok: true, mongo, time: nowIso() });
+});
 
 /**
  * Connect to MongoDB using the connection function from utils/db.js
