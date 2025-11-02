@@ -150,8 +150,8 @@ const corsOptions = {
   credentials: true,
 };
 
-// app.use(cors(corsOptions));
-app.use(cors());
+app.use(cors(corsOptions));
+//app.use(cors());
 
 app.set("trust proxy", true);
 
