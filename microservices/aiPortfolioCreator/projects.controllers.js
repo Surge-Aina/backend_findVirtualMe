@@ -18,7 +18,7 @@ const DEFAULT_FRONTEND_LINES = {
   15: '    <button onclick="save()">Save</button>',
   16: '    <p id="msg"></p>',
   17: "    <script>",
-  18: '      const url = "http://localhost:5000/name";',
+  18: '      const url = "${process.env.FRONTEND_URL}/name";',
   19: "      async function load() {",
   20: "        const res = await fetch(url);",
   21: "        const data = await res.json();",
