@@ -24,7 +24,7 @@ exports.createReview = async (req, res) => {
 
 exports.updateReview = async (req, res) => {
   try {
-    const updated = await Review.findByIdAndUpdate(
+    const updated = await Review.findOneAndUpdate(
       { _id: req.params.id, vendorId: req.params.vendorId },
       req.body,
       {
@@ -40,7 +40,7 @@ exports.updateReview = async (req, res) => {
 
 exports.deleteReview = async (req, res) => {
   try {
-    const deleted = await Review.findByIdAndDelete({
+    const deleted = await Review.findOneAndDelete({
       _id: req.params.id,
       vendorId: req.params.vendorId,
     });

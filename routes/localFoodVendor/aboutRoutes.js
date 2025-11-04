@@ -1,5 +1,5 @@
 const express = require("express");
-const upload = require("../../utils/multer");
+const multer = require("multer");
 const router = express.Router();
 const {
   getAllAbouts,
@@ -8,6 +8,10 @@ const {
   imageUpload,
   deleteAbout,
 } = require("../../controllers/localFoodVendor/aboutController");
+
+// Use memory storage for S3 uploads
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 router.get("/:vendorId", getAllAbouts);
 

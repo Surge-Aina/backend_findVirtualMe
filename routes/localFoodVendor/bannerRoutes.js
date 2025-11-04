@@ -1,5 +1,7 @@
 const express = require("express");
-const upload = require("../../utils/multer");
+const multer = require("multer");
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 const router = express.Router();
 const {
   getAllBanners,
