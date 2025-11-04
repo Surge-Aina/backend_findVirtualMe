@@ -6,7 +6,7 @@ const LineMapSchema = new mongoose.Schema(
   { _id: false, strict: false }
 );
 
-const ProjectSchema = new mongoose.Schema(
+const AIProjectSchema = new mongoose.Schema(
   {
     projectId: { type: String, required: true },
     name: { type: String, required: true },
@@ -29,6 +29,6 @@ const ProjectSchema = new mongoose.Schema(
 );
 
 module.exports = {
-  ProjectSchema,
-  ProjectModel: mongoose.model("Project", ProjectSchema),
+  AIProjectSchema,
+  AIProjectModel: mongoose.model("AIProject", AIProjectSchema),
 };
