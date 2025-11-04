@@ -52,7 +52,7 @@ const domainRoutes = require("./routes/domainRoutes");
 const telemetryRoutes = require("./routes/telemetry");
 // const settingRoutes2 = require('./routes/settingRoutes');
 const guestUserRoutes = require("./microservices/guestLogin/guestUser.routes");
-
+const guestAdminPanelRoutes = require("./microservices/guestAdminPanel/guestAdminPanel.routes");
 const portfolio_Routes = require("./routes/cleaningLady/portfolioRoutes");
 const socialLinksRoutes = require("./microservices/socialLinks/socialLinks.routes");
 // Import configuration from separate file
@@ -221,6 +221,7 @@ app.use("/api/telemetry", telemetryRoutes);
 
 //microservices
 app.use("/guestUser", guestUserRoutes);
+app.use("/guestAdminPanel", guestAdminPanelRoutes);
 app.use("/social-links", socialLinksRoutes);
 //aiPortfolioCreator
 const contactRouter = require("./microservices/aiPortfolioCreator/aiPortfolioCreator.routes");
