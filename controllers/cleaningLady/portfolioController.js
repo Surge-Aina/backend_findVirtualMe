@@ -59,22 +59,44 @@ exports.getMyPortfolio = async (req, res) => {
     
     let portfolio = await Portfolio.findOne({ userId });
     
-    if (!portfolio) {
-      console.log('⚠️ No portfolio found, creating default one...');
+    // if (!portfolio) {
+    //   console.log('⚠️ No portfolio found, creating default one...');
       
-      portfolio = await Portfolio.create({
-        userId,
-        slug: `user-cleaning-${Date.now()}`,
-        templateType: 'cleaning-service',
-        businessName: 'My Cleaning Service',
-        tagline1: "DOM's Cleaning – We bring sparkle to your space.",
-        tagline2: 'From roof to floor – Every detail matters.',
-        tagline3: 'For those I love – My purpose in every sweep.'
-      });
+    //   portfolio = await Portfolio.create({
+    //     userId,
+    //     slug: `user-cleaning-${Date.now()}`,
+    //     templateType: 'cleaning-service',
+    //     businessName: 'My Cleaning Service',
+    //     tagline1: "DOM's Cleaning – We bring sparkle to your space.",
+    //     tagline2: 'From roof to floor – Every detail matters.',
+    //     tagline3: 'For those I love – My purpose in every sweep.'
+    //   });
       
-      console.log('✅ Default portfolio created:', portfolio._id);
-    }
+    //   console.log('✅ Default portfolio created:', portfolio._id);
+    // }
     
+    
+    if (!portfolio) {
+  console.log('⚠️ No portfolio found, creating default one...');
+  
+  portfolio = await Portfolio.create({
+    userId,
+    slug: `user-cleaning-${Date.now()}`,
+    templateType: 'cleaning-service',
+    businessName: 'My Cleaning Service',
+    tagline1: "DOM's Cleaning – We bring sparkle to your space.",
+    tagline2: 'From roof to floor – Every detail matters.',
+    tagline3: 'For those I love – My purpose in every sweep.'
+  });
+  
+  console.log('✅ Default portfolio created:', portfolio._id);
+  
+  // ✅ ADD THIS CODE HERE:
+  await User.findByIdAndUpdate(userId, {
+    $addToSet: { portfolios: portfolio._id.toString() }
+  });
+  console.log(`✅ Added portfolio ${portfolio._id} to user ${userId}'s portfolios array`);
+}
     console.log('✅ Portfolio found:', portfolio._id);
     
     res.json({
@@ -203,7 +225,14 @@ exports.savePortfolio = async (req, res) => {
       portfolio.theme = req.body.theme || {};
       
       await portfolio.save();
-      
+      if (req.user && req.user.id) {
+  await User.findByIdAndUpdate(req.user.id, {
+    $addToSet: { portfolios: portfolio._id.toString() }
+  });
+  console.log(`✅ Added portfolio ${portfolio._id} to user ${req.user.id}'s portfolios array`);
+}
+
+
       res.status(201).json({
         message: 'Portfolio created successfully',
         portfolio
