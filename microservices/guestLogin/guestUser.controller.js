@@ -6,7 +6,7 @@ exports.signupUser = async (req, res) => {
     res.status(201).json({ message: "User created successfully", user: newUser });
   } catch (err) {
     console.error("Signup error:", err);
-    res.status(400).json({ messag: err.message });
+    res.status(400).json({ message: err.message });
   }
 };
 
