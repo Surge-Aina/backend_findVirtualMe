@@ -2,7 +2,8 @@ const guestUserService = require("../guestLogin/guestUser.service");
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const result = await guestUserService.getAllUsers();
+       const { portfolioId } = req.query;
+    const result = await guestUserService.getAllUsers(portfolioId);
 
     if (!result.success) {
       return res.status(400).json({
