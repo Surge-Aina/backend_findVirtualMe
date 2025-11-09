@@ -1,20 +1,45 @@
-const User = require("../tempUser.model");
-const USER_KEY = "singleton_user_mvp";
+// const User = require("../user/tempUser.model");
+const User = require("../../../models/User");
+// const USER_KEY = "singleton_user_mvp";
 
 exports.userUtils = {
-  async getOrCreateUser() {
-    let user = await User.findOne({ userKey: USER_KEY }).lean();
-    if (!user) {
-      user = await User.create({
-        userKey: USER_KEY,
-        email: "om@test.local",
-        displayName: "Om",
-        activeProjectId: "",
-        projects: [],
-      });
+  // async getOrCreateUser(userId) {
+  //   //let user = await User.findOne({ userKey: USER_KEY }).lean();
+  //   // if (!user) {
+  //   //   user = await User.create({
+  //   //     userKey: USER_KEY,
+  //   //     email: "om@test.local",
+  //   //     displayName: "Om",
+  //   //     activeProjectId: "",
+  //   //     projects: [],
+  //   //   });
+  //   // }
+  //   let user = await User.findById(userId).lean();
+  //   if (!user) {
+  //     // Instead of creating, throw an error
+  //     const err = new Error("User not found. Please create an account first.");
+  //     err.statusCode = 400; // or 401 depending on your flow
+  //     throw err;
+  //   }
+  //   // Return hydrated model next time
+  //   // return User.findOne({ userKey: USER_KEY });
+  //   return user;
+  // },
+  async getOrCreateUser(userId) {
+    if (!userId) {
+      const err = new Error("Authentication required");
+      err.statusCode = 401;
+      throw err;
     }
-    // Return hydrated model next time
-    return User.findOne({ userKey: USER_KEY });
+
+    const user = await User.findById(userId).lean();
+    if (!user) {
+      const err = new Error("User not found. Please create an account first.");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    return user;
   },
 };
 
