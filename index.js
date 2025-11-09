@@ -52,6 +52,7 @@ const domainRoutes = require("./routes/domainRoutes");
 const telemetryRoutes = require("./routes/telemetry");
 // const settingRoutes2 = require('./routes/settingRoutes');
 const guestUserRoutes = require("./microservices/guestLogin/guestUser.routes");
+const portfolioEditLogRoutes = require("./routes/portfolioEditLogRoutes");
 
 const portfolio_Routes = require("./routes/cleaningLady/portfolioRoutes");
 
@@ -208,6 +209,7 @@ app.use("/api/handyman-template", handymanTemplateRoutes);
 app.use("/api/handyman/inquiries", handymanInquiryRoutes);
 app.use("/support-form", supportFormRoutes);
 app.use("/api/domains", domainRoutes);
+app.use("/api/portfolio-edit-log", portfolioEditLogRoutes);
 
 // app.use("/cleaning/user", userRoutes2);
 // app.use('/services', serviceRoutes);
