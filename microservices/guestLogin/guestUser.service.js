@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 
 exports.createNewUser = async (userData) => {
   try {
-    const { name, username, portfolioType, phone, email, password } = userData;
+    const { name, username, portfolioType, phone, email, password,portfolioId } = userData;
 
     // Required fields check
     if (!portfolioType || !email || !password) {
@@ -28,6 +28,7 @@ exports.createNewUser = async (userData) => {
       phone,
       email,
       password: hashedPassword,
+      portfolioId
     });
 
     await newUser.save();
@@ -90,9 +91,11 @@ exports.deleteUser = async (id) => {
   }
 };
 
-exports.getAllUsers = async () => {
+exports.getAllUsers = async (portfolioId) => {
   try {
-    const userList = await GuestUser.find({}).select("-password").lean();
+    const filter = portfolioId ? { portfolioId: portfolioId } : {};
+    
+    const userList = await GuestUser.find(filter).select("-password").lean();
 
     return { success: true, data: userList };
   } catch (error) {

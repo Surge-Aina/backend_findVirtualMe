@@ -75,6 +75,7 @@ const seededOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "http://dannizhou.me:5173",
+  "https://localhost:5000",
 ]
   .filter(Boolean)
   .flatMap((entry) =>
@@ -226,19 +227,19 @@ app.use("/guestUser", guestUserRoutes);
 app.use("/guestAdminPanel", guestAdminPanelRoutes);
 app.use("/social-links", socialLinksRoutes);
 //aiPortfolioCreator
-const contactRouter = require("./microservices/aiPortfolioCreator/aiPortfolioCreator.routes");
+const contactRouter = require("./microservices/aiPortfolioCreator/contact/aiPortfolioCreator.routes.js");
 app.use("/api/contact", contactRouter);
-const execRouter = require("./microservices/aiPortfolioCreator/exec.routes");
+const execRouter = require("./microservices/aiPortfolioCreator/exec/exec.routes.js");
 app.use("/api/exec", execRouter);
-const userAiPortfolioCreatorRouter = require("./microservices/aiPortfolioCreator/user.routes");
+const userAiPortfolioCreatorRouter = require("./microservices/aiPortfolioCreator/user/user.routes.js");
 app.use("/api/user", userAiPortfolioCreatorRouter);
-const projectsRouter = require("./microservices/aiPortfolioCreator/projects.routes");
+const projectsRouter = require("./microservices/aiPortfolioCreator/projects/projects.routes");
 app.use("/api/projects", projectsRouter);
-const userAciveRouter = require("./microservices/aiPortfolioCreator/userActive.routes.js");
+const userAciveRouter = require("./microservices/aiPortfolioCreator/setActiveProject/setActiveProject.route.js");
 app.use("/api/active", userAciveRouter);
-const promoRouter = require("./microservices/aiPortfolioCreator/promo.routes");
+const promoRouter = require("./microservices/aiPortfolioCreator/promo/promo.routes.js");
 app.use("/api/promo", promoRouter);
-const userRouter = require("./microservices/aiPortfolioCreator/name.routes");
+const userRouter = require("./microservices/aiPortfolioCreator/name/name.routes.js");
 app.use("/name", userRouter);
 const mongoose = require("mongoose");
 const nowIso = () => new Date().toISOString();

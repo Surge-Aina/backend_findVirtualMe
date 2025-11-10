@@ -30,6 +30,10 @@ const guestUserSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+    portfolioId: {           // ← ADD THIS FIELD
+    type: String,
+    required: true,        // Make it required so users must have one
+  },
   phone: {
     type: String,
   },
