@@ -1,8 +1,7 @@
 const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 
-// Since your model uses ES6 import/export, we need to use require
-// If this doesn't work, you may need to convert the model to CommonJS
+
 const GuestAdminPanel = require("../guestAdminPanel.model").default || require("../guestAdminPanel.model");
 
 let mongoServer;
@@ -94,7 +93,7 @@ describe("GuestAdminPanel Model", () => {
     
     const originalUpdatedAt = saved.updatedAt;
 
-    // Wait a bit to ensure timestamp difference
+   
     await new Promise(resolve => setTimeout(resolve, 10));
 
     saved.name = "Updated Name";
