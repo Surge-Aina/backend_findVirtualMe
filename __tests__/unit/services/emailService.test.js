@@ -15,7 +15,7 @@ const {
   sendProjectManagerContactEmails,
   sendDataScientistContactEmails,
   sendPhotographerContactEmails
-} = require("../../services/emailService");
+} = require("../../../services/emailService");
 
 describe("Email Service Tests", () => {
   beforeEach(() => {
