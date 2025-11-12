@@ -1,119 +1,357 @@
-jest.mock("../../../../utils/multer", () => ({
-  single: () => (req, res, next) => {
-    req.file = {
-      filename: "test.jpg",
-      originalname: "test.jpg",
-      mimetype: "image/jpeg",
-    };
-    next();
-  },
-  fields: () => (req, res, next) => next(),
-  array: () => (req, res, next) => next(),
-}));
+require("../../../../setup");
+//jest.unmock("multer");
 
 const request = require("supertest");
-const app = require("../../../../testapp");
+const express = require("express");
 const mongoose = require("mongoose");
+
+jest.mock("../../../../services/s3Service", () => ({
+  uploadToS3: jest.fn().mockResolvedValue({
+    url: "https://mock-bucket.s3.amazonaws.com/test.jpg",
+    key: "mock-key",
+  }),
+  deleteFromS3: jest.fn().mockResolvedValue(true),
+}));
+
+const { uploadToS3 } = require("../../../../services/s3Service");
+
+jest.mock("../../../../models/localFoodVendor/TaggedImage", () => {
+  const dataStore = [];
+
+  class MockTaggedImage {
+    constructor(data) {
+      Object.assign(this, data);
+      this._id = this._id || `${dataStore.length + 1}`;
+      this.tags = this.tags || [];
+    }
+
+    async save() {
+      const idx = dataStore.findIndex((d) => d._id == this._id);
+      if (idx >= 0) dataStore[idx] = this;
+      else dataStore.push(this);
+      return this;
+    }
+
+    static find(filter = {}) {
+      const matched = dataStore.filter((img) =>
+        Object.keys(filter).every((k) => img[k] == filter[k])
+      );
+      const result = matched.map((d) => new MockTaggedImage(d));
+
+      // Return a Promise with .populate() support
+      const promise = Promise.resolve(result);
+      promise.populate = async () => result;
+      return promise;
+    }
+
+    static findOne(filter = {}) {
+      const found = dataStore.find((img) =>
+        Object.keys(filter).every((k) => img[k] == filter[k])
+      );
+      const result = found ? new MockTaggedImage(found) : null;
+
+      // Return a Promise with .populate() support
+      const promise = Promise.resolve(result);
+      promise.populate = async () => result;
+      return promise;
+    }
+
+    static async findOneAndDelete(filter = {}) {
+      const idx = dataStore.findIndex((img) =>
+        Object.keys(filter).every((k) => img[k] == filter[k])
+      );
+      if (idx === -1) return null;
+      const [deleted] = dataStore.splice(idx, 1);
+      return new MockTaggedImage(deleted);
+    }
+
+    static async deleteMany() {
+      dataStore.length = 0;
+    }
+  }
+
+  return MockTaggedImage;
+});
+
 const TaggedImage = require("../../../../models/localFoodVendor/TaggedImage");
 
-describe("TaggedImage API (mocked)", () => {
+const taggedImageRoutes = require("../../../../routes/localFoodVendor/taggedImageRoutes");
+const app = express();
+app.use(express.json());
+app.use("/tagged", taggedImageRoutes);
+
+let vendorId;
+
+beforeAll(() => {
+  vendorId = new mongoose.Types.ObjectId().toString();
+});
+
+//Test cases
+describe("Tagged Image API (mocked)", () => {
   const vendorId = new mongoose.Types.ObjectId().toString();
 
-  beforeEach(() => {
+  afterEach(async () => {
     jest.clearAllMocks();
-    TaggedImage.findOne = jest.fn();
-    TaggedImage.find = jest.fn();
-    TaggedImage.prototype.save = jest.fn();
+    await TaggedImage.deleteMany();
   });
 
-  it("should upload a new image", async () => {
-    const fakeSaved = {
-      _id: "img1",
-      vendorId,
-      imageUrl: "/uploads/test.jpg",
-      tags: [],
-    };
-    TaggedImage.prototype.save.mockResolvedValueOnce(fakeSaved);
-
+  //image upload test case
+  it("should upload a new image successfully", async () => {
     const res = await request(app)
-      .post(`/tagged-image/${vendorId}/upload`)
-      .attach("image", Buffer.from("fake"), "test.jpg");
+      .post(`/tagged/${vendorId}/upload`)
+      .attach("image", Buffer.from("mock-data"), "test.jpg");
 
-    expect(res.status).toBe(200); // controller uses res.json(), not 201
-    expect(res.body.imageUrl).toBe("/uploads/test.jpg");
+    expect(res.status).toBe(200);
+    expect(res.body.imageUrl).toContain("mock-bucket");
+    expect(uploadToS3).toHaveBeenCalled();
+  });
+
+  it("should return 400 if no file is uploaded", async () => {
+    const res = await request(app).post(`/tagged/${vendorId}/upload`);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/no file/i);
   });
 
   it("should add a tag to an existing image", async () => {
-    const fakeImage = {
-      _id: "img2",
+    const image = new TaggedImage({ vendorId, imageUrl: "url", key: "key" });
+    await image.save();
+
+    const res = await request(app)
+      .post(`/tagged/${vendorId}/${image._id}/tags`)
+      .send({ x: 10, y: 20, label: "Burger", menuItemId: "123" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.tags).toHaveLength(1);
+    expect(res.body.tags[0].label).toBe("Burger");
+  });
+
+  it("should return 404 if adding tag to non-existing image", async () => {
+    const res = await request(app)
+      .post(`/tagged/${vendorId}/doesNotExist/tags`)
+      .send({ x: 1, y: 2, label: "Invalid" });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Image not found");
+  });
+
+  it("should update an existing tag", async () => {
+    const image = new TaggedImage({
       vendorId,
+      imageUrl: "url",
+      key: "key",
+      tags: [{ x: 5, y: 10, label: "Old", menuItem: "1" }],
+    });
+    await image.save();
+
+    const res = await request(app)
+      .put(`/tagged/${vendorId}/${image._id}/tags/0`)
+      .send({ x: 7, y: 15, label: "Updated", menuItemId: "2" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.tags[0].label).toBe("Updated");
+  });
+
+  it("should return 404 if updating non-existing tag index", async () => {
+    const image = new TaggedImage({
+      vendorId,
+      imageUrl: "url",
+      key: "key",
       tags: [],
-      save: jest.fn().mockResolvedValue(),
-    };
-    TaggedImage.findOne.mockResolvedValueOnce(fakeImage);
+    });
+    await image.save();
 
     const res = await request(app)
-      .post(`/tagged-image/${vendorId}/img2/tags`)
-      .send({ x: 10, y: 20, label: "Cheese", menuItemId: "menu1" });
+      .put(`/tagged/${vendorId}/${image._id}/tags/5`)
+      .send({ label: "Invalid" });
 
-    expect(res.status).toBe(200);
-    expect(fakeImage.tags.length).toBe(1);
-    expect(TaggedImage.findOne).toHaveBeenCalledWith({ _id: "img2", vendorId });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Tag not found");
   });
 
-  it("should update a tag", async () => {
-    const fakeImage = {
-      _id: "img3",
+  it("should delete an existing tag", async () => {
+    const image = new TaggedImage({
       vendorId,
+      imageUrl: "url",
+      key: "key",
+      tags: [{ label: "ToDelete", x: 1, y: 2 }],
+    });
+    await image.save();
+
+    const res = await request(app).delete(
+      `/tagged/${vendorId}/${image._id}/tags/0`
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.tags).toHaveLength(0);
+  });
+
+  it("should return 404 if deleting tag from non-existing image", async () => {
+    const res = await request(app).delete(`/tagged/${vendorId}/noImg/tags/0`);
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Image not found");
+  });
+
+  it("should handle DB errors when adding tag", async () => {
+    jest
+      .spyOn(TaggedImage, "findOne")
+      .mockRejectedValueOnce(new Error("DB fail"));
+
+    const res = await request(app)
+      .post(`/tagged/${vendorId}/fakeImage/tags`)
+      .send({ x: 10, y: 20, label: "ErrorTag" });
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toMatch(/failed to add tag/i);
+  });
+});
+
+describe("PUT /tagged/:vendorId/:imageId/tags/:tagIndex (updateTag)", () => {
+  it("should return 404 if image is not found", async () => {
+    const res = await request(app)
+      .put(`/tagged/${vendorId}/nonexistentImage/tags/0`)
+      .send({ label: "New Label" });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/image not found/i);
+  });
+
+  it("should return 404 if tag index does not exist", async () => {
+    const image = new TaggedImage({
+      vendorId,
+      imageUrl: "url",
+      key: "key",
+      tags: [],
+    });
+    await image.save();
+
+    const res = await request(app)
+      .put(`/tagged/${vendorId}/${image._id}/tags/5`)
+      .send({ label: "Invalid" });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/tag not found/i);
+  });
+
+  it("should return 500 if save fails", async () => {
+    const image = new TaggedImage({
+      vendorId,
+      imageUrl: "url",
+      key: "key",
       tags: [{ x: 1, y: 1, label: "Old" }],
-      save: jest.fn().mockResolvedValue(),
-    };
-    TaggedImage.findOne.mockResolvedValueOnce(fakeImage);
+    });
+    await image.save();
+
+    jest
+      .spyOn(image, "save")
+      .mockRejectedValueOnce(new Error("DB save failed"));
 
     const res = await request(app)
-      .put(`/tagged-image/${vendorId}/img3/tags/0`)
-      .send({ x: 2, y: 2, label: "New", menuItemId: "menu2" });
-
-    expect(res.status).toBe(200);
-    expect(fakeImage.tags[0].label).toBe("New");
+      .put(`/tagged/${vendorId}/${image._id}/tags/0`)
+      .send({ label: "New" });
+    expect(res.status).toBe(500);
+    expect(res.body.error).toMatch(/failed to update/i);
   });
+});
 
-  it("should delete a tag", async () => {
-    const fakeImage = {
-      _id: "img4",
+describe("DELETE /tagged/:vendorId/:imageId/tags/:tagIndex (deleteTag)", () => {
+  it("should return 404 if tag index invalid", async () => {
+    const image = new TaggedImage({
       vendorId,
-      tags: [{ x: 1, y: 1, label: "DeleteMe" }],
-      save: jest.fn().mockResolvedValue(),
-    };
-    TaggedImage.findOne.mockResolvedValueOnce(fakeImage);
+      imageUrl: "url",
+      tags: [{ label: "Only Tag" }],
+    });
+    await image.save();
 
-    const res = await request(app).delete(`/tagged-image/${vendorId}/img4/tags/0`);
-
-    expect(res.status).toBe(200);
-    expect(fakeImage.tags.length).toBe(0);
+    const res = await request(app).delete(
+      `/tagged/${vendorId}/${image._id}/tags/5`
+    );
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/tag not found/i);
   });
 
-  it("should fetch a single tagged image", async () => {
-    const fakeImage = { _id: "img5", vendorId, tags: [] };
-    TaggedImage.findOne.mockReturnValueOnce({
-      populate: jest.fn().mockResolvedValue(fakeImage),
+  it("should return 500 if save throws error", async () => {
+    const image = new TaggedImage({
+      vendorId,
+      imageUrl: "url",
+      tags: [{ label: "DeleteMe" }],
     });
+    await image.save();
 
-    const res = await request(app).get(`/tagged-image/${vendorId}/img5`);
+    jest.spyOn(image, "save").mockRejectedValueOnce(new Error("DB fail"));
 
-    expect(res.status).toBe(200);
-    expect(res.body._id).toBe("img5");
+    const res = await request(app).delete(
+      `/tagged/${vendorId}/${image._id}/tags/0`
+    );
+    expect(res.status).toBe(500);
+    expect(res.body.error).toMatch(/failed to delete/i);
+  });
+});
+
+describe("GET /tagged/:vendorId/:imageId", () => {
+  it("should return 404 if image not found", async () => {
+    const res = await request(app).get(`/tagged/${vendorId}/nonexistent`);
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/image not found/i);
+  });
+});
+
+describe("DELETE /tagged/:vendorId/:imageId (deleteTaggedImage)", () => {
+  it("should return 404 if image not found", async () => {
+    const res = await request(app).delete(`/tagged/${vendorId}/missing`);
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/image not found/i);
   });
 
-  it("should fetch all tagged images", async () => {
-    const fakeImages = [{ _id: "img6", vendorId, tags: [] }];
-    TaggedImage.find.mockReturnValueOnce({
-      populate: jest.fn().mockResolvedValue(fakeImages),
+  it("should return 500 if DB delete fails", async () => {
+    jest
+      .spyOn(TaggedImage, "findOneAndDelete")
+      .mockRejectedValueOnce(new Error("Delete fail"));
+    const res = await request(app).delete(`/tagged/${vendorId}/123`);
+    expect(res.status).toBe(500);
+    expect(res.body.error).toMatch(/failed to delete tagged image/i);
+  });
+
+  it("should handle deleteFromS3 error gracefully", async () => {
+    const image = new TaggedImage({
+      vendorId,
+      imageUrl: "https://mock-bucket.s3.amazonaws.com/test.jpg",
+      key: "mock-key",
     });
+    await image.save();
 
-    const res = await request(app).get(`/tagged-image/${vendorId}`);
+    const { deleteFromS3 } = require("../../../../services/s3Service");
+    deleteFromS3.mockRejectedValueOnce(new Error("S3 delete failed"));
 
+    const res = await request(app).delete(`/tagged/${vendorId}/${image._id}`);
     expect(res.status).toBe(200);
-    expect(res.body.length).toBe(1);
+    expect(res.body.message).toMatch(/tagged image deleted/i);
+  });
+});
+
+describe("GET /tagged/:vendorId (getAllTaggedImages)", () => {
+  it("should return all tagged images for a vendor", async () => {
+    // Arrange: insert two mock images
+    const image1 = new TaggedImage({
+      vendorId,
+      imageUrl: "https://mock-bucket.s3.amazonaws.com/one.jpg",
+      key: "one-key",
+      tags: [{ label: "Pizza", x: 0.5, y: 0.5 }],
+    });
+    const image2 = new TaggedImage({
+      vendorId,
+      imageUrl: "https://mock-bucket.s3.amazonaws.com/two.jpg",
+      key: "two-key",
+      tags: [{ label: "Pasta", x: 0.4, y: 0.6 }],
+    });
+    await image1.save();
+    await image2.save();
+
+    // Act
+    const res = await request(app).get(`/tagged/${vendorId}`);
+
+    // Assert
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThanOrEqual(2);
+    expect(res.body[0]).toHaveProperty("imageUrl");
+    expect(res.body[0]).toHaveProperty("tags");
   });
 });
