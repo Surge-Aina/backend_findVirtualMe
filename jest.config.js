@@ -12,6 +12,7 @@ module.exports = {
     "models/**/*.js",
     "controllers/**/*.js",
     "!**/node_modules/**",
+    "services/**/*.js",
     "!**/coverage/**",
     "**/*.js",
     "!**/node_modules/**",
