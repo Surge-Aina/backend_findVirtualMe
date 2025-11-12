@@ -5,7 +5,7 @@
  */
 
 // Mock dependencies FIRST
-jest.mock('../../services/vercelService', () => ({
+jest.mock('../../../services/vercelService', () => ({
   addDomain: jest.fn(),
   verifyDomain: jest.fn(),
   removeDomain: jest.fn(),
@@ -22,9 +22,9 @@ jest.mock('xml2js', () => ({
   })),
 }));
 
-const domainService = require('../../services/domainService');
-const vercelService = require('../../services/vercelService');
-const User = require('../../models/User');
+const domainService = require('../../../services/domainService');
+const vercelService = require('../../../services/vercelService');
+const User = require('../../../models/User');
 const fs = require('fs');
 const path = require('path');
 

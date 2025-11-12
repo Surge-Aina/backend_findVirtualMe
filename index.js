@@ -52,7 +52,8 @@ const domainRoutes = require("./routes/domainRoutes");
 const telemetryRoutes = require("./routes/telemetry");
 // const settingRoutes2 = require('./routes/settingRoutes');
 const guestUserRoutes = require("./microservices/guestLogin/guestUser.routes");
-
+const portfolioEditLogRoutes = require("./routes/portfolioEditLogRoutes");
+const guestAdminPanelRoutes = require("./microservices/guestAdminPanel/guestAdminPanel.routes");
 const portfolio_Routes = require("./routes/cleaningLady/portfolioRoutes");
 const socialLinksRoutes = require("./microservices/socialLinks/socialLinks.routes");
 // Import configuration from separate file
@@ -74,6 +75,7 @@ const seededOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "http://dannizhou.me:5173",
+  "https://localhost:5000",
 ]
   .filter(Boolean)
   .flatMap((entry) =>
@@ -171,7 +173,7 @@ setCredentialsFromEnv();
 app.use("/portfolio", portfolioRoutes);
 
 // Mount the software engineering portfolio API routes at /softwareeng
-app.use("/softwareeng", softwareEngRoutes);
+//app.use("/softwareeng", softwareEngRoutes);
 
 // Test route to verify routing is working
 app.get("/test-route", (req, res) => {
@@ -209,6 +211,7 @@ app.use("/api/handyman-template", handymanTemplateRoutes);
 app.use("/api/handyman/inquiries", handymanInquiryRoutes);
 app.use("/support-form", supportFormRoutes);
 app.use("/api/domains", domainRoutes);
+app.use("/api/portfolio-edit-log", portfolioEditLogRoutes);
 
 // app.use("/cleaning/user", userRoutes2);
 // app.use('/services', serviceRoutes);
@@ -221,21 +224,22 @@ app.use("/api/telemetry", telemetryRoutes);
 
 //microservices
 app.use("/guestUser", guestUserRoutes);
+app.use("/guestAdminPanel", guestAdminPanelRoutes);
 app.use("/social-links", socialLinksRoutes);
 //aiPortfolioCreator
-const contactRouter = require("./microservices/aiPortfolioCreator/aiPortfolioCreator.routes");
+const contactRouter = require("./microservices/aiPortfolioCreator/contact/aiPortfolioCreator.routes.js");
 app.use("/api/contact", contactRouter);
-const execRouter = require("./microservices/aiPortfolioCreator/exec.routes");
+const execRouter = require("./microservices/aiPortfolioCreator/exec/exec.routes.js");
 app.use("/api/exec", execRouter);
-const userAiPortfolioCreatorRouter = require("./microservices/aiPortfolioCreator/user.routes");
+const userAiPortfolioCreatorRouter = require("./microservices/aiPortfolioCreator/user/user.routes.js");
 app.use("/api/user", userAiPortfolioCreatorRouter);
-const projectsRouter = require("./microservices/aiPortfolioCreator/projects.routes");
+const projectsRouter = require("./microservices/aiPortfolioCreator/projects/projects.routes");
 app.use("/api/projects", projectsRouter);
-const userAciveRouter = require("./microservices/aiPortfolioCreator/userActive.routes.js");
+const userAciveRouter = require("./microservices/aiPortfolioCreator/setActiveProject/setActiveProject.route.js");
 app.use("/api/active", userAciveRouter);
-const promoRouter = require("./microservices/aiPortfolioCreator/promo.routes");
+const promoRouter = require("./microservices/aiPortfolioCreator/promo/promo.routes.js");
 app.use("/api/promo", promoRouter);
-const userRouter = require("./microservices/aiPortfolioCreator/name.routes");
+const userRouter = require("./microservices/aiPortfolioCreator/name/name.routes.js");
 app.use("/name", userRouter);
 const mongoose = require("mongoose");
 const nowIso = () => new Date().toISOString();

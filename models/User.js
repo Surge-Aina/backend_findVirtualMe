@@ -1,6 +1,16 @@
 const mongoose = require("mongoose");
 
+const {
+  AIProjectSchema,
+} = require("../microservices/aiPortfolioCreator/contact/aiPortfolioCreator.model");
+
 const userSchema = new mongoose.Schema({
+  //ai user schema merge
+  userKey: { type: String, unique: true, index: true },
+  displayName: { type: String, default: "Default Display Name" },
+  activeProjectId: { type: String, default: "" },
+  projects: { type: [AIProjectSchema], default: [] },
+
   firstName: {
     type: String,
   },
@@ -56,7 +66,7 @@ const userSchema = new mongoose.Schema({
   },
   practiceId: {
     type: String,
-    unique: true
+    unique: true,
   },
   portfolios: [{ type: String }],
   // Domain management
@@ -85,13 +95,14 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  updatedAt: { type: Date, default: () => new Date() },
   lastLogin: {
     type: Date,
   },
-   isActive: {
+  isActive: {
     type: Boolean,
-    default: true
-  }
+    default: true,
+  },
 });
 //remove password before sending back to front end
 userSchema.set("toJSON", {
