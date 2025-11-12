@@ -40,7 +40,7 @@ describe('vercelService', () => {
     process.env.VERCEL_PROJECT_ID =
       process.env.VERCEL_PROJECT_ID || 'frontend-find-virtual-me';
     process.env.VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID || 'test-team';
-    vercelService = require('../../services/vercelService');
+    vercelService = require('../../../services/vercelService');
   });
 
   beforeEach(() => {
