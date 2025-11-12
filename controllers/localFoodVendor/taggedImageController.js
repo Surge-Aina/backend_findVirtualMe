@@ -38,12 +38,12 @@ exports.uploadImage = async (req, res) => {
   }
 };
 
-// 🔹 Add a new tag
+//  Add a new tag
 exports.addTag = async (req, res) => {
   const { x, y, label, menuItemId } = req.body;
   try {
     const image = await TaggedImage.findOne({
-      _id: req.params.id,
+      _id: req.params.imageId,
       vendorId: req.params.vendorId,
     });
     if (!image) return res.status(404).json({ error: "Image not found" });
@@ -57,7 +57,7 @@ exports.addTag = async (req, res) => {
   }
 };
 
-// 🔹 Update a tag
+// Update a tag
 exports.updateTag = async (req, res) => {
   const { x, y, label, menuItemId } = req.body;
   const { imageId, tagIndex } = req.params;
@@ -81,7 +81,7 @@ exports.updateTag = async (req, res) => {
   }
 };
 
-// 🔹 Delete a tag
+// Delete a tag
 exports.deleteTag = async (req, res) => {
   const { imageId, tagIndex } = req.params;
   try {
@@ -103,7 +103,7 @@ exports.deleteTag = async (req, res) => {
   }
 };
 
-// 🔹 Get a single tagged image
+//  Get a single tagged image
 exports.getTaggedImage = async (req, res) => {
   try {
     const image = await TaggedImage.findOne({
@@ -118,7 +118,7 @@ exports.getTaggedImage = async (req, res) => {
   }
 };
 
-// 🔹 Get all tagged images
+//  Get all tagged images
 exports.getAllTaggedImages = async (req, res) => {
   try {
     const images = await TaggedImage.find({
@@ -131,11 +131,11 @@ exports.getAllTaggedImages = async (req, res) => {
   }
 };
 
-// 🔹 Optional cleanup endpoint for future (when deleting full image)
+//  Optional cleanup endpoint for future (when deleting full image)
 exports.deleteTaggedImage = async (req, res) => {
   try {
     const image = await TaggedImage.findOneAndDelete({
-      _id: req.params.id,
+      _id: req.params.imageId,
       vendorId: req.params.vendorId,
     });
     if (!image) return res.status(404).json({ error: "Image not found" });
