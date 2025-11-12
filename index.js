@@ -173,7 +173,7 @@ setCredentialsFromEnv();
 app.use("/portfolio", portfolioRoutes);
 
 // Mount the software engineering portfolio API routes at /softwareeng
-app.use("/softwareeng", softwareEngRoutes);
+//app.use("/softwareeng", softwareEngRoutes);
 
 // Test route to verify routing is working
 app.get("/test-route", (req, res) => {
