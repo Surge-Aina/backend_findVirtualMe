@@ -239,6 +239,8 @@ const promoRouter = require("./microservices/aiPortfolioCreator/promo/promo.rout
 app.use("/api/promo", promoRouter);
 const userRouter = require("./microservices/aiPortfolioCreator/name/name.routes.js");
 app.use("/name", userRouter);
+const publicProjectsRouter = require("./microservices/aiPortfolioCreator/publicProjectsAccess/publicProjectsAccess.routes.js");
+app.use("/api/publicProjects", publicProjectsRouter);
 const mongoose = require("mongoose");
 const nowIso = () => new Date().toISOString();
 app.get("/api/health", (_req, res) => {

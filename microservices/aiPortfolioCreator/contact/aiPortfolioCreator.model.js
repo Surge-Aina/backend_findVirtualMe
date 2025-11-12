@@ -11,6 +11,7 @@ const AIProjectSchema = new mongoose.Schema(
     projectId: { type: String, required: true },
     name: { type: String, required: true },
     status: { type: String, default: "active" }, // active | deleted
+    isPublic: { type: Boolean, default: false },
     frontendJson: new mongoose.Schema(
       { lines: LineMapSchema },
       { _id: false, strict: false }
