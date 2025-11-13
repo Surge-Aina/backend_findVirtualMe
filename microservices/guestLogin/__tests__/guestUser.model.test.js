@@ -34,6 +34,7 @@ describe("GuestUser Model", () => {
       portfolioType: "photographer",
       email: "alice@test.com",
       password: "password123",
+      portfolioId: "test-portfolio-123",
     };
 
     const user = new GuestUser(userData);

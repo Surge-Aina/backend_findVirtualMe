@@ -6,12 +6,16 @@ module.exports = {
     "<rootDir>/**/__tests__/**/*.test.js", // <- include nested __tests__
     "**/test/**/*.test.js",
   ],
-  transformIgnorePatterns: ["node_modules/(?!(@vercel/sdk)/)"],
+  transformIgnorePatterns: [
+    "node_modules/(?!(@vercel/sdk)/)",
+    "node_modules/(?!(@vercel/sdk|uuid)/)",
+  ],
   collectCoverageFrom: [
     "routes/**/*.js",
     "models/**/*.js",
     "controllers/**/*.js",
     "!**/node_modules/**",
+    "services/**/*.js",
     "!**/coverage/**",
     "**/*.js",
     "!**/node_modules/**",
