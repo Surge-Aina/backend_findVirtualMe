@@ -7,8 +7,6 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:user": "jest __tests__/unit/controllers/UserController.test.js __tests__/unit/models/UserModel.test.js",
-    "test:support": "jest __tests__/unit/controllers/supportForm/supportFormController.test.js __tests__/unit/models/Supportformmodel.test.js",
     "start": "node server.js",
     "dev": "nodemon server.js",
     "new:feature": "node scripts/newFeature.js"
