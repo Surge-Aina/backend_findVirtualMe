@@ -466,9 +466,7 @@ describe('Cleaning Lady Controller Tests', () => {
     });
   });
 
-  // =============================================
-  // SERVICES MANAGEMENT TESTS
-  // =============================================
+  
 
   describe('addService', () => {
     it('should add service to portfolio', async () => {
@@ -653,9 +651,7 @@ describe('Cleaning Lady Controller Tests', () => {
     });
   });
 
-  // =============================================
-  // ROOM PRICING MANAGEMENT TESTS
-  // =============================================
+
 
   describe('updateRoomPricing', () => {
     it('should update room pricing successfully', async () => {
@@ -704,9 +700,7 @@ describe('Cleaning Lady Controller Tests', () => {
     });
   });
 
-  // =============================================
-  // QUOTES MANAGEMENT TESTS
-  // =============================================
+
 
   describe('submitQuote', () => {
     it('should submit quote and send emails', async () => {
