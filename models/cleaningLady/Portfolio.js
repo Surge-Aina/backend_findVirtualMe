@@ -118,8 +118,5 @@ const PortfolioSchema = new Schema({
   
 }, { timestamps: true });
 
-if (mongoose.models.CleaningPortfolio) {
-  delete mongoose.models.CleaningPortfolio;
-}
+module.exports = mongoose.models.CleaningPortfolio || mongoose.model('CleaningPortfolio', PortfolioSchema, 'cleaning_portfolios');
 
-module.exports = mongoose.model('CleaningPortfolio', PortfolioSchema, 'cleaning_portfolios');
