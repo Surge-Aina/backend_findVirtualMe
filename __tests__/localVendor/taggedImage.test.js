@@ -5,7 +5,7 @@ const request = require("supertest");
 const express = require("express");
 const mongoose = require("mongoose");
 
-jest.mock("../../../../services/s3Service", () => ({
+jest.mock("../../services/s3Service", () => ({
   uploadToS3: jest.fn().mockResolvedValue({
     url: "https://mock-bucket.s3.amazonaws.com/test.jpg",
     key: "mock-key",
@@ -15,7 +15,7 @@ jest.mock("../../../../services/s3Service", () => ({
 
 const { uploadToS3 } = require("../../services/s3Service");
 
-jest.mock("../../../../models/localFoodVendor/TaggedImage", () => {
+jest.mock("../../models/localFoodVendor/TaggedImage", () => {
   const dataStore = [];
 
   class MockTaggedImage {

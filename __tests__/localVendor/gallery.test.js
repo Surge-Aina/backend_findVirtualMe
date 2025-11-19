@@ -30,7 +30,7 @@ jest.mock("multer", () => {
   return multer;
 });
 
-jest.mock("../../../../services/s3Service", () => ({
+jest.mock("../../services/s3Service", () => ({
   uploadToS3: jest.fn(async () => ({
     url: "/uploads/test.jpg",
     key: "mock-key",
@@ -43,8 +43,8 @@ const request = require("supertest");
 const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 
-const galleryRoutes = require("../../../../routes/localFoodVendor/galleryRoutes");
-const GalleryImage = require("../../../../models/localFoodVendor/GalleryImage");
+const galleryRoutes = require("../../routes/localFoodVendor/galleryRoutes");
+const GalleryImage = require("../../models/localFoodVendor/GalleryImage");
 
 const app = express();
 app.use(express.json());
@@ -56,7 +56,7 @@ app.post(
     req.file = undefined;
     next();
   },
-  require("../../../../controllers/localFoodVendor/galleryController")
+  require("../../controllers/localFoodVendor/galleryController")
     .createGalleryImage
 );
 
@@ -66,7 +66,7 @@ app.post(
     req.files = undefined;
     next();
   },
-  require("../../../../controllers/localFoodVendor/galleryController")
+  require("../../controllers/localFoodVendor/galleryController")
     .insertMultipleGalleryImage
 );
 
@@ -195,7 +195,7 @@ describe("Gallery API (integration-style)", () => {
       key: "old-key",
     });
 
-    const { deleteFromS3 } = require("../../../../services/s3Service");
+    const { deleteFromS3 } = require("../../services/s3Service");
     deleteFromS3.mockRejectedValueOnce(new Error("S3 delete failed"));
 
     const res = await request(app)
@@ -214,7 +214,7 @@ describe("Gallery API (integration-style)", () => {
       imageUrl: "https://bucket.s3.amazonaws.com/uploads/test.jpg",
     });
 
-    const { deleteFromS3 } = require("../../../../services/s3Service");
+    const { deleteFromS3 } = require("../../services/s3Service");
     deleteFromS3.mockRejectedValueOnce(new Error("S3 deletion failed"));
 
     const res = await request(app).delete(`/gallery/${vendorId}/${img._id}`);
@@ -242,7 +242,7 @@ describe("Gallery API (integration-style)", () => {
   it("should handle DB save failure during createGalleryImage", async () => {
     const saveMock = jest
       .spyOn(
-        require("../../../../models/localFoodVendor/GalleryImage").prototype,
+        require("../../models/localFoodVendor/GalleryImage").prototype,
         "save"
       )
       .mockRejectedValueOnce(new Error("DB save error"));
