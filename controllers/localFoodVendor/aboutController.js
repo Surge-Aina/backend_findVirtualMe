@@ -16,9 +16,15 @@ function keyFromUrl(url) {
 exports.getAllAbouts = async (req, res) => {
   try {
     const about = await AboutContent.findOne({ vendorId: req.params.vendorId });
-    res.json(about);
+    //res.json(about);
+    if (!about) {
+      // No record found, proper REST response
+      return res.status(404).json({ error: "About content not found" });
+    }
     console.log("GET about id:", about?._id);
+    return res.status(200).json(about);
   } catch (err) {
+    console.error("GET About Error:", err);
     res.status(500).json({ error: "Failed to fetch about content" });
   }
 };

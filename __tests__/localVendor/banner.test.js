@@ -1,43 +1,20 @@
-jest.unmock("../../../../models/localFoodVendor/Banner");
-jest.mock("../../../../utils/multer", () => ({
-  single: () => (req, res, next) => {
-    req.file = null; // No file in tests
-    next();
-  },
-}));
-
 const express = require("express");
 const request = require("supertest");
 const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
-const bannerRoutes = require("../../../../routes/localFoodVendor/bannerRoutes");
+const bannerRoutes = require("../../routes/localFoodVendor/bannerRoutes");
 const app = express();
 app.use(express.json());
 app.use("/banner", bannerRoutes);
 
-const Banner = require("../../../../models/localFoodVendor/Banner");
-//setup mongoMemoryServer in place of Atlas server
-//connect mongoose to provided uri
-let mongoServer;
-beforeAll(async () => {
-  // Prevent connecting to real databases accidentally
-  if (process.env.MONGO_URI && process.env.MONGO_URI.includes("mongodb.net")) {
-    throw new Error("❌ Refusing to connect to real MongoDB Atlas in test!");
-  }
-
-  mongoServer = await MongoMemoryServer.create();
-  const uri = mongoServer.getUri();
-  await mongoose.connect(uri);
-});
-
-afterAll(async () => {
-  await mongoose.disconnect();
-  await mongoServer.stop();
-});
-
-afterEach(async () => {
-  await Banner.deleteMany();
-});
+const Banner = require("../../models/localFoodVendor/Banner");
+jest.mock("../../services/s3Service", () => ({
+  uploadToS3: jest.fn(async () => ({
+    url: "mocked-s3-url",
+    key: "mocked-key",
+  })),
+  deleteFromS3: jest.fn(async () => true),
+}));
 
 describe("Banner API (mocked)", () => {
   const vendorId = new mongoose.Types.ObjectId().toString();
@@ -64,7 +41,9 @@ describe("Banner API (mocked)", () => {
       shape: "fullscreen",
     };
 
-    const res = await request(app).post(`/banner/${vendorId.toString()}`).send(payload);
+    const res = await request(app)
+      .post(`/banner/${vendorId.toString()}`)
+      .send(payload);
 
     // Use util.inspect for deep objects
 
@@ -222,7 +201,9 @@ describe("Banner API (mocked)", () => {
       // title is missing - it's required!
     };
 
-    const res = await request(app).post(`/banner/${vendorId.toString()}`).send(payload);
+    const res = await request(app)
+      .post(`/banner/${vendorId.toString()}`)
+      .send(payload);
 
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("Failed to create banner");
@@ -237,7 +218,9 @@ describe("Banner API (mocked)", () => {
       shape: "invalid-shape", // Not in enum: ["blob", "oval", "square", "fullscreen"]
     };
 
-    const res = await request(app).post(`/banner/${vendorId.toString()}`).send(payload);
+    const res = await request(app)
+      .post(`/banner/${vendorId.toString()}`)
+      .send(payload);
 
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("Failed to create banner");
@@ -252,7 +235,9 @@ describe("Banner API (mocked)", () => {
       shape: "oval",
     };
 
-    const res = await request(app).post(`/banner/${vendorId.toString()}`).send(payload);
+    const res = await request(app)
+      .post(`/banner/${vendorId.toString()}`)
+      .send(payload);
 
     expect(res.status).toBe(201);
     expect(res.body.shape).toBe("oval");
@@ -273,7 +258,9 @@ describe("Banner API (mocked)", () => {
       // shape not provided
     };
 
-    const res = await request(app).post(`/banner/${vendorId.toString()}`).send(payload);
+    const res = await request(app)
+      .post(`/banner/${vendorId.toString()}`)
+      .send(payload);
 
     expect(res.status).toBe(201);
     expect(res.body.shape).toBe("fullscreen"); // Default value
@@ -290,7 +277,9 @@ describe("Banner API (mocked)", () => {
         shape: shape,
       };
 
-      const res = await request(app).post(`/banner/${vendorId.toString()}`).send(payload);
+      const res = await request(app)
+        .post(`/banner/${vendorId.toString()}`)
+        .send(payload);
 
       expect(res.status).toBe(201);
       expect(res.body.shape).toBe(shape);
@@ -299,5 +288,81 @@ describe("Banner API (mocked)", () => {
     // Verify all 4 banners were created
     const allBanners = await Banner.find({ vendorId });
     expect(allBanners).toHaveLength(4);
+  });
+
+  it("should return 500 if DB find fails", async () => {
+    jest.spyOn(Banner, "find").mockRejectedValueOnce(new Error("DB error"));
+
+    const res = await request(app).get(`/banner/${vendorId}`);
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe("Failed to fetch banners");
+  });
+
+  it("should return 400 if S3 upload fails", async () => {
+    const vendorId = new mongoose.Types.ObjectId();
+
+    const { uploadToS3 } = require("../../services/s3Service");
+    uploadToS3.mockRejectedValueOnce(new Error("S3 fail"));
+
+    const res = await request(app)
+      .post(`/banner/${vendorId}`)
+      .attach("image", Buffer.from("fake"), "test.jpg");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Failed to create banner");
+  });
+
+  it("should return 500 if update fails", async () => {
+    const vendorId = new mongoose.Types.ObjectId();
+    const banner = await Banner.create({
+      vendorId,
+      title: "Old",
+      description: "Old",
+    });
+
+    jest
+      .spyOn(Banner.prototype, "save")
+      .mockRejectedValueOnce(new Error("Save failed"));
+
+    const res = await request(app)
+      .put(`/banner/${vendorId}/${banner._id}`)
+      .send({ title: "New" });
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe("Failed to update banner");
+  });
+
+  it("should update banner even if deleting old S3 image fails", async () => {
+    const vendorId = new mongoose.Types.ObjectId();
+
+    const banner = await Banner.create({
+      vendorId,
+      title: "Old",
+      key: "old-key",
+    });
+
+    const { deleteFromS3 } = require("../../services/s3Service");
+    deleteFromS3.mockRejectedValueOnce(new Error("Delete fail"));
+
+    const res = await request(app)
+      .put(`/banner/${vendorId}/${banner._id}`)
+      .attach("image", Buffer.from("img"), "file.jpg");
+
+    expect(res.status).toBe(200);
+    expect(res.body.image).toBeDefined();
+  });
+
+  it("should return 500 if DB delete fails", async () => {
+    jest
+      .spyOn(Banner, "findOneAndDelete")
+      .mockRejectedValueOnce(new Error("Delete fail"));
+
+    const res = await request(app).delete(
+      `/banner/${vendorId}/${new mongoose.Types.ObjectId()}`
+    );
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toBe("Failed to delete banner");
   });
 });
