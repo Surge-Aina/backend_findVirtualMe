@@ -106,6 +106,7 @@ for (const origin of seededOrigins) {
 }
 
 const corsOptions = {
+  origin: seededOrigins,
   origin: (origin, callback) => {
     if (!origin) {
       return callback(null, true);
@@ -150,10 +151,26 @@ const corsOptions = {
       });
   },
   credentials: true,
+  // allowedHeaders: [
+  //   "Content-Type",
+  //   "Authorization",
+  //   "Cross-Origin-Embedder-Policy",
+  //   "Cross-Origin-Opener-Policy",
+  // ],
 };
 
 app.use(cors(corsOptions));
 //app.use(cors());
+
+// //needed for webContainers
+// app.use((req, res, next) => {
+//   res.set({
+//     "Cross-Origin-Opener-Policy": "same-origin",
+//     "Cross-Origin-Embedder-Policy": "require-corp",
+//     "Cross-Origin-Resource-Policy": "same-origin",
+//   });
+//   next();
+// });
 
 app.set("trust proxy", true);
 
@@ -241,6 +258,8 @@ const promoRouter = require("./microservices/aiPortfolioCreator/promo/promo.rout
 app.use("/api/promo", promoRouter);
 const userRouter = require("./microservices/aiPortfolioCreator/name/name.routes.js");
 app.use("/name", userRouter);
+const publicProjectsRouter = require("./microservices/aiPortfolioCreator/publicProjectsAccess/publicProjectsAccess.routes.js");
+app.use("/api/publicProjects", publicProjectsRouter);
 const mongoose = require("mongoose");
 const nowIso = () => new Date().toISOString();
 app.get("/api/health", (_req, res) => {
