@@ -107,70 +107,70 @@ for (const origin of seededOrigins) {
 
 const corsOptions = {
   origin: seededOrigins,
-  // origin: (origin, callback) => {
-  //   if (!origin) {
-  //     return callback(null, true);
-  //   }
+  origin: (origin, callback) => {
+    if (!origin) {
+      return callback(null, true);
+    }
 
-  //   let parsed;
-  //   try {
-  //     parsed = new URL(origin);
-  //   } catch (error) {
-  //     console.warn(`[cors] Rejecting malformed origin "${origin}"`);
-  //     return callback(new Error("Invalid origin"));
-  //   }
+    let parsed;
+    try {
+      parsed = new URL(origin);
+    } catch (error) {
+      console.warn(`[cors] Rejecting malformed origin "${origin}"`);
+      return callback(new Error("Invalid origin"));
+    }
 
-  //   const normalizedOrigin = `${parsed.protocol}//${parsed.host}`.toLowerCase();
-  //   const hostname = parsed.hostname.toLowerCase();
+    const normalizedOrigin = `${parsed.protocol}//${parsed.host}`.toLowerCase();
+    const hostname = parsed.hostname.toLowerCase();
 
-  //   if (hostname.endsWith("surge-ainas-projects.vercel.app")) {
-  //     return callback(null, true);
-  //   }
+    if (hostname.endsWith("surge-ainas-projects.vercel.app")) {
+      return callback(null, true);
+    }
 
-  //   if (staticOriginSet.has(normalizedOrigin) || staticHostnameSet.has(hostname)) {
-  //     return callback(null, true);
-  //   }
+    if (staticOriginSet.has(normalizedOrigin) || staticHostnameSet.has(hostname)) {
+      return callback(null, true);
+    }
 
-  //   User.exists({
-  //     "domains.domain": hostname,
-  //     "domains.status": "active",
-  //   })
-  //     .then((match) => {
-  //       if (match) {
-  //         staticOriginSet.add(normalizedOrigin);
-  //         staticHostnameSet.add(hostname);
-  //         return callback(null, true);
-  //       }
+    User.exists({
+      "domains.domain": hostname,
+      "domains.status": "active",
+    })
+      .then((match) => {
+        if (match) {
+          staticOriginSet.add(normalizedOrigin);
+          staticHostnameSet.add(hostname);
+          return callback(null, true);
+        }
 
-  //       console.warn(`[cors] Blocked origin "${origin}" (no matching active domain)`);
-  //       return callback(new Error("Not allowed by CORS"));
-  //     })
-  //     .catch((error) => {
-  //       console.error(`[cors] Failed checking origin "${origin}": ${error.message}`);
-  //       return callback(new Error("Not allowed by CORS"));
-  //     });
-  // },
+        console.warn(`[cors] Blocked origin "${origin}" (no matching active domain)`);
+        return callback(new Error("Not allowed by CORS"));
+      })
+      .catch((error) => {
+        console.error(`[cors] Failed checking origin "${origin}": ${error.message}`);
+        return callback(new Error("Not allowed by CORS"));
+      });
+  },
   credentials: true,
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "Cross-Origin-Embedder-Policy",
-    "Cross-Origin-Opener-Policy",
-  ],
+  // allowedHeaders: [
+  //   "Content-Type",
+  //   "Authorization",
+  //   "Cross-Origin-Embedder-Policy",
+  //   "Cross-Origin-Opener-Policy",
+  // ],
 };
 
 app.use(cors(corsOptions));
 //app.use(cors());
 
-//needed for webContainers
-app.use((req, res, next) => {
-  res.set({
-    "Cross-Origin-Opener-Policy": "same-origin",
-    "Cross-Origin-Embedder-Policy": "require-corp",
-    "Cross-Origin-Resource-Policy": "same-origin",
-  });
-  next();
-});
+// //needed for webContainers
+// app.use((req, res, next) => {
+//   res.set({
+//     "Cross-Origin-Opener-Policy": "same-origin",
+//     "Cross-Origin-Embedder-Policy": "require-corp",
+//     "Cross-Origin-Resource-Policy": "same-origin",
+//   });
+//   next();
+// });
 
 app.set("trust proxy", true);
 
