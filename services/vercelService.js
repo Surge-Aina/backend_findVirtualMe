@@ -1,4 +1,9 @@
 let vercelClientPromise = null;
+let vercelClient = null;
+
+// -----------------------------------------------------------------------------
+// Internal helpers
+// -----------------------------------------------------------------------------
 
 async function getVercelClient() {
   if (vercelClientPromise) {
@@ -8,6 +13,7 @@ async function getVercelClient() {
   vercelClientPromise = (async () => {
     const token = process.env.VERCEL_TOKEN;
     if (!token) {
+      // This gets wrapped by buildVercelError in callers
       throw new Error("VERCEL_TOKEN environment variable is required");
     }
 
@@ -21,7 +27,22 @@ async function getVercelClient() {
   return vercelClientPromise;
 }
 
-const projectId = process.env.VERCEL_PROJECT_ID || "frontend-find-virtual-me";
+/**
+ * Ensure project + team envs exist.
+ * We intentionally throw plain Errors with specific messages so that
+ * the callers' catch blocks can wrap them via buildVercelError and
+ * produce messages like:
+ *   "Vercel API error: VERCEL_PROJECT_ID environment variable is required"
+ *   "Vercel API error: VERCEL_TEAM_ID environment variable is required"
+ */
+function validateProjectAndTeamEnv() {
+  if (!process.env.VERCEL_PROJECT_ID) {
+    throw new Error("VERCEL_PROJECT_ID environment variable is required");
+  }
+  if (!process.env.VERCEL_TEAM_ID) {
+    throw new Error("VERCEL_TEAM_ID environment variable is required");
+  }
+}
 
 function normalizeVercelError(error) {
   if (!error || typeof error !== "object") {
@@ -67,6 +88,7 @@ function normalizeVercelError(error) {
 function buildVercelError(error, options = {}) {
   const { defaultMessage, prefix } = options;
   const normalized = normalizeVercelError(error);
+
   const detailMessage =
     normalized.apiMessage ||
     normalized.message ||
@@ -99,10 +121,19 @@ function buildVercelError(error, options = {}) {
   return wrapped;
 }
 
+// -----------------------------------------------------------------------------
+// Public API
+// -----------------------------------------------------------------------------
+
 // Add domain to Vercel project
 async function addDomain(domain) {
   try {
+    // Ensure project + team envs are present
+    validateProjectAndTeamEnv();
+
     const vercel = await getVercelClient();
+    const projectId = process.env.VERCEL_PROJECT_ID;
+
     const result = await vercel.projects.addProjectDomain({
       idOrName: projectId,
       requestBody: {
@@ -128,7 +159,11 @@ async function addDomain(domain) {
 // Verify domain after DNS configured
 async function verifyDomain(domain) {
   try {
+    validateProjectAndTeamEnv();
+
     const vercel = await getVercelClient();
+    const projectId = process.env.VERCEL_PROJECT_ID;
+
     const result = await vercel.projects.verifyProjectDomain({
       idOrName: projectId,
       domain: domain,
@@ -150,7 +185,11 @@ async function verifyDomain(domain) {
 // Remove domain from Vercel
 async function removeDomain(domain) {
   try {
+    validateProjectAndTeamEnv();
+
     const vercel = await getVercelClient();
+    const projectId = process.env.VERCEL_PROJECT_ID;
+
     await vercel.projects.removeProjectDomain({
       idOrName: projectId,
       domain: domain,
@@ -169,7 +208,11 @@ async function removeDomain(domain) {
 // Get domain status
 async function getDomainStatus(domain) {
   try {
+    validateProjectAndTeamEnv();
+
     const vercel = await getVercelClient();
+    const projectId = process.env.VERCEL_PROJECT_ID;
+
     const result = await vercel.projects.getProjectDomain({
       idOrName: projectId,
       domain: domain,
@@ -188,9 +231,13 @@ async function getDomainStatus(domain) {
   }
 }
 
+// Get DNS config hints for a domain
 async function getDomainConfig(domain) {
   try {
+    validateProjectAndTeamEnv();
+
     const vercel = await getVercelClient();
+
     const result = await vercel.domains.getDomainConfig({
       domain: domain,
       teamId: process.env.VERCEL_TEAM_ID,
