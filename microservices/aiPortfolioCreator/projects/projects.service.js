@@ -105,7 +105,8 @@ exports.getProjectById = async (projectId, user) => {
     (p) => p.projectId === projectId && p.status !== "deleted"
   );
   if (!proj) return null;
-  return projectToClient(proj);
+  //return projectToClient(proj);
+  return proj;
 };
 
 exports.updateProject = async (projectId, frontendText, backendText, user) => {
