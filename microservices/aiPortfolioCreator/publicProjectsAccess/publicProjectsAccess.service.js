@@ -5,7 +5,7 @@ exports.getPublicProjects = async () => {
     const projects = await User.aggregate([
       { $unwind: "$projects" },
       { $match: { "projects.isPublic": true } },
-      { $project: { project: "$projects", _id: 0 } },
+      { $replaceRoot: { newRoot: "$projects" } },
     ]);
 
     return projects;
@@ -42,7 +42,7 @@ exports.togglePublicProjectStatus = async (user, projectId) => {
     return project;
   } catch (error) {
     console.error(
-      `Error toggling public status on user ${userId} for project ${projectId}:`,
+      `Error toggling public status on user ${user.email} for project ${projectId}:`,
       error
     );
     throw new Error("Could not toggle public status");
