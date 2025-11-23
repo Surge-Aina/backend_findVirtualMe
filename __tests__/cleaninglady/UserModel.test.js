@@ -509,4 +509,4 @@ describe('User Model Tests (Cleaning Lady)', () => {
       expect(user.extraField).toBeUndefined();
     });
   });
-});
+}); 
