@@ -1,4 +1,4 @@
-// Mock dependencies FIRST
+
 jest.mock('../../models/cleaningLady/userModel2');
 jest.mock('bcrypt');
 jest.mock('jsonwebtoken');
@@ -27,9 +27,7 @@ describe('User Controller Tests (Cleaning Lady)', () => {
     process.env.JWT_SECRET = 'test-secret-key';
   });
 
-  // ============================================
-  // SIGNUP TESTS
-  // ============================================
+  
   describe('signupUser', () => {
     describe('✅ Success Cases', () => {
       it('should create new user successfully', async () => {
@@ -327,9 +325,7 @@ describe('User Controller Tests (Cleaning Lady)', () => {
     });
   });
 
-  // ============================================
-  // LOGIN TESTS
-  // ============================================
+
   describe('loginUser', () => {
     describe('✅ Success Cases - Hashed Password', () => {
       it('should login successfully with hashed password', async () => {

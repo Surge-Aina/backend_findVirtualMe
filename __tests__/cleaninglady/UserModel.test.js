@@ -27,9 +27,7 @@ afterEach(async () => {
 });
 
 describe('User Model Tests (Cleaning Lady)', () => {
-  // ============================================
-  // SUCCESSFUL USER CREATION
-  // ============================================
+
   describe('✅ Successful User Creation', () => {
     it('should create a user successfully with all required fields', async () => {
       const userData = {
@@ -97,9 +95,7 @@ describe('User Model Tests (Cleaning Lady)', () => {
     });
   });
 
-  // ============================================
-  // EMAIL FIELD TESTS
-  // ============================================
+ 
   describe('📧 Email Field Tests', () => {
     it('should convert email to lowercase', async () => {
       const userData = {
@@ -146,9 +142,7 @@ describe('User Model Tests (Cleaning Lady)', () => {
     });
   });
 
-  // ============================================
-  // VALIDATION TESTS - REQUIRED FIELDS
-  // ============================================
+  
   describe('❌ Validation Tests - Required Fields', () => {
     it('should fail if email is missing', async () => {
       const userData = {
@@ -193,9 +187,7 @@ describe('User Model Tests (Cleaning Lady)', () => {
     });
   });
 
-  // ============================================
-  // UNIQUE CONSTRAINT TESTS
-  // ============================================
+ 
   describe('🔒 Unique Email Constraint', () => {
     it('should not allow duplicate emails', async () => {
       const userData = {
@@ -206,7 +198,7 @@ describe('User Model Tests (Cleaning Lady)', () => {
       // Create first user
       await User.create(userData);
 
-      // Try to create second user with same email
+      
       await expect(
         User.create({
           email: 'duplicate@example.com',
@@ -221,7 +213,7 @@ describe('User Model Tests (Cleaning Lady)', () => {
         password: 'password123',
       });
 
-      // Email will be converted to lowercase, causing duplicate
+   
       await expect(
         User.create({
           email: 'TEST@EXAMPLE.COM',
@@ -236,7 +228,7 @@ describe('User Model Tests (Cleaning Lady)', () => {
         password: 'password123',
       });
 
-      // Whitespace will be trimmed, causing duplicate
+   
       await expect(
         User.create({
           email: '  test@example.com  ',
@@ -260,9 +252,6 @@ describe('User Model Tests (Cleaning Lady)', () => {
     });
   });
 
-  // ============================================
-  // PASSWORD FIELD TESTS
-  // ============================================
   describe('🔐 Password Field Tests', () => {
     it('should store password as provided (bcrypt hash)', async () => {
       const hashedPassword = '$2b$10$abcdefghijklmnopqrstuvwxyz1234567890';
@@ -302,9 +291,7 @@ describe('User Model Tests (Cleaning Lady)', () => {
     });
   });
 
-  // ============================================
-  // isAdmin FIELD TESTS
-  // ============================================
+ 
   describe('👤 isAdmin Field Tests', () => {
     it('should accept true for isAdmin', async () => {
       const user = await User.create({
@@ -364,9 +351,7 @@ describe('User Model Tests (Cleaning Lady)', () => {
     });
   });
 
-  // ============================================
-  // QUERY TESTS
-  // ============================================
+  
   describe('🔍 Query Tests', () => {
     beforeEach(async () => {
       // Create test users
@@ -411,9 +396,7 @@ describe('User Model Tests (Cleaning Lady)', () => {
     });
   });
 
-  // ============================================
-  // UPDATE TESTS
-  // ============================================
+  
   describe('✏️ Update Tests', () => {
     it('should update user password', async () => {
       const user = await User.create({
@@ -436,7 +419,7 @@ describe('User Model Tests (Cleaning Lady)', () => {
 
       const originalUpdatedAt = user.updatedAt;
 
-      // Wait a bit to ensure timestamp changes
+      
       await new Promise(resolve => setTimeout(resolve, 10));
 
       user.password = 'newPassword';
@@ -462,9 +445,7 @@ describe('User Model Tests (Cleaning Lady)', () => {
     });
   });
 
-  // ============================================
-  // DELETE TESTS
-  // ============================================
+
   describe('🗑️ Delete Tests', () => {
     it('should delete user by ID', async () => {
       const user = await User.create({
@@ -504,9 +485,7 @@ describe('User Model Tests (Cleaning Lady)', () => {
     });
   });
 
-  // ============================================
-  // SCHEMA STRUCTURE TESTS
-  // ============================================
+
   describe('📋 Schema Structure Tests', () => {
     it('should have correct field types', () => {
       const user = new User({
