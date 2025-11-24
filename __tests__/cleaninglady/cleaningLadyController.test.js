@@ -49,9 +49,7 @@ describe('Cleaning Lady Controller Tests', () => {
     jest.clearAllMocks();
   });
 
-  // =============================================
-  // PUBLIC ENDPOINTS TESTS
-  // =============================================
+
 
   describe('getAllPortfolios', () => {
     it('should return all portfolios with email fields', async () => {
@@ -236,9 +234,7 @@ describe('Cleaning Lady Controller Tests', () => {
     });
   });
 
-  // =============================================
-  // PROTECTED ENDPOINTS TESTS
-  // =============================================
+  
 
   describe('savePortfolio', () => {
     it('should update existing portfolio', async () => {
