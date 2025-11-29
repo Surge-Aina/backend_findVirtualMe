@@ -68,7 +68,17 @@ const userSchema = new mongoose.Schema({
     type: String,
     unique: true,
   },
-  portfolios: [{ type: String }],
+  portfolios: [
+    {
+      portfolioId: { type: mongoose.Schema.Types.ObjectId, required: true },
+      portfolioType: {
+        type: String,
+        required: true,
+        enum: ["Handyman", "LocalVendor", "CleaningLady", "ProjectManager"],
+      },
+      isPublic: { type: Boolean, default: false },
+    },
+  ],
   // Domain management
   domains: [
     {

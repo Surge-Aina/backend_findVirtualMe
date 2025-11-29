@@ -40,7 +40,6 @@ exports.signupUser = async (req, res) => {
   }
 };
 
-
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -62,18 +61,17 @@ exports.loginUser = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
-const portfolioIds = user.portfolios || [];
+    const portfolioIds = user.portfolios || [];
     console.log("📁 User's portfolio IDs:", portfolioIds);
 
-   
-
     //res.status(201).json({ token, isAdmin: user.isAdmin, }); //this one removed as well -CarlosG
-    res.status(201).json({ message: "logged in successfully", token, user, portfolioIds });
+    res
+      .status(201)
+      .json({ message: "logged in successfully", token, user, portfolioIds });
   } catch (err) {
     console.log("error loggin in: ", err);
     res.status(500).json({ message: "error loggin in", error: err.message });
   }
-  
 };
 
 exports.getMe = async (req, res) => {
@@ -234,10 +232,12 @@ exports.getHasSubscription = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const id = req.user._id;
+    const user = await User.findByIdAndUpdate(id, req.body, { new: true });
     if (!user) return res.status(404).json({ message: "User not found" });
     res.status(200).json({ user });
   } catch (error) {
+    console.error("Update user error in userController.js:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -263,9 +263,9 @@ exports.getMe = async (req, res) => {
     }
 
     console.log("✅ User found:", user.email);
-     const portfolioIds = user.portfolios || [];
+    const portfolioIds = user.portfolios || [];
     console.log("📁 User's portfolio IDs (from getMe):", portfolioIds);
-    res.status(200).json({ user,portfolioIds });
+    res.status(200).json({ user, portfolioIds });
   } catch (error) {
     console.error("❌ Error in getMe:", error);
     res.status(500).json({ message: "Server error" });

@@ -20,7 +20,7 @@ const driveRoutes = require("./routes/photographer/driveRoute");
 const photoRoutes = require("./routes/photographer/photoRoute");
 //const uploadRoutes = require("./routes/photographer/uploadRoute");
 const userRoutes = require("./routes/userRoute");
-const portfolioRoutes = require("./routes/projectManager/portfolioRoute");
+const projectManagerPortfolioRoutes = require("./routes/projectManager/portfolioRoute");
 const softwareEngRoutes = require("./routes/softwareEngineer/portfolio");
 const testimonialRoutes = require("./routes/dataScientist/testimonialRoute");
 const dashboardRoutes = require("./routes/dataScientist/dashboardRoute");
@@ -56,6 +56,9 @@ const portfolioEditLogRoutes = require("./routes/portfolioEditLogRoutes");
 const guestAdminPanelRoutes = require("./microservices/guestAdminPanel/guestAdminPanel.routes");
 const portfolio_Routes = require("./routes/cleaningLady/portfolioRoutes");
 const socialLinksRoutes = require("./microservices/socialLinks/socialLinks.routes");
+const userPortfoliosArrayRoutes = require("./microservices/userPortfoliosArray/userPortfoliosArray.routes.js");
+const publicPortfoliosRoutes = require("./microservices/publicPortfolios/publicPortfolios.routes");
+
 // Import configuration from separate file
 const config = require("./config");
 
@@ -162,7 +165,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 //app.use(cors());
 
-// //needed for webContainers
+//needed for webContainers
 // app.use((req, res, next) => {
 //   res.set({
 //     "Cross-Origin-Opener-Policy": "same-origin",
@@ -187,7 +190,7 @@ app.use("/api/portfolios", portfolio_Routes);
 setCredentialsFromEnv();
 
 // Mount the main portfolio API routes at /portfolio
-app.use("/portfolio", portfolioRoutes);
+app.use("/portfolio", projectManagerPortfolioRoutes);
 
 // Mount the software engineering portfolio API routes at /softwareeng
 //app.use("/softwareeng", softwareEngRoutes);
@@ -243,6 +246,9 @@ app.use("/api/telemetry", telemetryRoutes);
 app.use("/guestUser", guestUserRoutes);
 app.use("/guestAdminPanel", guestAdminPanelRoutes);
 app.use("/social-links", socialLinksRoutes);
+app.use("/userPortfoliosArray", userPortfoliosArrayRoutes);
+app.use("/publicPortfolios", publicPortfoliosRoutes);
+
 //aiPortfolioCreator
 const contactRouter = require("./microservices/aiPortfolioCreator/contact/aiPortfolioCreator.routes.js");
 app.use("/api/contact", contactRouter);
