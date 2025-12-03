@@ -6,9 +6,7 @@ const MenuItem = require("../../models/localFoodVendor/MenuItems");
 const Review = require("../../models/localFoodVendor/Review");
 const TaggedImage = require("../../models/localFoodVendor/TaggedImage");
 const seedVendor = require("../../models/localFoodVendor/seedVendor");
-const {
-  generateVendorAboutAndMenuJSON,
-} = require("../../services/openAiService");
+const { generateVendorAboutAndMenuJSON } = require("../../services/openAiService");
 const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
 const { PDFDocument } = require("pdf-lib");
@@ -24,15 +22,16 @@ exports.createVendor = async (req, res) => {
     //seeding info
     await seedVendor(vendor._id);
 
-    // link this vendor to the logged-in user
-    if (req.user && req.user._id) {
-      await User.findByIdAndUpdate(req.user._id, {
-        $addToSet: { portfolios: vendor._id.toString() }, // avoids duplicates
-      });
-    }
+    // // link this vendor to the logged-in user
+    // if (req.user && req.user._id) {
+    //   await User.findByIdAndUpdate(req.user._id, {
+    //     $addToSet: { portfolios: vendor._id.toString() }, // avoids duplicates
+    //   });
+    // }
 
     res.status(201).json(vendor);
   } catch (err) {
+    console.log(err);
     res.status(400).json({ error: "Failed to create vendor" });
   }
 };
@@ -76,9 +75,7 @@ exports.updateVendor = async (req, res) => {
 // Delete vendor
 exports.deleteVendor = async (req, res) => {
   try {
-    const deleted = await LocalVendorPortfolio.findByIdAndDelete(
-      req.params.vendorId
-    );
+    const deleted = await LocalVendorPortfolio.findByIdAndDelete(req.params.vendorId);
     if (!deleted) return res.status(404).json({ error: "Vendor not found" });
 
     // remove vendor ID from user's portfolios array
@@ -102,15 +99,14 @@ exports.getFullPortfolio = async (req, res) => {
     if (!vendor) return res.status(404).json({ error: "Vendor not found" });
 
     // fetch all linked data in parallel
-    const [banners, about, gallery, menu, reviews, taggedImages] =
-      await Promise.all([
-        Banner.find({ vendorId }),
-        About.findOne({ vendorId }),
-        GalleryImage.find({ vendorId }),
-        MenuItem.find({ vendorId }),
-        Review.find({ vendorId }),
-        TaggedImage.find({ vendorId }).populate("tags.menuItem"),
-      ]);
+    const [banners, about, gallery, menu, reviews, taggedImages] = await Promise.all([
+      Banner.find({ vendorId }),
+      About.findOne({ vendorId }),
+      GalleryImage.find({ vendorId }),
+      MenuItem.find({ vendorId }),
+      Review.find({ vendorId }),
+      TaggedImage.find({ vendorId }).populate("tags.menuItem"),
+    ]);
 
     res.json({ vendor, banners, about, gallery, menu, reviews, taggedImages });
   } catch (err) {
@@ -167,9 +163,7 @@ async function extractText(fileBuffer, mimeType) {
       // Primary parse
       const data = await pdfParse(normalizedBuffer);
       if (!data.text || data.text.trim().length < 50) {
-        throw new Error(
-          "Parsed PDF is too short — likely invalid or image-only."
-        );
+        throw new Error("Parsed PDF is too short — likely invalid or image-only.");
       }
       console.log("PDF parse success, length of text:", data.text.length);
       return data.text.trim();
@@ -298,13 +292,9 @@ exports.injectVendorPortfolio = async (req, res) => {
       shape: "fullscreen",
     });
 
-    res
-      .status(201)
-      .json({ vendor, about: parsed.about, menuItems: parsed.menuItems });
+    res.status(201).json({ vendor, about: parsed.about, menuItems: parsed.menuItems });
   } catch (err) {
     console.error(err);
-    res
-      .status(500)
-      .json({ error: "Failed to create vendor portfolio from document" });
+    res.status(500).json({ error: "Failed to create vendor portfolio from document" });
   }
 };

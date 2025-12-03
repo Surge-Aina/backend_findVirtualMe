@@ -10,6 +10,7 @@ const {
   getSubInfo,
   getHasSubscription,
   getMe,
+  addPortfolioID,
 } = require("../controllers/userController");
 const auth = require("../middleware/auth");
 const router = express.Router();
@@ -25,6 +26,7 @@ router.get("/me", auth, getMe);
 router.post("/addUser", addUser); //onboarding
 
 router.patch("/updateUser", auth, updateUser);
+router.patch("/addPortfolioId", auth, addPortfolioID);
 
 router.delete("/deleteUser/:id", deleteUser);
 

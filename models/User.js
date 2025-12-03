@@ -74,7 +74,7 @@ const userSchema = new mongoose.Schema({
       portfolioType: {
         type: String,
         required: true,
-        enum: ["Handyman", "LocalVendor", "CleaningLady", "ProjectManager"],
+        enum: ["Handyman", "LocalVendor", "CleaningLady", "ProjectManager", "Healthcare"],
       },
       isPublic: { type: Boolean, default: false },
     },

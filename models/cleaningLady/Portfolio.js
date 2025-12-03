@@ -4,6 +4,8 @@ const Schema = mongoose.Schema;
 const PortfolioSchema = new Schema(
   {
     isPublic: { type: Boolean, default: false },
+    portfolioType: { type: String, immutable: true, default: "CleaningLady" },
+
     userId: {
       type: Schema.Types.ObjectId,
       ref: "User",
