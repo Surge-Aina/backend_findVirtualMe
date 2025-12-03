@@ -43,8 +43,6 @@ exports.getMyPortfolio = async (type, id) => {
 
 exports.togglePublicPortfolio = async (portfolioId) => {
   try {
-    const Model = Object.values(modelMap).find((m) => m.findById);
-
     let foundDoc = null;
 
     for (const Model of Object.values(modelMap)) {
@@ -63,6 +61,29 @@ exports.togglePublicPortfolio = async (portfolioId) => {
     return { _id: portfolioId, isPublic: foundDoc.isPublic };
   } catch (error) {
     console.error("togglePublicPortfolio Error:", error);
+    throw error;
+  }
+};
+
+exports.deletePortfolio = async (portfolioId) => {
+  try {
+    let foundDoc = null;
+
+    for (const Model of Object.values(modelMap)) {
+      const doc = await Model.findById(portfolioId);
+      if (doc) {
+        foundDoc = doc;
+        break;
+      }
+    }
+
+    if (!foundDoc) return null;
+
+    await foundDoc.deleteOne();
+
+    return { _id: portfolioId };
+  } catch (error) {
+    console.error("deletePortfolio Error:", error);
     throw error;
   }
 };

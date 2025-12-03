@@ -40,8 +40,9 @@ const ProcessStepSchema = new Schema(
 
 const HandymanTemplateSchema = new Schema(
   {
+    portfolioType: { type: String, immutable: true, default: "Handyman" },
     isPublic: { type: Boolean, default: false },
-    userId: { type: String, unique: true },
+    userId: { type: String },
 
     // Projects / gallery copy
     portfolioTitle: { type: String, default: "Quality Craftsmanship You Can See" },

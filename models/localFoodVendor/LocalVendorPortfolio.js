@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const localVendorPortfolioSchema = new mongoose.Schema(
   {
+    portfolioType: { type: String, immutable: true, default: "LocalVendor" },
     isPublic: { type: Boolean, default: false },
     name: { type: String, required: true },
     email: { type: String, required: true },
