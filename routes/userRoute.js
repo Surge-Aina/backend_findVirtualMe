@@ -1,5 +1,17 @@
 const express = require("express");
-const { loginUser, signupUser, addUser, getAllUsers, getUserById, updateUser, deleteUser, getSubInfo, getHasSubscription,getMe } = require("../controllers/userController");
+const {
+  loginUser,
+  signupUser,
+  addUser,
+  getAllUsers,
+  getUserById,
+  updateUser,
+  deleteUser,
+  getSubInfo,
+  getHasSubscription,
+  getMe,
+  addPortfolioID,
+} = require("../controllers/userController");
 const auth = require("../middleware/auth");
 const router = express.Router();
 //auth routes
@@ -10,10 +22,11 @@ router.get("/getAllUsers", getAllUsers);
 router.get("/getUser/:id", getUserById);
 router.get("/subInfo", auth, getSubInfo);
 router.get("/hasSubscription", auth, getHasSubscription);
-router.get('/me', auth, getMe);
+router.get("/me", auth, getMe);
 router.post("/addUser", addUser); //onboarding
 
-router.patch("/updateUser/:id", updateUser);
+router.patch("/updateUser", auth, updateUser);
+router.patch("/addPortfolioId", auth, addPortfolioID);
 
 router.delete("/deleteUser/:id", deleteUser);
 

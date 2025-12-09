@@ -2,6 +2,8 @@ const mongoose = require("mongoose");
 
 const localVendorPortfolioSchema = new mongoose.Schema(
   {
+    portfolioType: { type: String, immutable: true, default: "LocalVendor" },
+    isPublic: { type: Boolean, default: false },
     name: { type: String, required: true },
     email: { type: String, required: true },
     phone: String,
@@ -12,7 +14,4 @@ const localVendorPortfolioSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model(
-  "LocalVendorPortfolio",
-  localVendorPortfolioSchema
-);
+module.exports = mongoose.model("LocalVendorPortfolio", localVendorPortfolioSchema);

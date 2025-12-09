@@ -40,7 +40,6 @@ exports.signupUser = async (req, res) => {
   }
 };
 
-
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -53,8 +52,8 @@ exports.loginUser = async (req, res) => {
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ message: "Invalid credentials" });
-    console.log("🔍 User found:", user._id);
-    console.log("🔍 Creating token with id:", user._id);
+    // console.log("🔍 User found:", user._id);
+    // console.log("🔍 Creating token with id:", user._id);
 
     const token = jwt.sign(
       //{ id: user._id, isAdmin: user.isAdmin },// removed this so users are not signed in as admin. ADD BACK ONLY IF NECESSARY -CarlosG
@@ -62,23 +61,22 @@ exports.loginUser = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
-const portfolioIds = user.portfolios || [];
-    console.log("📁 User's portfolio IDs:", portfolioIds);
-
-   
+    const portfolioIds = user.portfolios || [];
+    // console.log("📁 User's portfolio IDs:", portfolioIds);
 
     //res.status(201).json({ token, isAdmin: user.isAdmin, }); //this one removed as well -CarlosG
-    res.status(201).json({ message: "logged in successfully", token, user, portfolioIds });
+    res
+      .status(201)
+      .json({ message: "logged in successfully", token, user, portfolioIds });
   } catch (err) {
     console.log("error loggin in: ", err);
     res.status(500).json({ message: "error loggin in", error: err.message });
   }
-  
 };
 
 exports.getMe = async (req, res) => {
   try {
-    console.log("🔍 getMe called, req.user:", req.user);
+    // console.log("🔍 getMe called, req.user:", req.user);
 
     const user = await User.findById(req.user.id).select("-password");
 
@@ -86,7 +84,7 @@ exports.getMe = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    console.log("✅ User found:", user.email);
+    // console.log("✅ User found:", user.email);
     res.status(200).json({ user });
   } catch (error) {
     console.error("❌ Error in getMe:", error);
@@ -234,10 +232,12 @@ exports.getHasSubscription = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const id = req.user._id;
+    const user = await User.findByIdAndUpdate(id, req.body, { new: true });
     if (!user) return res.status(404).json({ message: "User not found" });
     res.status(200).json({ user });
   } catch (error) {
+    console.error("Update user error in userController.js:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -248,13 +248,14 @@ exports.deleteUser = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
     res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
+    console.error("deleteUser error in userController.js:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
 exports.getMe = async (req, res) => {
   try {
-    console.log("🔍 getMe called, req.user:", req.user);
+    // console.log("🔍 getMe called, req.user:", req.user);
 
     const user = await User.findById(req.user.id).select("-password");
 
@@ -262,12 +263,34 @@ exports.getMe = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    console.log("✅ User found:", user.email);
-     const portfolioIds = user.portfolios || [];
-    console.log("📁 User's portfolio IDs (from getMe):", portfolioIds);
-    res.status(200).json({ user,portfolioIds });
+    // console.log("✅ User found:", user.email);
+    const portfolioIds = user.portfolios || [];
+    // console.log("📁 User's portfolio IDs (from getMe):", portfolioIds);
+    res.status(200).json({ user, portfolioIds });
   } catch (error) {
     console.error("❌ Error in getMe:", error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.addPortfolioID = async (req, res) => {
+  try {
+    const userID = req.user._id;
+
+    const user = await User.findByIdAndUpdate(
+      userID,
+      { $push: { portfolios: req.body } },
+      { new: true, runValidators: true },
+      { $addToSet: { portfolios: req.body } }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ user });
+  } catch (error) {
+    console.error("addPortfolioID error in userController.js:", error);
+    res.status(500).json({ message: error.message });
   }
 };
