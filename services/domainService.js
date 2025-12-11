@@ -1,8 +1,7 @@
-const xml2js = require('xml2js');
+const xml2js = require("xml2js");
 const parser = new xml2js.Parser();
 const User = require("../models/User");
 const vercelService = require("./vercelService");
-
 
 const determinePortfolioPath = ({ user, domainConfig }) => {
   if (!user || !domainConfig) {
@@ -16,8 +15,7 @@ const determinePortfolioPath = ({ user, domainConfig }) => {
 
   const rawIndustry =
     domainConfig.industry || user.industry || domainConfig.portfolioType || "";
-  const industry =
-    typeof rawIndustry === "string" ? rawIndustry.toLowerCase() : "";
+  const industry = typeof rawIndustry === "string" ? rawIndustry.toLowerCase() : "";
   const username = user.username || user.email?.split("@")[0];
 
   switch (industry) {
@@ -68,10 +66,7 @@ const parseVercelErrorResponse = (error) => {
 
   const apiError = parsedBody?.error;
   const message =
-    apiError?.message ||
-    error.humanMessage ||
-    error.message ||
-    "Vercel request failed";
+    apiError?.message || error.humanMessage || error.message || "Vercel request failed";
 
   return {
     message,
@@ -166,9 +161,7 @@ const domainService = {
       // parses the xml response to a javascript object
       parser.parseString(xmlResponse, (err, result) => {
         if (err) {
-          return res
-            .status(500)
-            .json({ error: `Failed to parse XML: ${err.message}` });
+          return res.status(500).json({ error: `Failed to parse XML: ${err.message}` });
         }
 
         // checks if the api response is ok
@@ -192,22 +185,17 @@ const domainService = {
             !apiResponse.CommandResponse[0] ||
             !apiResponse.CommandResponse[0].DomainCheckResult
           ) {
-            return res
-              .status(502)
-              .json({ error: "Invalid API response structure" });
+            return res.status(502).json({ error: "Invalid API response structure" });
           }
 
           // gets the domain check result
-          const domainCheckResult =
-            apiResponse.CommandResponse[0].DomainCheckResult[0].$;
+          const domainCheckResult = apiResponse.CommandResponse[0].DomainCheckResult[0].$;
           // cleans the result
           const cleanResult = {
             domain: domainCheckResult.Domain,
             available: domainCheckResult.Available === "true",
             isPremium: domainCheckResult.IsPremiumName === "true",
-            premiumPrice: parseFloat(
-              domainCheckResult.PremiumRegistrationPrice || 0
-            ),
+            premiumPrice: parseFloat(domainCheckResult.PremiumRegistrationPrice || 0),
             icannFee: parseFloat(domainCheckResult.IcannFee || 0),
           };
 
@@ -239,9 +227,7 @@ const domainService = {
       portfolioId = Array.isArray(portfolioId) ? portfolioId[0] : portfolioId;
 
       if (!domain || !portfolioId) {
-        return res
-          .status(400)
-          .json({ error: "Domain and portfolioId are required" });
+        return res.status(400).json({ error: "Domain and portfolioId are required" });
       }
       if (
         !process.env.USER_FIRST_NAME ||
@@ -291,9 +277,7 @@ const domainService = {
       const xmlResponse = await fetchRes.text();
       parser.parseString(xmlResponse, async (err, result) => {
         if (err) {
-          return res
-            .status(500)
-            .json({ error: `Failed to parse XML: ${err.message}` });
+          return res.status(500).json({ error: `Failed to parse XML: ${err.message}` });
         }
         const apiResponse = result.ApiResponse;
 
@@ -304,11 +288,7 @@ const domainService = {
           try {
             // Add domain to Vercel project
             try {
-              vercelResult = await vercelService.addDomain(
-                domain,
-                userId,
-                portfolioId
-              );
+              vercelResult = await vercelService.addDomain(domain, userId, portfolioId);
               console.log(`Domain ${domain} added to Vercel project`);
             } catch (vercelErr) {
               console.error("Vercel add domain error:", vercelErr.message);
@@ -351,9 +331,7 @@ const domainService = {
 
         const isVerified = vercelResult?.verified === true;
         const responseStatus =
-          apiResponse.$.Status === "OK" && isVerified
-            ? "active"
-            : "pending_verification";
+          apiResponse.$.Status === "OK" && isVerified ? "active" : "pending_verification";
 
         return res.status(200).json({
           message: "Domain registration initiated",
@@ -380,9 +358,7 @@ const domainService = {
       // Ensure domain is a string
       // example before : ["example.com"]
       // example after : "example.com"
-      const domainString = Array.isArray(domain)
-        ? domain.join("")
-        : String(domain || "");
+      const domainString = Array.isArray(domain) ? domain.join("") : String(domain || "");
       domain = domainString.trim().toLowerCase();
       // if the portfolioId is an array, get the first element
       // probably not needed since we are using the portfolioId from the request body
@@ -391,20 +367,14 @@ const domainService = {
       }
 
       if (!domain || !portfolioId) {
-        return res
-          .status(400)
-          .json({ error: "Domain and portfolioId are required" });
+        return res.status(400).json({ error: "Domain and portfolioId are required" });
       }
 
       // Add domain to Vercel project
       let vercelResult;
       try {
         // add the domain to the vercel project
-        vercelResult = await vercelService.addDomain(
-          domain,
-          userId,
-          portfolioId
-        );
+        vercelResult = await vercelService.addDomain(domain, userId, portfolioId);
         console.log(`Custom domain ${domain} added to Vercel project`);
       } catch (vercelErr) {
         // if the domain is not added to the vercel project, return an error
@@ -566,9 +536,7 @@ const domainService = {
         return res.status(404).json({ error: "Domain not found" });
       }
 
-      const domainRecord = userRecord.domains.find(
-        (d) => d.domain === domainName
-      );
+      const domainRecord = userRecord.domains.find((d) => d.domain === domainName);
 
       if (!domainRecord) {
         return res.status(404).json({ error: "Domain not found" });

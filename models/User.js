@@ -91,7 +91,7 @@ const userSchema = new mongoose.Schema({
       },
       status: {
         type: String,
-        enum: ["pending", "active", "expired", "suspended"],
+        enum: ["pending", "active", "expired", "suspended", "failed_registration"],
         default: "pending",
       },
       registeredAt: { type: Date, default: Date.now },
