@@ -577,6 +577,46 @@ const domainService = {
       res.status(500).json({ error: "Internal server error" });
     }
   },
+
+  deleteDomain: async (req, res) => {
+    try {
+      const userId = req.user._id;
+      const domainId = req.params.domainId;
+
+      if (!userId) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      if (!domainId) {
+        return res.status(400).json({ error: "Domain ID is required for deletion." });
+      }
+
+      const updatedUser = await User.findByIdAndUpdate(
+        userId,
+        {
+          $pull: {
+            domains: {
+              _id: domainId,
+            },
+          },
+        },
+        {
+          new: true, // Return the updated document
+        }
+      );
+      if (!updatedUser) {
+        return res.status(404).json({ error: "Error deleting domain." });
+      }
+
+      return res.status(200).json({
+        message: "Domain successfully deleted.",
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error("deleteDomain Failed in domainService.js:", error.message);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
 };
 
 module.exports = domainService;
