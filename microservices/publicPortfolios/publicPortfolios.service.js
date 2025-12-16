@@ -2,24 +2,27 @@ const ProjectManager = require("../../models/projectManager/portfolioModel");
 const Handyman = require("../../models/handyMan/HandymanTemplate");
 const LocalVendor = require("../../models/localFoodVendor/LocalVendorPortfolio");
 const CleaningLady = require("../../models/cleaningLady/Portfolio");
+const Healthcare = require('../../models/healthcare/userData');
 
 const modelMap = {
   ProjectManager,
   Handyman,
   LocalVendor,
   CleaningLady,
+  Healthcare
 };
 
 exports.getPublicPortfolios = async () => {
   try {
-    const [pm, hm, lv, cl] = await Promise.all([
+    const [pm, hm, lv, cl, hc] = await Promise.all([
       ProjectManager.find({ isPublic: true }).lean(),
       Handyman.find({ isPublic: true }).lean(),
       LocalVendor.find({ isPublic: true }).lean(),
       CleaningLady.find({ isPublic: true }).lean(),
+      Healthcare.find({ isPublic: true }).lean()
     ]);
 
-    return [...pm, ...hm, ...lv, ...cl];
+    return [...pm, ...hm, ...lv, ...cl, ...hc];
   } catch (error) {
     console.log("getPublicPortfolios Error:", error);
     throw error;
@@ -33,6 +36,9 @@ exports.getMyPortfolio = async (type, id) => {
     if (!Model) throw new Error("Invalid portfolio type");
 
     const portfolio = await Model.findById(id).lean();
+    if (portfolio && type === 'Healthcare' && !portfolio.practiceId) {
+      portfolio.practiceId = portfolio._id;
+    }
 
     return portfolio || null;
   } catch (error) {
