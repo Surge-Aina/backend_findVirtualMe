@@ -58,7 +58,7 @@ const portfolio_Routes = require("./routes/cleaningLady/portfolioRoutes");
 const socialLinksRoutes = require("./microservices/socialLinks/socialLinks.routes");
 const userPortfoliosArrayRoutes = require("./microservices/userPortfoliosArray/userPortfoliosArray.routes.js");
 const publicPortfoliosRoutes = require("./microservices/publicPortfolios/publicPortfolios.routes");
-
+const domainPaymentRouter = require("./microservices/domainPayment/stripe/stripe.route");
 // Import configuration from separate file
 const config = require("./config");
 
@@ -248,6 +248,7 @@ app.use("/guestAdminPanel", guestAdminPanelRoutes);
 app.use("/social-links", socialLinksRoutes);
 app.use("/userPortfoliosArray", userPortfoliosArrayRoutes);
 app.use("/publicPortfolios", publicPortfoliosRoutes);
+app.use("/api/domainPayment", domainPaymentRouter);
 
 //aiPortfolioCreator
 const contactRouter = require("./microservices/aiPortfolioCreator/contact/aiPortfolioCreator.routes.js");

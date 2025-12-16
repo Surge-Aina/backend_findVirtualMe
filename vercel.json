@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/routing-proxy?host=$host&path=$1"
+    }
+  ]
+}
