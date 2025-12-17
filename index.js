@@ -59,6 +59,8 @@ const socialLinksRoutes = require("./microservices/socialLinks/socialLinks.route
 const userPortfoliosArrayRoutes = require("./microservices/userPortfoliosArray/userPortfoliosArray.routes.js");
 const publicPortfoliosRoutes = require("./microservices/publicPortfolios/publicPortfolios.routes");
 const domainPaymentRouter = require("./microservices/domainPayment/stripe/stripe.route");
+const emailMvpRoutes = require('./microservices/emailmvp/emailmvp.routes');
+
 // Import configuration from separate file
 const config = require("./config");
 
@@ -267,6 +269,7 @@ const userRouter = require("./microservices/aiPortfolioCreator/name/name.routes.
 app.use("/name", userRouter);
 const publicProjectsRouter = require("./microservices/aiPortfolioCreator/publicProjectsAccess/publicProjectsAccess.routes.js");
 app.use("/api/publicProjects", publicProjectsRouter);
+app.use('/api/mvp', emailMvpRoutes);
 const mongoose = require("mongoose");
 const nowIso = () => new Date().toISOString();
 app.get("/api/health", (_req, res) => {

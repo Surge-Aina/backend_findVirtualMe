@@ -56,11 +56,24 @@ router.get('/subdomain/:subdomain', async (req, res) => {
   }
 })
 
-
-// Register new practice
+//Register new Practice
 router.post('/auth/register', async (req, res) => {
   try {
     const { email, password, firstName, lastName, practiceName } = req.body
+
+    // Get userId from authenticated request if available
+    let authenticatedUserId = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.substring(7);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        authenticatedUserId = decoded.id;
+      } catch (err) {
+        // Token invalid or expired, continue without linking
+        console.log('Token verification failed during registration:', err.message);
+      }
+    }
 
     // Validation
     if (!email || !password || !firstName || !lastName || !practiceName) {
@@ -72,30 +85,48 @@ router.post('/auth/register', async (req, res) => {
     // Check if user exists
     const existingUser = await User.findOne({ email: email.toLowerCase() })
     if (existingUser) {
-      return res.status(400).json({ 
-        error: 'Email already registered' 
-      })
+      // If user is authenticated and trying to register, use their account
+      if (authenticatedUserId && existingUser._id.toString() === authenticatedUserId) {
+        // User is creating a healthcare portfolio for their existing account
+        // Continue with practice creation
+      } else {
+        return res.status(400).json({ 
+          error: 'Email already registered' 
+        })
+      }
     }
 
     // Generate unique practice ID
     const practiceId = `practice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10)
-    const hashedPassword = await bcrypt.hash(password, salt)
+    let user;
+    
+    // If authenticated user is creating portfolio, use their account
+    if (authenticatedUserId) {
+      user = await User.findById(authenticatedUserId);
+      if (!user) {
+        return res.status(404).json({ error: 'Authenticated user not found' });
+      }
+      // Update user with practice info if needed
+      user.practiceId = practiceId;
+      await user.save();
+    } else {
+      // Create new user
+      const salt = await bcrypt.genSalt(10)
+      const hashedPassword = await bcrypt.hash(password, salt)
 
-    // Create user
-const user = new User({
-  email: email.toLowerCase(),
-  password: hashedPassword,
-  firstName,
-  lastName,
-  practiceId,
-  username: email.toLowerCase(), 
-  role: 'admin'
-})
+      user = new User({
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        firstName,
+        lastName,
+        practiceId,
+        username: email.toLowerCase(), 
+        role: 'admin'
+      })
 
-    await user.save()
+      await user.save()
+    }
 
     // Create practice data
     const practiceData = new UserData({
@@ -148,7 +179,7 @@ const user = new User({
       { 
         id: user._id,
         email: user.email,
-        practiceId: user.practiceId,
+        practiceId: practiceId,
         role: user.role
       },
       process.env.JWT_SECRET || 'your-secret-key',
@@ -164,7 +195,7 @@ const user = new User({
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        practiceId: user.practiceId,
+        practiceId: practiceId,
         role: user.role
       },
       practiceId
