@@ -1,6 +1,6 @@
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY_TEST);
-const { checkDomainAndGetPrice, handleFulfillment } = require("./fulfillment.service");
-
+const { checkDomainAndGetPrice } = require("../services/pricing.service");
+const { handleFulfillment } = require("../services/fulfillment.service");
 // The minimum price for non-premium domains to trigger your Namecheap purchase.
 const MINIMUM_PURCHASE_PRICE_USD = 12.99;
 
@@ -109,6 +109,7 @@ exports.checkPriceAndAvailability = async (req, res) => {
       return res.status(400).json({ error: "Domain is required" });
     }
 
+    console.log("checking domain", domain);
     const result = await checkDomainAndGetPrice(domain);
 
     console.log("result---------------,", result);
@@ -121,6 +122,7 @@ exports.checkPriceAndAvailability = async (req, res) => {
     }
   } catch (error) {
     console.error("Error in checkPriceAndAvailability:", error.message);
+    console.log(error?.data?.error);
     res.status(500).json({ error: error.message || "Failed to check domain price." });
   }
 };
