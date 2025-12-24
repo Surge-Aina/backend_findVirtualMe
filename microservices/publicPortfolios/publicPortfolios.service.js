@@ -35,9 +35,25 @@ exports.getMyPortfolio = async (type, id) => {
 
     if (!Model) throw new Error("Invalid portfolio type");
 
-    const portfolio = await Model.findById(id).lean();
-    if (portfolio && type === 'Healthcare' && !portfolio.practiceId) {
-      portfolio.practiceId = portfolio._id;
+    let portfolio;
+
+    // 🏥 HEALTHCARE INTEGRATION: Healthcare uses practiceId instead of _id
+    if (type === 'Healthcare') {
+      // Try finding by practiceId first (primary lookup)
+      portfolio = await Model.findOne({ practiceId: id }).lean();
+      
+      // Fallback to _id for backward compatibility
+      if (!portfolio) {
+        portfolio = await Model.findById(id).lean();
+      }
+      
+      // Ensure practiceId is set
+      if (portfolio && !portfolio.practiceId) {
+        portfolio.practiceId = portfolio._id;
+      }
+    } else {
+      // Existing behavior for other portfolio types
+      portfolio = await Model.findById(id).lean();
     }
 
     return portfolio || null;
@@ -51,11 +67,18 @@ exports.togglePublicPortfolio = async (portfolioId) => {
   try {
     let foundDoc = null;
 
-    for (const Model of Object.values(modelMap)) {
-      const doc = await Model.findById(portfolioId);
-      if (doc) {
-        foundDoc = doc;
-        break;
+    // 🏥 HEALTHCARE INTEGRATION: Check Healthcare by practiceId first
+    const healthcareDoc = await Healthcare.findOne({ practiceId: portfolioId });
+    if (healthcareDoc) {
+      foundDoc = healthcareDoc;
+    } else {
+      // Existing behavior: loop through all models and find by _id
+      for (const Model of Object.values(modelMap)) {
+        const doc = await Model.findById(portfolioId);
+        if (doc) {
+          foundDoc = doc;
+          break;
+        }
       }
     }
 
@@ -75,11 +98,18 @@ exports.deletePortfolio = async (portfolioId) => {
   try {
     let foundDoc = null;
 
-    for (const Model of Object.values(modelMap)) {
-      const doc = await Model.findById(portfolioId);
-      if (doc) {
-        foundDoc = doc;
-        break;
+    // 🏥 HEALTHCARE INTEGRATION: Check Healthcare by practiceId first
+    const healthcareDoc = await Healthcare.findOne({ practiceId: portfolioId });
+    if (healthcareDoc) {
+      foundDoc = healthcareDoc;
+    } else {
+      // Existing behavior: loop through all models and find by _id
+      for (const Model of Object.values(modelMap)) {
+        const doc = await Model.findById(portfolioId);
+        if (doc) {
+          foundDoc = doc;
+          break;
+        }
       }
     }
 
