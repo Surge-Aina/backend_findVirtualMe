@@ -1,7 +1,8 @@
 const mongoose = require("mongoose");
 
 const UserDataSchema = new mongoose.Schema({
-  portfolioType: { type: String, immutable: true, default: "Healthcare" },
+  portfolioType: { type: String, default: "Healthcare" },
+  portfolioName: { type: String, default: "New Healthcare Portftolio" },
   isPublic: { type: Boolean, default: false },
   practiceId: {
     type: String,

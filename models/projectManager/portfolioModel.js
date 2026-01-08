@@ -38,7 +38,8 @@ const ProjectSchema = new mongoose.Schema(
 const PortfolioSchema = new mongoose.Schema(
   {
     isPublic: { type: Boolean, default: false },
-    portfolioType: { type: String, immutable: true, default: "ProjectManager" },
+    portfolioType: { type: String, default: "ProjectManager" },
+    portfolioName: { type: String, default: "New Project Manager Portfolio" },
 
     name: { type: String },
     title: { type: String },
