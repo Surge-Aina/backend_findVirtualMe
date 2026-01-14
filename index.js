@@ -61,6 +61,7 @@ const publicPortfoliosRoutes = require("./microservices/publicPortfolios/publicP
 const domainPaymentRouter = require("./microservices/domainPayment/stripe/stripe.route");
 const emailMvpRoutes = require("./microservices/emailmvp/emailmvp.routes");
 const domainRouting = require("./middleware/domainRouting");
+const contactMeRoutes = require("./microservices/contactMeForm/contactMeForm.routes.js");
 
 // Import configuration from separate file
 const config = require("./config");
@@ -263,6 +264,7 @@ app.use("/social-links", socialLinksRoutes);
 app.use("/userPortfoliosArray", userPortfoliosArrayRoutes);
 app.use("/publicPortfolios", publicPortfoliosRoutes);
 app.use("/api/domainPayment", domainPaymentRouter);
+app.use("/contactMe", contactMeRoutes);
 
 //aiPortfolioCreator
 const contactRouter = require("./microservices/aiPortfolioCreator/contact/aiPortfolioCreator.routes.js");
