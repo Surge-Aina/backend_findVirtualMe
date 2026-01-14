@@ -23,12 +23,19 @@ const userSchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
+  name: { type: String },
   email: {
     type: String,
     required: true,
     unique: true,
     lowercase: true,
     trim: true,
+  },
+  googleId: { type: String, index: true },
+  authProvider: {
+    type: String,
+    enum: ["local", "google"],
+    default: "local",
   },
   stripeCustomerId: {
     type: String,
