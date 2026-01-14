@@ -16,19 +16,16 @@ exports.googleLogin = async (req, res) => {
     let user = await User.findOne({ email: payload.email });
 
     if (!user) {
-      user = await User.create({
-        email: payload.email,
-        name: payload.name,
-        googleId: payload.sub,
-        authProvider: "google",
-      });
+      return res.status(400).json({ message: "Create a user first" });
     }
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
-
-    res.json({ token, user });
+    const portfolioIds = user.portfolios || [];
+    res
+      .status(201)
+      .json({ message: "logged in successfully", token, user, portfolioIds });
   } catch (err) {
     console.error(err);
     res.status(401).json({ message: "Google authentication failed" });
