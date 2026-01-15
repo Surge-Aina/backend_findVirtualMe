@@ -19,10 +19,16 @@ exports.getPublicPortfolios = async () => {
       Handyman.find({ isPublic: true }).lean(),
       LocalVendor.find({ isPublic: true }).lean(),
       CleaningLady.find({ isPublic: true }).lean(),
-      Healthcare.find({ isPublic: true }).lean()
+      Healthcare.find({ isPublic: true, isActive: true }).lean()
     ]);
 
-    return [...pm, ...hm, ...lv, ...cl, ...hc];
+    // Add portfolioType to healthcare portfolios for frontend
+    const healthcareWithType = hc.map(portfolio => ({
+      ...portfolio,
+      portfolioType: 'Healthcare'
+    }));
+
+    return [...pm, ...hm, ...lv, ...cl, ...healthcareWithType];
   } catch (error) {
     console.log("getPublicPortfolios Error:", error);
     throw error;
@@ -32,13 +38,10 @@ exports.getPublicPortfolios = async () => {
 exports.getMyPortfolio = async (type, id) => {
   try {
     const Model = modelMap[type];
-
     if (!Model) throw new Error("Invalid portfolio type");
 
+    // All portfolios use _id (ObjectId)
     const portfolio = await Model.findById(id).lean();
-    if (portfolio && type === 'Healthcare' && !portfolio.practiceId) {
-      portfolio.practiceId = portfolio._id;
-    }
 
     return portfolio || null;
   } catch (error) {
@@ -50,11 +53,14 @@ exports.getMyPortfolio = async (type, id) => {
 exports.togglePublicPortfolio = async (portfolioId) => {
   try {
     let foundDoc = null;
+    let modelType = null;
 
-    for (const Model of Object.values(modelMap)) {
+    // Check all models by _id (including Healthcare)
+    for (const [type, Model] of Object.entries(modelMap)) {
       const doc = await Model.findById(portfolioId);
       if (doc) {
         foundDoc = doc;
+        modelType = type;
         break;
       }
     }
@@ -64,7 +70,11 @@ exports.togglePublicPortfolio = async (portfolioId) => {
     foundDoc.isPublic = !foundDoc.isPublic;
     await foundDoc.save();
 
-    return { _id: portfolioId, isPublic: foundDoc.isPublic };
+    return { 
+      _id: foundDoc._id,
+      isPublic: foundDoc.isPublic,
+      portfolioType: modelType
+    };
   } catch (error) {
     console.error("togglePublicPortfolio Error:", error);
     throw error;
@@ -75,7 +85,8 @@ exports.deletePortfolio = async (portfolioId) => {
   try {
     let foundDoc = null;
 
-    for (const Model of Object.values(modelMap)) {
+    // Check all models by _id (including Healthcare)
+    for (const [type, Model] of Object.entries(modelMap)) {
       const doc = await Model.findById(portfolioId);
       if (doc) {
         foundDoc = doc;
@@ -87,7 +98,9 @@ exports.deletePortfolio = async (portfolioId) => {
 
     await foundDoc.deleteOne();
 
-    return { _id: portfolioId };
+    return { 
+      _id: foundDoc._id
+    };
   } catch (error) {
     console.error("deletePortfolio Error:", error);
     throw error;

@@ -4,8 +4,10 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../../models/User");
 const UserData = require("../../models/healthcare/userData");
-const verifyToken = require("../../middleware/auth"); // Health check
+const verifyToken = require("../../middleware/auth");
 const auth = require("../../middleware/auth");
+
+// Health check
 router.get("/health", (req, res) => {
   res.json({
     status: "OK",
@@ -14,17 +16,15 @@ router.get("/health", (req, res) => {
   });
 });
 
-// Get public practice data by practiceId
-router.get("/practice/:practiceId", async (req, res) => {
+// Get public practice data by ID (ObjectId)
+router.get("/practice/:id", async (req, res) => {
   try {
-    const { practiceId } = req.params;
+    const { id } = req.params;
 
-    const userData = await UserData.findOne({
-      practiceId,
-      isActive: true,
-    });
+    // Since we're using ObjectId everywhere, find by _id
+    const userData = await UserData.findById(id);
 
-    if (!userData) {
+    if (!userData || !userData.isActive) {
       return res.status(404).json({ error: "Practice not found" });
     }
 
@@ -56,25 +56,38 @@ router.get("/subdomain/:subdomain", async (req, res) => {
   }
 });
 
+// Get all public healthcare portfolios
+router.get("/public/all", async (req, res) => {
+  try {
+    const publicHealthcarePortfolios = await UserData.find({
+      isPublic: true,
+      isActive: true,
+    }).lean();
+
+    // Add portfolioType field for frontend
+    const portfoliosWithType = publicHealthcarePortfolios.map(portfolio => ({
+      ...portfolio,
+      portfolioType: 'Healthcare'
+    }));
+
+    res.json({
+      success: true,
+      portfolios: portfoliosWithType
+    });
+  } catch (error) {
+    console.error("Error fetching public healthcare portfolios:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch public portfolios"
+    });
+  }
+});
+
 //Register new Practice
 router.post("/auth/register", auth, async (req, res) => {
   try {
     const { email, password, firstName, lastName, practiceName } = req.body;
     const user = req.user;
-
-    // // Get userId from authenticated request if available
-    // let authenticatedUserId = null;
-    // const authHeader = req.headers.authorization;
-    // if (authHeader && authHeader.startsWith("Bearer ")) {
-    //   try {
-    //     const token = authHeader.substring(7);
-    //     const decoded = jwt.verify(token, process.env.JWT_SECRET || "your-secret-key");
-    //     authenticatedUserId = decoded.id;
-    //   } catch (err) {
-    //     // Token invalid or expired, continue without linking
-    //     console.log("Token verification failed during registration:", err.message);
-    //   }
-    // }
 
     // Validation
     if (!email || !password || !firstName || !lastName || !practiceName) {
@@ -83,57 +96,14 @@ router.post("/auth/register", auth, async (req, res) => {
       });
     }
 
-    // // Check if user exists
-    // const existingUser = await User.findOne({ email: email.toLowerCase() });
-    // if (existingUser) {
-    //   // If user is authenticated and trying to register, use their account
-    //   if (authenticatedUserId && existingUser._id.toString() === authenticatedUserId) {
-    //     // User is creating a healthcare portfolio for their existing account
-    //     // Continue with practice creation
-    //   } else {
-    //     return res.status(400).json({
-    //       error: "Email already registered",
-    //     });
-    //   }
-    // }
-
-    // Generate unique practice ID
+    // Generate unique practice ID (kept for backward compatibility, but _id is primary)
     const practiceId = `practice_${Date.now()}_${Math.random()
       .toString(36)
       .substr(2, 9)}`;
 
-    // let user;
-
-    // // If authenticated user is creating portfolio, use their account
-    // if (authenticatedUserId) {
-    //   user = await User.findById(authenticatedUserId);
-    //   if (!user) {
-    //     return res.status(404).json({ error: "Authenticated user not found" });
-    //   }
-    //   // Update user with practice info if needed
-    //   user.practiceId = practiceId;
-    //   await user.save();
-    // } else {
-    //   // Create new user
-    //   const salt = await bcrypt.genSalt(10);
-    //   const hashedPassword = await bcrypt.hash(password, salt);
-
-    //   user = new User({
-    //     email: email.toLowerCase(),
-    //     password: hashedPassword,
-    //     firstName,
-    //     lastName,
-    //     practiceId,
-    //     username: email.toLowerCase(),
-    //     role: "admin",
-    //   });
-
-    //   await user.save();
-    //}
-
     // Create practice data
     const practiceData = new UserData({
-      practiceId,
+      practiceId, // Keep for legacy/reference
       userId: user._id.toString(),
       practice: {
         name: practiceName,
@@ -177,32 +147,11 @@ router.post("/auth/register", auth, async (req, res) => {
 
     await practiceData.save();
 
-    // // Generate JWT token
-    // const token = jwt.sign(
-    //   {
-    //     id: user._id,
-    //     email: user.email,
-    //     practiceId: practiceId,
-    //     role: user.role,
-    //   },
-    //   process.env.JWT_SECRET || "your-secret-key",
-    //   { expiresIn: "30d" }
-    // );
-
     res.status(201).json({
       success: true,
       message: "Practice registered successfully",
-      // token,
-      // user: {
-      //   id: user._id,
-      //   email: user.email,
-      //   firstName: user.firstName,
-      //   lastName: user.lastName,
-      //   practiceId: practiceId,
-      //   role: user.role,
-      // },
       practiceId,
-      portfolio: practiceData, //carlosG: added this so that the ObjectId from healthcaresettings is available in the front end
+      portfolio: practiceData,
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -305,20 +254,17 @@ router.post("/admin/data", verifyToken, async (req, res) => {
     const practiceId = req.user.practiceId;
     const updateData = req.body;
 
-    // --- START FIX: Use findOneAndUpdate for atomic updates ---
     const updatedDocument = await UserData.findOneAndUpdate(
-      { practiceId }, // Query
+      { practiceId },
       {
-        // Use $set to update fields
         $set: updateData,
-        lastModified: new Date(), // Set lastModified
+        lastModified: new Date(),
       },
       {
-        new: true, // Return the updated document
-        runValidators: true, // Ensure Mongoose validators run
+        new: true,
+        runValidators: true,
       }
     );
-    // --- END FIX ---
 
     if (!updatedDocument) {
       return res.status(404).json({ error: "Practice not found or not owned by user" });
@@ -327,10 +273,9 @@ router.post("/admin/data", verifyToken, async (req, res) => {
     res.json({
       success: true,
       message: "Data saved successfully",
-      timestamp: updatedDocument.lastModified, // Use the timestamp from the result
+      timestamp: updatedDocument.lastModified,
     });
   } catch (error) {
-    // You should still return error details here if it's a validation error
     console.error("Error saving data:", error);
     res.status(500).json({
       success: false,
@@ -386,7 +331,7 @@ const initializeData = async () => {
     const count = await UserData.countDocuments();
 
     if (count === 0) {
-      console.log("📝 Creating demo practice...");
+      console.log("🏥 Creating demo practice...");
 
       // Create demo user
       const demoUser = new User({
@@ -395,7 +340,7 @@ const initializeData = async () => {
         firstName: "Demo",
         lastName: "User",
         practiceId: "practice_demo",
-        username: "demo", // Added required username
+        username: "demo",
         role: "admin",
       });
       await demoUser.save();
