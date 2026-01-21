@@ -2,7 +2,14 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/api/routing-proxy?host=$host&path=$1"
+      "has": [
+        {
+          "type": "header",
+          "key": "accept",
+          "value": "text/html.*"
+        }
+      ],
+      "destination": "/domainRouter/routing-proxy?host=$host&path=$1"
     }
   ]
 }

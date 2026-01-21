@@ -19,10 +19,12 @@ router.get("/practice/:practiceId", async (req, res) => {
   try {
     const { practiceId } = req.params;
 
-    const userData = await UserData.findOne({
-      practiceId,
-      isActive: true,
-    });
+    // const userData = await UserData.findOne({
+    //   practiceId,
+    //   isActive: true,
+    // });
+
+    const userData = await UserData.findById(practiceId);
 
     if (!userData) {
       return res.status(404).json({ error: "Practice not found" });
