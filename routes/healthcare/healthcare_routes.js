@@ -1,11 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const User = require("../../models/User");
 const UserData = require("../../models/healthcare/userData");
+const User = require("../../models/User");
 const verifyToken = require("../../middleware/auth");
-const auth = require("../../middleware/auth");
+
+// ==========================================
+// PUBLIC ROUTES (No Auth Required)
+// ==========================================
 
 // Health check
 router.get("/health", (req, res) => {
@@ -16,15 +17,26 @@ router.get("/health", (req, res) => {
   });
 });
 
-// Get public practice data by ID (ObjectId)
-router.get("/practice/:id", async (req, res) => {
+// Get public practice data by practiceId (for backward compatibility)
+router.get("/practice/:practiceId", async (req, res) => {
   try {
-    const { id } = req.params;
+    const { practiceId } = req.params;
 
-    // Since we're using ObjectId everywhere, find by _id
-    const userData = await UserData.findById(id);
+    // Try to find by practiceId first (legacy)
+    let userData = await UserData.findOne({ 
+      practiceId,
+      isActive: true 
+    });
 
-    if (!userData || !userData.isActive) {
+    // If not found, try by _id (new approach)
+    if (!userData) {
+      userData = await UserData.findOne({
+        _id: practiceId,
+        isActive: true
+      });
+    }
+
+    if (!userData) {
       return res.status(404).json({ error: "Practice not found" });
     }
 
@@ -83,47 +95,96 @@ router.get("/public/all", async (req, res) => {
   }
 });
 
-//Register new Practice
-router.post("/auth/register", auth, async (req, res) => {
+// Get demo practice data (no auth required)
+router.get("/demo", async (req, res) => {
   try {
-    const { email, password, firstName, lastName, practiceName } = req.body;
-    const user = req.user;
+    const demoData = await UserData.findOne({ 
+      practiceId: "practice_demo",
+      isActive: true 
+    });
 
-    // Validation
-    if (!email || !password || !firstName || !lastName || !practiceName) {
-      return res.status(400).json({
-        error: "All fields are required",
+    if (!demoData) {
+      return res.status(404).json({ error: "Demo practice not found" });
+    }
+
+    res.json(demoData);
+  } catch (error) {
+    console.error("Error fetching demo data:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ==========================================
+// PROTECTED ROUTES (Main Platform Auth Required)
+// ==========================================
+
+// Create new healthcare portfolio for authenticated user
+router.post("/create", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id; // Handle both formats
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Check if user already has a healthcare portfolio
+    let existingPortfolio = await UserData.findOne({ userId: userId.toString() });
+
+    if (existingPortfolio) {
+      return res.json({
+        success: true,
+        message: "Portfolio already exists",
+        practiceId: existingPortfolio._id.toString(), // Use _id as practiceId
+        portfolio: existingPortfolio
       });
     }
 
-    // Generate unique practice ID (kept for backward compatibility, but _id is primary)
+    // Generate unique practice ID (kept for backward compatibility)
     const practiceId = `practice_${Date.now()}_${Math.random()
       .toString(36)
       .substr(2, 9)}`;
 
-    // Create practice data
-    const practiceData = new UserData({
-      practiceId, // Keep for legacy/reference
-      userId: user._id.toString(),
+    // Generate unique subdomain suggestion
+    const baseSubdomain = (user.username || user.email.split('@')[0]).toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
+    let subdomain = baseSubdomain;
+    let counter = 1;
+
+    // Ensure subdomain is unique
+    while (await UserData.findOne({ subdomain })) {
+      subdomain = `${baseSubdomain}${counter}`;
+      counter++;
+    }
+
+    // Create new healthcare portfolio
+    const newPortfolio = new UserData({
+      practiceId, // Legacy field
+      userId: userId.toString(),
+      subdomain,
+      portfolioName: `${user.firstName || 'My'} Healthcare Portfolio`,
+      portfolioType: "Healthcare",
+      isActive: true,
+      isPublic: false, // User can make it public later
       practice: {
-        name: practiceName,
+        name: `${user.firstName || 'Your'} ${user.lastName || 'Practice'}`,
         tagline: "Your Health, Our Priority",
-        description: "Providing exceptional healthcare services.",
+        description: "Providing exceptional healthcare services with compassion and expertise.",
       },
       contact: {
-        phone: "",
-        whatsapp: "",
-        email: email,
+        phone: user.phone || "",
+        whatsapp: user.phone || "",
+        email: user.email,
         address: {
           street: "",
-          city: "",
+          city: user.location || "",
           state: "",
           zip: "",
         },
       },
       hours: {
         weekdays: "Mon-Fri: 9:00 AM - 5:00 PM",
-        saturday: "Sat: Closed",
+        saturday: "Sat: 9:00 AM - 2:00 PM",
         sunday: "Sun: Closed",
       },
       stats: {
@@ -139,125 +200,133 @@ router.post("/auth/register", auth, async (req, res) => {
         beforeAfterCases: [],
       },
       seo: {
-        siteTitle: `${practiceName} - Healthcare Services`,
-        metaDescription: "Quality healthcare services",
-        keywords: "healthcare, medical, clinic",
+        siteTitle: `${user.firstName || 'Healthcare'} - Professional Healthcare Services`,
+        metaDescription: "Quality healthcare services tailored to your needs.",
+        keywords: "healthcare, medical, clinic, doctor",
       },
+      ui: {
+        hero: {
+          primaryButtonText: "Get Started",
+          secondaryButtonText: "Learn More"
+        },
+        services: {
+          viewAllText: "View All Services",
+          bookButtonText: "Book Now"
+        },
+        blog: {
+          readMoreText: "Read More",
+          viewAllText: "View All Posts"
+        },
+        contact: {
+          buttonText: "Contact Us",
+          submitText: "Send Message"
+        },
+        cta: {
+          heading: "Ready to Get Started?",
+          description: "Contact us today to schedule your appointment",
+          buttonText: "Schedule Appointment"
+        },
+        social: {
+          facebook: "",
+          instagram: "",
+          twitter: "",
+          linkedin: "",
+          youtube: ""
+        }
+      }
     });
 
-    await practiceData.save();
+    await newPortfolio.save();
 
     res.status(201).json({
       success: true,
-      message: "Practice registered successfully",
-      practiceId,
-      portfolio: practiceData,
+      message: "Healthcare portfolio created successfully",
+      practiceId: newPortfolio._id.toString(), // Use MongoDB _id as practiceId
+      subdomain,
+      portfolio: newPortfolio
     });
   } catch (error) {
-    console.error("Registration error:", error);
+    console.error("Error creating portfolio:", error);
     res.status(500).json({
-      error: "Registration failed",
+      success: false,
+      error: "Failed to create portfolio",
       details: error.message,
     });
   }
 });
 
-// Login
-router.post("/auth/login", async (req, res) => {
+// Get user's own healthcare portfolio(s)
+router.get("/my-portfolios", verifyToken, async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const userId = req.user.id || req.user._id;
 
-    // Find user
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    // Check password
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    // Update last login
-    user.lastLogin = new Date();
-    await user.save();
-
-    // Generate token
-    const token = jwt.sign(
-      {
-        id: user._id,
-        email: user.email,
-        practiceId: user.practiceId,
-        role: user.role,
-      },
-      process.env.JWT_SECRET || "your-secret-key",
-      { expiresIn: "30d" }
-    );
+    const portfolios = await UserData.find({ 
+      userId: userId.toString() 
+    }).sort({ createdAt: -1 });
 
     res.json({
       success: true,
-      token,
-      user: {
-        id: user._id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        practiceId: user.practiceId,
-        role: user.role,
-      },
+      portfolios: portfolios.map(p => ({
+        ...p.toObject(),
+        practiceId: p._id.toString() // Ensure practiceId is the _id
+      }))
     });
   } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ error: "Login failed" });
+    console.error("Error fetching user portfolios:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch portfolios"
+    });
   }
 });
 
-// Get current user info
-router.get("/auth/me", verifyToken, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select("-password");
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// ==========================================
-// ADMIN ROUTES (Auth Required)
-// ==========================================
-
-// Get practice data for admin
+// Get admin data for authenticated user's portfolio
 router.get("/admin/data", verifyToken, async (req, res) => {
   try {
+    const userId = req.user.id || req.user._id;
+
+    // Find user's healthcare portfolio
     const userData = await UserData.findOne({
-      practiceId: req.user.practiceId,
+      userId: userId.toString()
     });
 
     if (!userData) {
-      return res.status(404).json({ error: "Practice data not found" });
+      return res.status(404).json({ 
+        error: "Healthcare portfolio not found. Please create one first." 
+      });
     }
 
-    res.json(userData);
+    // Return data with practiceId set to _id
+    res.json({
+      ...userData.toObject(),
+      practiceId: userData._id.toString()
+    });
   } catch (error) {
     console.error("Error fetching admin data:", error);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ 
+      error: "Server error",
+      details: error.message 
+    });
   }
 });
 
-// Save practice data
+// Save/Update practice data (authenticated user only)
 router.post("/admin/data", verifyToken, async (req, res) => {
   try {
-    const practiceId = req.user.practiceId;
+    const userId = req.user.id || req.user._id;
     const updateData = req.body;
 
+    // Remove fields that shouldn't be updated directly
+    delete updateData._id;
+    delete updateData.userId;
+    delete updateData.createdAt;
+    delete updateData.__v;
+
+    // Find and update user's portfolio
     const updatedDocument = await UserData.findOneAndUpdate(
-      { practiceId },
+      { userId: userId.toString() },
       {
-        $set: updateData,
+        ...updateData,
         lastModified: new Date(),
       },
       {
@@ -267,12 +336,15 @@ router.post("/admin/data", verifyToken, async (req, res) => {
     );
 
     if (!updatedDocument) {
-      return res.status(404).json({ error: "Practice not found or not owned by user" });
+      return res.status(404).json({ 
+        error: "Portfolio not found. Please create a portfolio first." 
+      });
     }
 
     res.json({
       success: true,
       message: "Data saved successfully",
+      practiceId: updatedDocument._id.toString(),
       timestamp: updatedDocument.lastModified,
     });
   } catch (error) {
@@ -289,7 +361,7 @@ router.post("/admin/data", verifyToken, async (req, res) => {
 router.post("/admin/subdomain", verifyToken, async (req, res) => {
   try {
     const { subdomain } = req.body;
-    const practiceId = req.user.practiceId;
+    const userId = req.user.id || req.user._id;
 
     // Validate subdomain
     if (!/^[a-z0-9-]+$/.test(subdomain)) {
@@ -298,10 +370,10 @@ router.post("/admin/subdomain", verifyToken, async (req, res) => {
       });
     }
 
-    // Check if subdomain is taken
+    // Check if subdomain is taken by another user
     const existing = await UserData.findOne({
       subdomain: subdomain.toLowerCase(),
-      practiceId: { $ne: practiceId },
+      userId: { $ne: userId.toString() },
     });
 
     if (existing) {
@@ -309,52 +381,123 @@ router.post("/admin/subdomain", verifyToken, async (req, res) => {
     }
 
     // Update subdomain
-    await UserData.findOneAndUpdate(
-      { practiceId },
-      { subdomain: subdomain.toLowerCase() }
+    const updated = await UserData.findOneAndUpdate(
+      { userId: userId.toString() },
+      { subdomain: subdomain.toLowerCase() },
+      { new: true }
     );
 
-    res.json({ success: true, message: "Subdomain updated successfully" });
+    if (!updated) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    res.json({ 
+      success: true, 
+      message: "Subdomain updated successfully",
+      subdomain: subdomain.toLowerCase()
+    });
   } catch (error) {
     console.error("Error updating subdomain:", error);
     res.status(500).json({ error: "Failed to update subdomain" });
   }
 });
 
+// Toggle portfolio public/private
+router.post("/admin/toggle-public", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+    const { isPublic } = req.body;
+
+    const updated = await UserData.findOneAndUpdate(
+      { userId: userId.toString() },
+      { isPublic: !!isPublic },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Portfolio is now ${isPublic ? 'public' : 'private'}`,
+      isPublic: updated.isPublic
+    });
+  } catch (error) {
+    console.error("Error toggling public status:", error);
+    res.status(500).json({ error: "Failed to update public status" });
+  }
+});
+
+// Delete portfolio
+router.delete("/admin/delete", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id;
+
+    const deleted = await UserData.findOneAndDelete({
+      userId: userId.toString()
+    });
+
+    if (!deleted) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    res.json({ 
+      success: true, 
+      message: "Portfolio deleted successfully" 
+    });
+  } catch (error) {
+    console.error("Error deleting portfolio:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Failed to delete portfolio" 
+    });
+  }
+});
+
 // ==========================================
-// INITIALIZATION (Keep for backward compatibility)
+// INITIALIZATION (Demo Data)
 // ==========================================
 
 const initializeData = async () => {
   try {
-    // Only create demo practice if no practices exist
-    const count = await UserData.countDocuments();
+    // Only create demo practice if it doesn't exist
+    const demoExists = await UserData.findOne({ practiceId: "practice_demo" });
 
-    if (count === 0) {
-      console.log("🏥 Creating demo practice...");
+    if (!demoExists) {
+      console.log("🏥 Creating demo healthcare practice...");
 
-      // Create demo user
-      const demoUser = new User({
-        email: "demo@healthcare.com",
-        password: await bcrypt.hash("demo123", 10),
-        firstName: "Demo",
-        lastName: "User",
-        practiceId: "practice_demo",
-        username: "demo",
-        role: "admin",
-      });
-      await demoUser.save();
+      // Check if demo user exists
+      let demoUser = await User.findOne({ email: "demo@healthcare.com" });
+      
+      if (!demoUser) {
+        console.log("Creating demo user...");
+        const bcrypt = require("bcryptjs");
+        demoUser = new User({
+          email: "demo@healthcare.com",
+          password: await bcrypt.hash("demo123", 10),
+          firstName: "Demo",
+          lastName: "Practice",
+          username: "demo-healthcare",
+          role: "user",
+        });
+        await demoUser.save();
+      }
 
       // Create demo practice
       const demoData = new UserData({
         practiceId: "practice_demo",
         userId: demoUser._id.toString(),
         subdomain: "demo",
+        portfolioName: "Demo Healthcare Portfolio",
+        portfolioType: "Healthcare",
+        isActive: true,
+        isPublic: true, // Make demo public
         practice: {
           name: "Elite Medical Center",
           tagline: "Your Health, Our Priority",
           description:
-            "Providing exceptional healthcare services with state-of-the-art technology.",
+            "Providing exceptional healthcare services with state-of-the-art technology and compassionate care.",
         },
         contact: {
           phone: "+1 (555) 123-4567",
@@ -378,26 +521,100 @@ const initializeData = async () => {
           successRate: "98",
           doctorsCount: "8",
         },
-        services: [],
-        blogPosts: [],
+        services: [
+          {
+            id: "primary-care",
+            title: "Primary Care",
+            description: "Comprehensive healthcare for all ages including checkups, preventive care, and chronic disease management.",
+            icon: "user-md",
+            price: "$150",
+            duration: "45 minutes",
+            features: [
+              "Comprehensive health examination",
+              "Preventive care screening",
+              "Chronic disease management",
+              "Health education and counseling"
+            ]
+          },
+          {
+            id: "urgent-care",
+            title: "Urgent Care",
+            description: "Immediate medical attention for non-life-threatening conditions.",
+            icon: "heartbeat",
+            price: "$200",
+            duration: "30 minutes",
+            features: [
+              "Same-day appointments",
+              "Minor injury treatment",
+              "Illness diagnosis",
+              "On-site lab testing"
+            ]
+          }
+        ],
+        blogPosts: [
+          {
+            id: 1,
+            title: "10 Essential Health Tips for 2024",
+            slug: "health-tips-2024",
+            excerpt: "Discover the latest evidence-based strategies to maintain optimal health and prevent common illnesses.",
+            content: "<h2>Introduction</h2><p>Maintaining good health requires a comprehensive approach...</p>",
+            publishDate: "2024-03-15",
+            author: { name: "Dr. Sarah Johnson", id: "dr-sarah" },
+            category: "Health Tips",
+            tags: ["health", "prevention", "wellness"],
+            readTime: "5 min read",
+            featured: true
+          }
+        ],
         gallery: {
           facilityImages: [],
           beforeAfterCases: [],
         },
         seo: {
           siteTitle: "Elite Medical Center - Healthcare Services",
-          metaDescription: "Leading healthcare facility",
-          keywords: "healthcare, medical, clinic",
+          metaDescription: "Leading healthcare facility providing comprehensive medical services",
+          keywords: "healthcare, medical, clinic, doctor, primary care",
         },
+        ui: {
+          hero: {
+            primaryButtonText: "Get Started",
+            secondaryButtonText: "Learn More"
+          },
+          services: {
+            viewAllText: "View All Services",
+            bookButtonText: "Book Appointment"
+          },
+          blog: {
+            readMoreText: "Read More",
+            viewAllText: "View All Articles"
+          },
+          contact: {
+            buttonText: "Contact Us",
+            submitText: "Send Message"
+          },
+          cta: {
+            heading: "Ready to Get Started?",
+            description: "Contact us today to schedule your appointment and take the first step toward better health.",
+            buttonText: "Schedule Appointment"
+          },
+          social: {
+            facebook: "",
+            instagram: "",
+            twitter: "",
+            linkedin: "",
+            youtube: ""
+          }
+        }
       });
 
       await demoData.save();
 
-      console.log("✅ Demo practice created");
+      console.log("✅ Demo healthcare practice created");
       console.log("📧 Demo login: demo@healthcare.com / demo123");
-      console.log("🔗 Demo URL: /portfolios/healthcare/practice_demo");
+      console.log("🔗 Demo URL: /portfolios/healthcare/demo");
+      console.log("🔗 Practice ID:", demoData._id.toString());
     } else {
-      console.log("✅ Healthcare practices already exist");
+      console.log("✅ Demo healthcare practice already exists");
     }
   } catch (error) {
     console.error("❌ Healthcare init error:", error);
