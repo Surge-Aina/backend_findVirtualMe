@@ -84,6 +84,7 @@ const seededOrigins = [
   "http://127.0.0.1:5173",
   "http://dannizhou.me:5173",
   "https://localhost:5000",
+  "https://frontend-find-virtual-me-staging.vercel.app"
 ]
   .filter(Boolean)
   .flatMap((entry) =>
