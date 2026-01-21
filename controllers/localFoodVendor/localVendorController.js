@@ -11,6 +11,7 @@ const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
 const { PDFDocument } = require("pdf-lib");
 const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
+const User = require("../../models/User");
 
 // Create vendor and add the basic info so website doesn't look blank, view seedVendor
 exports.createVendor = async (req, res) => {
@@ -21,8 +22,16 @@ exports.createVendor = async (req, res) => {
     //seeding info
     await seedVendor(vendor._id);
 
+    // // link this vendor to the logged-in user
+    // if (req.user && req.user._id) {
+    //   await User.findByIdAndUpdate(req.user._id, {
+    //     $addToSet: { portfolios: vendor._id.toString() }, // avoids duplicates
+    //   });
+    // }
+
     res.status(201).json(vendor);
   } catch (err) {
+    console.log(err);
     res.status(400).json({ error: "Failed to create vendor" });
   }
 };
@@ -68,6 +77,14 @@ exports.deleteVendor = async (req, res) => {
   try {
     const deleted = await LocalVendorPortfolio.findByIdAndDelete(req.params.vendorId);
     if (!deleted) return res.status(404).json({ error: "Vendor not found" });
+
+    // remove vendor ID from user's portfolios array
+    if (req.user && req.user._id) {
+      await User.findByIdAndUpdate(req.user._id, {
+        $pull: { portfolios: req.params.vendorId.toString() },
+      });
+    }
+
     res.json({ message: "Vendor deleted" });
   } catch (err) {
     res.status(500).json({ error: "Failed to delete vendor" });
@@ -146,9 +163,7 @@ async function extractText(fileBuffer, mimeType) {
       // Primary parse
       const data = await pdfParse(normalizedBuffer);
       if (!data.text || data.text.trim().length < 50) {
-        throw new Error(
-          "Parsed PDF is too short — likely invalid or image-only."
-        );
+        throw new Error("Parsed PDF is too short — likely invalid or image-only.");
       }
       console.log("PDF parse success, length of text:", data.text.length);
       return data.text.trim();
@@ -188,7 +203,7 @@ async function extractText(fileBuffer, mimeType) {
   }
 }
 
-// NEW: Inject vendor + about + menu
+// Inject vendor + about + menu
 exports.injectVendorPortfolio = async (req, res) => {
   console.log("req.file:", req.file);
   console.log("req.body keys:", Object.keys(req.body));
@@ -242,6 +257,13 @@ exports.injectVendorPortfolio = async (req, res) => {
     }
 
     const vendor = await LocalVendorPortfolio.create(parsed.vendor);
+
+    // link this vendor to the logged-in user's portfolios array
+    if (req.user && req.user._id) {
+      await User.findByIdAndUpdate(req.user._id, {
+        $addToSet: { portfolios: vendor._id.toString() },
+      });
+    }
 
     await About.create({ ...parsed.about, vendorId: vendor._id });
 

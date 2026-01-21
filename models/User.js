@@ -1,6 +1,16 @@
 const mongoose = require("mongoose");
 
+const {
+  AIProjectSchema,
+} = require("../microservices/aiPortfolioCreator/contact/aiPortfolioCreator.model");
+
 const userSchema = new mongoose.Schema({
+  //ai user schema merge
+  userKey: { type: String, unique: true, index: true },
+  displayName: { type: String, default: "Default Display Name" },
+  activeProjectId: { type: String, default: "" },
+  projects: { type: [AIProjectSchema], default: [] },
+
   firstName: {
     type: String,
   },
@@ -13,12 +23,19 @@ const userSchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
+  name: { type: String },
   email: {
     type: String,
     required: true,
     unique: true,
     lowercase: true,
     trim: true,
+  },
+  googleId: { type: String, index: true },
+  authProvider: {
+    type: String,
+    enum: ["local", "google"],
+    default: "local",
   },
   stripeCustomerId: {
     type: String,
@@ -56,9 +73,18 @@ const userSchema = new mongoose.Schema({
   },
   practiceId: {
     type: String,
-    unique: true
+    unique: true,
   },
-  portfolios: [{ type: String }],
+  portfolios: [
+    {
+      portfolioId: { type: mongoose.Schema.Types.ObjectId, required: true },
+      portfolioType: {
+        type: String,
+        required: true,
+      },
+      isPublic: { type: Boolean, default: false },
+    },
+  ],
   // Domain management
   domains: [
     {
@@ -71,7 +97,7 @@ const userSchema = new mongoose.Schema({
       },
       status: {
         type: String,
-        enum: ["pending", "active", "expired", "suspended"],
+        enum: ["pending", "active", "expired", "suspended", "failed_registration"],
         default: "pending",
       },
       registeredAt: { type: Date, default: Date.now },
@@ -85,13 +111,14 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  updatedAt: { type: Date, default: () => new Date() },
   lastLogin: {
     type: Date,
   },
-   isActive: {
+  isActive: {
     type: Boolean,
-    default: true
-  }
+    default: true,
+  },
 });
 //remove password before sending back to front end
 userSchema.set("toJSON", {

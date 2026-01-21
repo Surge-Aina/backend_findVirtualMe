@@ -3,6 +3,8 @@ const router = express.Router();
 const Stripe = require("stripe");
 const Subscription = require("../models/Subscriptions");
 const User = require("../models/Subscriptions");
+const stripeController = require("../microservices/domainPayment/stripe/stripe.controller");
+const bodyParser = require("body-parser");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
@@ -22,6 +24,15 @@ const PRICE_MAP = {
       ? process.env.PRICE_PRO_LIVE
       : process.env.PRICE_PRO_TEST,
 };
+
+// Endpoint for Stripe to send real-time payment status updates (Webhook)
+// NOTE: Use raw body for this route for Stripe signature verification!
+// The path should be /webhook or /stripe/webhook, depending on how you mount the router.
+router.post(
+  "/domainPayment-webhook",
+  bodyParser.raw({ type: "application/json" }),
+  stripeController.handleStripeWebhook
+);
 
 router.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   const sig = req.headers["stripe-signature"];

@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 
 exports.createNewUser = async (userData) => {
   try {
-    const { name, username, portfolioType, phone, email, password } = userData;
+    const { name, username, portfolioType, phone, email, password,portfolioId } = userData;
 
     // Required fields check
     if (!portfolioType || !email || !password) {
@@ -28,6 +28,7 @@ exports.createNewUser = async (userData) => {
       phone,
       email,
       password: hashedPassword,
+      portfolioId
     });
 
     await newUser.save();
@@ -69,7 +70,9 @@ exports.loginUser = async (userData) => {
 exports.updateUser = async (userData) => {
   try {
     const { userId, updatedInfo } = userData;
-    const user = await GuestUser.findByIdAndUpdate(userId, updatedInfo, { new: true });
+    const user = await GuestUser.findByIdAndUpdate(userId, updatedInfo, {
+      new: true,
+    }).select("-password");
     if (!user) throw new Error("User not found");
     return user;
   } catch (err) {
@@ -85,5 +88,18 @@ exports.deleteUser = async (id) => {
     return user;
   } catch (err) {
     throw err;
+  }
+};
+
+exports.getAllUsers = async (portfolioId) => {
+  try {
+    const filter = portfolioId ? { portfolioId: portfolioId } : {};
+    
+    const userList = await GuestUser.find(filter).select("-password").lean();
+
+    return { success: true, data: userList };
+  } catch (error) {
+    console.error("Error in guestUser.service for getAllUsers():", error);
+    throw error;
   }
 };
