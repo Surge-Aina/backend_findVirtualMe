@@ -1,8 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const UserData = require("../../models/healthcare/userData");
+const User = require("../../models/User");
 const verifyToken = require("../../middleware/auth");
-const auth = require("../../middleware/auth");
+
+// ==========================================
+// PUBLIC ROUTES (No Auth Required)
+// ==========================================
 
 // Health check
 router.get("/health", (req, res) => {
@@ -13,15 +17,26 @@ router.get("/health", (req, res) => {
   });
 });
 
-// Get public practice data by ID (ObjectId)
-router.get("/practice/:id", async (req, res) => {
+// Get public practice data by practiceId (for backward compatibility)
+router.get("/practice/:practiceId", async (req, res) => {
   try {
-    const { id } = req.params;
+    const { practiceId } = req.params;
 
-    // Since we're using ObjectId everywhere, find by _id
-    const userData = await UserData.findById(id);
+    // Try to find by practiceId first (legacy)
+    let userData = await UserData.findOne({ 
+      practiceId,
+      isActive: true 
+    });
 
-    if (!userData || !userData.isActive) {
+    // If not found, try by _id (new approach)
+    if (!userData) {
+      userData = await UserData.findOne({
+        _id: practiceId,
+        isActive: true
+      });
+    }
+
+    if (!userData) {
       return res.status(404).json({ error: "Practice not found" });
     }
 
@@ -80,28 +95,77 @@ router.get("/public/all", async (req, res) => {
   }
 });
 
-//Register new Practice
-router.post("/auth/register", auth, async (req, res) => {
+// Get demo practice data (no auth required)
+router.get("/demo", async (req, res) => {
   try {
-    const { email, password, firstName, lastName, practiceName } = req.body;
-    const user = req.user;
+    const demoData = await UserData.findOne({ 
+      practiceId: "practice_demo",
+      isActive: true 
+    });
 
-    // Validation
-    if (!email || !password || !firstName || !lastName || !practiceName) {
-      return res.status(400).json({
-        error: "All fields are required",
+    if (!demoData) {
+      return res.status(404).json({ error: "Demo practice not found" });
+    }
+
+    res.json(demoData);
+  } catch (error) {
+    console.error("Error fetching demo data:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ==========================================
+// PROTECTED ROUTES (Main Platform Auth Required)
+// ==========================================
+
+// Create new healthcare portfolio for authenticated user
+router.post("/create", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id || req.user._id; // Handle both formats
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Check if user already has a healthcare portfolio
+    let existingPortfolio = await UserData.findOne({ userId: userId.toString() });
+
+    if (existingPortfolio) {
+      return res.json({
+        success: true,
+        message: "Portfolio already exists",
+        practiceId: existingPortfolio._id.toString(), // Use _id as practiceId
+        portfolio: existingPortfolio
       });
     }
 
-    // Generate unique practice ID (kept for backward compatibility, but _id is primary)
+    // Generate unique practice ID (kept for backward compatibility)
     const practiceId = `practice_${Date.now()}_${Math.random()
       .toString(36)
       .substr(2, 9)}`;
 
-    // Create practice data
-    const practiceData = new UserData({
-      practiceId, // Keep for legacy/reference
-      userId: user._id.toString(),
+    // Generate unique subdomain suggestion
+    const baseSubdomain = (user.username || user.email.split('@')[0]).toLowerCase()
+      .replace(/[^a-z0-9]/g, '');
+    let subdomain = baseSubdomain;
+    let counter = 1;
+
+    // Ensure subdomain is unique
+    while (await UserData.findOne({ subdomain })) {
+      subdomain = `${baseSubdomain}${counter}`;
+      counter++;
+    }
+
+    // Create new healthcare portfolio
+    const newPortfolio = new UserData({
+      practiceId, // Legacy field
+      userId: userId.toString(),
+      subdomain,
+      portfolioName: `${user.firstName || 'My'} Healthcare Portfolio`,
+      portfolioType: "Healthcare",
+      isActive: true,
+      isPublic: false, // User can make it public later
       practice: {
         name: `${user.firstName || 'Your'} ${user.lastName || 'Practice'}`,
         tagline: "Your Health, Our Priority",
@@ -172,13 +236,14 @@ router.post("/auth/register", auth, async (req, res) => {
       }
     });
 
-    await practiceData.save();
+    await newPortfolio.save();
 
     res.status(201).json({
       success: true,
-      message: "Practice registered successfully",
-      practiceId,
-      portfolio: practiceData,
+      message: "Healthcare portfolio created successfully",
+      practiceId: newPortfolio._id.toString(), // Use MongoDB _id as practiceId
+      subdomain,
+      portfolio: newPortfolio
     });
   } catch (error) {
     console.error("Error creating portfolio:", error);
@@ -251,10 +316,17 @@ router.post("/admin/data", verifyToken, async (req, res) => {
     const userId = req.user.id || req.user._id;
     const updateData = req.body;
 
+    // Remove fields that shouldn't be updated directly
+    delete updateData._id;
+    delete updateData.userId;
+    delete updateData.createdAt;
+    delete updateData.__v;
+
+    // Find and update user's portfolio
     const updatedDocument = await UserData.findOneAndUpdate(
-      { practiceId },
+      { userId: userId.toString() },
       {
-        $set: updateData,
+        ...updateData,
         lastModified: new Date(),
       },
       {
@@ -272,6 +344,7 @@ router.post("/admin/data", verifyToken, async (req, res) => {
     res.json({
       success: true,
       message: "Data saved successfully",
+      practiceId: updatedDocument._id.toString(),
       timestamp: updatedDocument.lastModified,
     });
   } catch (error) {
@@ -388,23 +461,28 @@ router.delete("/admin/delete", verifyToken, async (req, res) => {
 
 const initializeData = async () => {
   try {
-    // Only create demo practice if no practices exist
-    const count = await UserData.countDocuments();
+    // Only create demo practice if it doesn't exist
+    const demoExists = await UserData.findOne({ practiceId: "practice_demo" });
 
-    if (count === 0) {
-      console.log("🏥 Creating demo practice...");
+    if (!demoExists) {
+      console.log("🏥 Creating demo healthcare practice...");
 
-      // Create demo user
-      const demoUser = new User({
-        email: "demo@healthcare.com",
-        password: await bcrypt.hash("demo123", 10),
-        firstName: "Demo",
-        lastName: "User",
-        practiceId: "practice_demo",
-        username: "demo",
-        role: "admin",
-      });
-      await demoUser.save();
+      // Check if demo user exists
+      let demoUser = await User.findOne({ email: "demo@healthcare.com" });
+      
+      if (!demoUser) {
+        console.log("Creating demo user...");
+        const bcrypt = require("bcryptjs");
+        demoUser = new User({
+          email: "demo@healthcare.com",
+          password: await bcrypt.hash("demo123", 10),
+          firstName: "Demo",
+          lastName: "Practice",
+          username: "demo-healthcare",
+          role: "user",
+        });
+        await demoUser.save();
+      }
 
       // Create demo practice
       const demoData = new UserData({
