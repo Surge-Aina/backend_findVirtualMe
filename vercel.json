@@ -1,11 +1,14 @@
 {
   "rewrites": [
     {
-      "source": "/(src|node_modules|@react-refresh|@vite|assets)/(.*)",
-      "destination": "http://localhost:5173/$1/$2"
-    },
-    {
       "source": "/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "accept",
+          "value": "text/html.*"
+        }
+      ],
       "destination": "/domainRouter/routing-proxy?host=$host&path=$1"
     }
   ]
