@@ -1,6 +1,25 @@
 const DomainRoute = require("./DomainRouter.model");
 const axios = require("axios");
 
+// ----------------- Helpers -----------------
+
+function normalizeDomain(domain) {
+  return domain
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "");
+}
+
+function getPortfolioMeta(user, portfolioId) {
+  return user.portfolios.find(p =>
+    p.portfolioId.equals(portfolioId)
+  );
+}
+
+// ----------------- CREATE -----------------
+
 // POST /api/domains
 exports.createDomainRoute = async (req, res) => {
   try {
@@ -9,33 +28,41 @@ exports.createDomainRoute = async (req, res) => {
     const userId = user._id;
 
     if (!domain || !portfolioId) {
-      return res.status(400).json({ message: "Domain and portfolioId are required" });
+      return res.status(400).json({
+        message: "Domain and portfolioId are required"
+      });
     }
 
-    const normalizedDomain = domain.trim().toLowerCase();
+    const normalizedDomain = normalizeDomain(domain);
 
-    // Verify portfolio ownership
-    const portfolio = user.portfolios.find(p =>
-      p.portfolioId.equals(portfolioId)
-    );
+    // Verify portfolio ownership and extract routing fields
+    const portfolio = getPortfolioMeta(user, portfolioId);
 
     if (!portfolio) {
-      return res.status(403).json({ message: "You do not own this portfolio" });
+      return res.status(403).json({
+        message: "You do not own this portfolio"
+      });
     }
 
     // Prevent duplicate domain
-    const existing = await DomainRoute.findOne({ domain: normalizedDomain });
+    const existing = await DomainRoute.findOne({
+      domain: normalizedDomain
+    });
+
     if (existing) {
-      return res.status(409).json({ message: "Domain already mapped" });
+      return res.status(409).json({
+        message: "Domain already mapped"
+      });
     }
 
     const mapping = await DomainRoute.create({
       domain: normalizedDomain,
-      userId, // REQUIRED
+      userId,
       portfolioId,
+      portfolioType: portfolio.portfolioType,
       notes: notes || null,
       createdBy: userId,
-      updatedBy: userId,
+      updatedBy: userId
     });
 
     res.status(201).json(mapping);
@@ -45,7 +72,7 @@ exports.createDomainRoute = async (req, res) => {
   }
 };
 
-
+// ----------------- READ -----------------
 
 // GET /api/domains
 exports.getMyDomainRoutes = async (req, res) => {
@@ -63,7 +90,7 @@ exports.getMyDomainRoutes = async (req, res) => {
   }
 };
 
-
+// ----------------- UPDATE -----------------
 
 // PATCH /api/domains/:id
 exports.updateDomainRoute = async (req, res) => {
@@ -75,17 +102,21 @@ exports.updateDomainRoute = async (req, res) => {
 
     const route = await DomainRoute.findById(id);
     if (!route) {
-      return res.status(404).json({ message: "Mapping not found" });
+      return res.status(404).json({
+        message: "Mapping not found"
+      });
     }
 
-    // Ownership check — must own this mapping
+    // Ownership check
     if (!route.userId.equals(userId)) {
-      return res.status(403).json({ message: "Access denied" });
+      return res.status(403).json({
+        message: "Access denied"
+      });
     }
 
     // Domain update with collision check
     if (domain) {
-      const normalized = domain.trim().toLowerCase();
+      const normalized = normalizeDomain(domain);
 
       const existing = await DomainRoute.findOne({
         domain: normalized,
@@ -93,23 +124,26 @@ exports.updateDomainRoute = async (req, res) => {
       });
 
       if (existing) {
-        return res.status(409).json({ message: "Domain already mapped" });
+        return res.status(409).json({
+          message: "Domain already mapped"
+        });
       }
 
       route.domain = normalized;
     }
 
-    // Portfolio update — verify ownership only if changing
+    // Portfolio update — verify ownership and refresh routing fields
     if (portfolioId) {
-      const portfolio = user.portfolios.find(p =>
-        p.portfolioId.equals(portfolioId)
-      );
+      const portfolio = getPortfolioMeta(user, portfolioId);
 
       if (!portfolio) {
-        return res.status(403).json({ message: "You do not own this portfolio" });
+        return res.status(403).json({
+          message: "You do not own this portfolio"
+        });
       }
 
       route.portfolioId = portfolioId;
+      route.portfolioType = portfolio.portfolioType;
     }
 
     if (typeof isActive === "boolean") {
@@ -130,7 +164,7 @@ exports.updateDomainRoute = async (req, res) => {
   }
 };
 
-
+// ----------------- DELETE -----------------
 
 // DELETE /api/domains/:id
 exports.deleteDomainRoute = async (req, res) => {
@@ -140,27 +174,72 @@ exports.deleteDomainRoute = async (req, res) => {
 
     const route = await DomainRoute.findById(id);
     if (!route) {
-      return res.status(404).json({ message: "Mapping not found" });
+      return res.status(404).json({
+        message: "Mapping not found"
+      });
     }
 
     // Ownership check
     if (!route.userId.equals(userId)) {
-      return res.status(403).json({ message: "Access denied" });
+      return res.status(403).json({
+        message: "Access denied"
+      });
     }
 
     await route.deleteOne();
-    res.json({ message: "Mapping deleted" });
+    res.json({
+      message: "Mapping deleted"
+    });
   } catch (err) {
     console.error("Delete domain route error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
+const BYPASS_PREFIXES = [
+  "/@",
+  "/vite",
+  "/src",
+  "/assets",
+  "/favicon",
+  "/node_modules",
+  "/__inspect",
+  "/manifest.json"
+];
+
+function shouldBypass(path) {
+  // Catch the prefixes
+  const isPrefix = BYPASS_PREFIXES.some(prefix => path.startsWith(prefix));
+  // Catch common file extensions just in case
+  const isFile = /\.(js|css|png|jpg|jpeg|svg|gif|ico|woff|woff2)$/i.test(path);
+  
+  return isPrefix || isFile;
+}
 
 exports.routingProxy = async (req, res) => {
   try {
-    const host = req.query.host?.toLowerCase();
-    const path = req.query.path || "";
+    // ----------------- PATH -----------------
+    let rawPath = req.query.path || "";
+    if (!rawPath.startsWith("/")) rawPath = "/" + rawPath;
+
+    // ----------------- BYPASS DEV FILES -----------------
+    if (shouldBypass(rawPath)) {
+      const frontend = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
+      const targetUrl = `${frontend}${rawPath}`;
+      
+      // Use the same proxy logic here as you do for the portfolio
+      const response = await axios.get(targetUrl, {
+        responseType: "stream",
+      });
+
+      res.set("Content-Type", response.headers["content-type"]); // Crucial for JS files!
+      return response.data.pipe(res);
+    }
+
+    // ----------------- DETERMINE HOST -----------------
+    const host =
+      req.query.host?.toLowerCase() ||
+      req.headers.host?.split(":")[0]?.toLowerCase();
 
     if (!host) {
       return res.status(400).send("Missing host");
@@ -168,31 +247,40 @@ exports.routingProxy = async (req, res) => {
 
     const domain = host.replace(/^www\./, "");
 
+    // ----------------- FIND DOMAIN ROUTE -----------------
     const route = await DomainRoute.findOne({
       domain,
       isActive: true
     }).lean();
 
+    // ----------------- BUILD TARGET PATH -----------------
     let targetPath;
 
     if (route) {
-      targetPath = `/portfolios/${route.portfolioType}/${route.portfolioSlug}${path ? "/" + path : ""}`;
+      targetPath = `/portfolios/${route.portfolioType}/something/${route.portfolioId}${rawPath !== "/" ? rawPath : ""}`;
     } else {
-      // fallback to normal app behavior
-      targetPath = `/${path}`;
+      // fallback to normal path
+      targetPath = rawPath;
     }
 
-    const targetUrl = `https://www.findvirtual.me${targetPath}`;
+    // ----------------- FRONTEND URL -----------------
+    const frontend = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
+    const targetUrl = `${frontend}${targetPath}`;
 
+    // ----------------- PROXY REQUEST -----------------
     const response = await axios.get(targetUrl, {
       responseType: "stream",
       headers: {
-        "user-agent": req.headers["user-agent"]
-      }
+        "user-agent": req.headers["user-agent"],
+        // Optional: forward cookies if needed
+        cookie: req.headers.cookie || "",
+      },
     });
 
+    // ----------------- STREAM RESPONSE -----------------
     res.set(response.headers);
     response.data.pipe(res);
+
   } catch (err) {
     console.error("Routing proxy error:", err.message);
     res.status(500).send("Routing error");

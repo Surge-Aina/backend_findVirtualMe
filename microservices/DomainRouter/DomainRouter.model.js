@@ -10,25 +10,26 @@ const DomainRouteSchema = new mongoose.Schema(
       lowercase: true,
     },
 
-    // Owner of the portfolio
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
 
-    // Embedded portfolio ID inside user.portfolios[]
     portfolioId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      index: true,
+    },
+
+    portfolioType: {
+      type: String,
+      required: true,
+      trim: true,
     },
 
     isActive: {
       type: Boolean,
       default: true,
-      index: true,
     },
 
     notes: {
@@ -57,13 +58,12 @@ const DomainRouteSchema = new mongoose.Schema(
 // Normalize domain
 DomainRouteSchema.pre("save", function (next) {
   if (this.domain) {
-    this.domain = this.domain.trim().toLowerCase();
+    this.domain = this.domain.trim().toLowerCase().replace(/^www\./, "");
   }
   next();
 });
 
 // Indexes
-DomainRouteSchema.index({ domain: 1 }, { unique: true });
 DomainRouteSchema.index({ userId: 1 });
 DomainRouteSchema.index({ portfolioId: 1 });
 DomainRouteSchema.index({ isActive: 1 });
