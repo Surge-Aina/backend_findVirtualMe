@@ -15,34 +15,13 @@ const {
   listFilesInFolder,
 } = require("./oauthHandler");
 const healthcareRoutes = require("./routes/healthcare/healthcare_routes");
-const settingsRoutes = require("./routes/photographer/settingsRoute");
-const driveRoutes = require("./routes/photographer/driveRoute");
-const photoRoutes = require("./routes/photographer/photoRoute");
-//const uploadRoutes = require("./routes/photographer/uploadRoute");
 const userRoutes = require("./routes/userRoute");
 const projectManagerPortfolioRoutes = require("./routes/projectManager/portfolioRoute");
-const softwareEngRoutes = require("./routes/softwareEngineer/portfolio");
-const testimonialRoutes = require("./routes/dataScientist/testimonialRoute");
-const dashboardRoutes = require("./routes/dataScientist/dashboardRoute");
-const bannerRoutes = require("./routes/localFoodVendor/bannerRoutes");
-const aboutRoutes = require("./routes/localFoodVendor/aboutRoutes");
-const menuRoutes = require("./routes/localFoodVendor/menuRoutes");
-const galleryRoutes = require("./routes/localFoodVendor/galleryRoutes");
-const reviewRoutes = require("./routes/localFoodVendor/reviewRoutes");
-const taggedImageRoutes = require("./routes/localFoodVendor/taggedImageRoutes");
-const handymanPortfolioRoutes = require("./routes/handyMan/handymanPortfolioRoutes");
-const dataScientistRoutes = require("./routes/dataScientist/dataScientistRoutes");
-const userRoutes2 = require("./routes/cleaningLady/userRoute2");
-// const serviceRoutes = require('./routes/serviceRoutes.js');
-// const quoteRoutes = require('./routes/quoteRoutes.js');
-// const roomRoutes = require('./routes/roomRoutes.js');
+// const uploadRoutes = require("./routes/photographer/uploadRoute");
 const checkoutRoutes = require("./routes/stripePayment/checkoutRoutes");
 const authRoutes = require("./routes/auth"); // Import authentication routes
 const seedUsers = require("./seed/users"); // Import seed users function
 const domainResolver = require("./middleware/domainResolver"); // Import domain resolver
-const handymanTemplateRoutes = require("./routes/handyMan/handymanTemplateRoutes");
-const handymanInquiryRoutes = require("./routes/handyMan/handymanInquiryRoutes");
-const localVendorRoutes = require("./routes/localFoodVendor/localVendorRoutes");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes");
 const supportFormRoutes = require("./routes/supportFormRoutes");
@@ -54,10 +33,9 @@ const telemetryRoutes = require("./routes/telemetry");
 const guestUserRoutes = require("./microservices/guestLogin/guestUser.routes");
 const portfolioEditLogRoutes = require("./routes/portfolioEditLogRoutes");
 const guestAdminPanelRoutes = require("./microservices/guestAdminPanel/guestAdminPanel.routes");
-const portfolio_Routes = require("./routes/cleaningLady/portfolioRoutes");
 const socialLinksRoutes = require("./microservices/socialLinks/socialLinks.routes");
-const userPortfoliosArrayRoutes = require("./microservices/userPortfoliosArray/userPortfoliosArray.routes.js");
-const publicPortfoliosRoutes = require("./microservices/publicPortfolios/publicPortfolios.routes");
+//const userPortfoliosArrayRoutes = require("./microservices/userPortfoliosArray/userPortfoliosArray.routes.js");
+//const publicPortfoliosRoutes = require("./microservices/publicPortfolios/publicPortfolios.routes");
 const domainPaymentRouter = require("./microservices/domainPayment/stripe/stripe.route");
 const emailMvpRoutes = require("./microservices/emailmvp/emailmvp.routes");
 const domainRouting = require("./middleware/domainRouting");
@@ -84,7 +62,7 @@ const seededOrigins = [
   "http://127.0.0.1:5173",
   "http://dannizhou.me:5173",
   "https://localhost:5000",
-  "https://frontend-find-virtual-me-staging.vercel.app"
+  "https://frontend-find-virtual-me-staging.vercel.app",
 ]
   .filter(Boolean)
   .flatMap((entry) =>
@@ -151,11 +129,15 @@ const corsOptions = {
           return callback(null, true);
         }
 
-        console.warn(`[cors] Blocked origin "${origin}" (no matching active domain)`);
+        console.warn(
+          `[cors] Blocked origin "${origin}" (no matching active domain)`
+        );
         return callback(new Error("Not allowed by CORS"));
       })
       .catch((error) => {
-        console.error(`[cors] Failed checking origin "${origin}": ${error.message}`);
+        console.error(
+          `[cors] Failed checking origin "${origin}": ${error.message}`
+        );
         return callback(new Error("Not allowed by CORS"));
       });
   },
@@ -229,23 +211,7 @@ app.use("/subscriptions", auth, roleCheck(["admin"]), subscriptionRoutes);
 // app.use("/onboarding", onboardingRoutes);
 
 app.use("/user", userRoutes); //onboarding now routes here
-app.use("/settings", settingsRoutes);
-app.use("/drive", driveRoutes);
-app.use("/photo", photoRoutes);
 //app.use("/upload", uploadRoutes);
-app.use("/testimonials", testimonialRoutes);
-app.use("/dashboard", dashboardRoutes);
-app.use("/banner", bannerRoutes);
-app.use("/about", aboutRoutes);
-app.use("/menu", menuRoutes);
-app.use("/gallery", galleryRoutes);
-app.use("/reviews", reviewRoutes);
-app.use("/tagged", taggedImageRoutes);
-app.use("/vendor", localVendorRoutes);
-app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
-app.use("/datascience-portfolio", dataScientistRoutes);
-app.use("/api/handyman-template", handymanTemplateRoutes);
-app.use("/api/handyman/inquiries", handymanInquiryRoutes);
 app.use("/support-form", supportFormRoutes);
 app.use("/api/domains", domainRoutes);
 app.use("/api/portfolio-edit-log", portfolioEditLogRoutes);
@@ -255,7 +221,9 @@ app.use("/api/portfolio-edit-log", portfolioEditLogRoutes);
 // app.use('/quotes', quoteRoutes);
 // app.use('/rooms', roomRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.get("/health", (_req, res) => res.status(200).json({ ok: true, ts: Date.now() }));
+app.get("/health", (_req, res) =>
+  res.status(200).json({ ok: true, ts: Date.now() })
+);
 app.use("/healthcare", healthcareRoutes);
 app.use("/api/telemetry", telemetryRoutes);
 
@@ -263,8 +231,8 @@ app.use("/api/telemetry", telemetryRoutes);
 app.use("/guestUser", guestUserRoutes);
 app.use("/guestAdminPanel", guestAdminPanelRoutes);
 app.use("/social-links", socialLinksRoutes);
-app.use("/userPortfoliosArray", userPortfoliosArrayRoutes);
-app.use("/publicPortfolios", publicPortfoliosRoutes);
+//app.use("/userPortfoliosArray", userPortfoliosArrayRoutes);
+//app.use("/publicPortfolios", publicPortfoliosRoutes);
 app.use("/api/domainPayment", domainPaymentRouter);
 app.use("/google-login/", googleLoginRoutes);
 app.use("/contactMe", contactMeRoutes);
@@ -361,67 +329,6 @@ app.get("/oauth2callback", async (req, res) => {
     res.status(500).send("Auth failed");
   }
 });
-
-// // Create HTTP server with Socket.IO
-// const server = http.createServer(app);
-// const io = socketIo(server, {
-//   cors: {
-//     origin: config.server.corsOrigin,
-//     methods: ["GET", "POST"],
-//   },
-// });
-
-/**
- * Socket.IO connection handling for real-time updates
- */
-// io.on("connection", (socket) => {
-//   console.log("🔌 Client connected:", socket.id);
-
-//   socket.on("join-customer-room", () => {
-//     socket.join("customer-updates");
-//     socket.join("cust@test.com-updates");
-//     console.log("👥 Customer joined update room");
-//   });
-
-//   socket.on("join-admin-room", () => {
-//     socket.join("admin-updates");
-//     socket.join("admin@test.com-updates");
-//     console.log("👤 Admin joined update room");
-//   });
-
-//   socket.on("join-user-room", (userId) => {
-//     socket.join(`${userId}-updates`);
-//     console.log(`👤 User ${userId} joined their specific room`);
-//   });
-
-//   socket.on("disconnect", () => {
-//     console.log("🔌 Client disconnected:", socket.id);
-//   });
-// });
-
-// // Make io available to routes
-// app.set("io", io);
-
-/**
- * Test endpoint to trigger WebSocket events
- * @route   POST /test-websocket
- * @param   {Object} req - Express request object
- * @param   {Object} res - Express response object
- * @returns {Object} Success message
- */
-// app.post("/test-websocket", (req, res) => {
-//   const io = req.app.get("io");
-//   if (io) {
-//     io.emit("test-event", {
-//       message: "Test WebSocket event",
-//       timestamp: new Date().toISOString(),
-//     });
-//     console.log("📡 Test WebSocket event emitted");
-//     res.json({ message: "Test event sent" });
-//   } else {
-//     res.status(500).json({ error: "Socket.IO not available" });
-//   }
-// });
 
 /**
  * Start the Express server on the specified port
