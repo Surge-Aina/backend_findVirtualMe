@@ -12,7 +12,9 @@ const {
   aiSummary,
   getAllPortfolios,
 } = require("../../controllers/projectManager/portfolioController");
-const { submitContact } = require("../../controllers/projectManager/projectManagerContactController");
+const {
+  submitContact,
+} = require("../../microservices/contactMeForm/contactMeForm.controller");
 const auth = require("../../middleware/auth");
 
 const upload = multer({ storage: multer.memoryStorage() });

@@ -17,6 +17,7 @@ exports.getPublicPortfolios = async (req, res) => {
     res.status(500).json({ success: false, error: "Error getting public portfolios" });
   }
 };
+
 // GET my portfolio
 exports.getPortfolio = async (req, res) => {
   try {
@@ -58,6 +59,7 @@ exports.deletePortfolio = async (req, res) => {
     if (!result)
       return res.status(404).json({ success: false, message: "Portfolio not found" });
 
+    // Remove from user's portfolio list (works for all types including Healthcare)
     await User.findByIdAndUpdate(
       req.user._id,
       { $pull: { portfolios: { portfolioId: id } } },

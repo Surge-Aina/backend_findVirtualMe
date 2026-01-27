@@ -59,7 +59,10 @@ const socialLinksRoutes = require("./microservices/socialLinks/socialLinks.route
 const userPortfoliosArrayRoutes = require("./microservices/userPortfoliosArray/userPortfoliosArray.routes.js");
 const publicPortfoliosRoutes = require("./microservices/publicPortfolios/publicPortfolios.routes");
 const domainPaymentRouter = require("./microservices/domainPayment/stripe/stripe.route");
-const emailMvpRoutes = require('./microservices/emailmvp/emailmvp.routes');
+const emailMvpRoutes = require("./microservices/emailmvp/emailmvp.routes");
+const domainRouting = require("./middleware/domainRouting");
+const googleLoginRoutes = require("./microservices/googleLogin/googleLogin.routes.js");
+const contactMeRoutes = require("./microservices/contactMeForm/contactMeForm.routes.js");
 
 // Import configuration from separate file
 const config = require("./config");
@@ -186,8 +189,19 @@ app.use("/stripe-webhook", stripeWebhookRoutes);
 app.use(express.json({ limit: "1mb" }));
 
 // Domain resolver middleware - must be before other routes
-app.use(domainResolver);
-app.use("/api/portfolios", portfolio_Routes);
+// app.use(domainResolver);
+// app.use("/api/portfolios", portfolio_Routes);
+app.use(domainRouting);
+app.get("/api/domain-context", (req, res) => {
+  if (!req.domainContext) {
+    return res.json({ mapped: false });
+  }
+
+  res.json({
+    mapped: true,
+    ...req.domainContext,
+  });
+});
 
 setCredentialsFromEnv();
 
@@ -251,6 +265,8 @@ app.use("/social-links", socialLinksRoutes);
 app.use("/userPortfoliosArray", userPortfoliosArrayRoutes);
 app.use("/publicPortfolios", publicPortfoliosRoutes);
 app.use("/api/domainPayment", domainPaymentRouter);
+app.use("/google-login/", googleLoginRoutes);
+app.use("/contactMe", contactMeRoutes);
 
 //aiPortfolioCreator
 const contactRouter = require("./microservices/aiPortfolioCreator/contact/aiPortfolioCreator.routes.js");
@@ -269,7 +285,7 @@ const userRouter = require("./microservices/aiPortfolioCreator/name/name.routes.
 app.use("/name", userRouter);
 const publicProjectsRouter = require("./microservices/aiPortfolioCreator/publicProjectsAccess/publicProjectsAccess.routes.js");
 app.use("/api/publicProjects", publicProjectsRouter);
-app.use('/api/mvp', emailMvpRoutes);
+app.use("/api/mvp", emailMvpRoutes);
 const mongoose = require("mongoose");
 const nowIso = () => new Date().toISOString();
 app.get("/api/health", (_req, res) => {
