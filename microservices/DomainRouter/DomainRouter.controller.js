@@ -224,7 +224,7 @@ exports.routingProxy = async (req, res) => {
 
     // ----------------- BYPASS DEV FILES -----------------
     if (shouldBypass(rawPath)) {
-      const frontend = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
+      const frontend = process.env.FRONTEND_ORIGIN;
       const targetUrl = `${frontend}${rawPath}`;
       
       // Use the same proxy logic here as you do for the portfolio
