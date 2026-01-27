@@ -14,7 +14,6 @@ module.exports = async function domainRouting(req, res, next) {
       req.domainContext = {
         domain: host,
         portfolioId: route.portfolioId,
-        portfolioSlug: route.portfolioSlug || null,
       };
     } else {
       req.domainContext = null;
