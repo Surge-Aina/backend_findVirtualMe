@@ -15,9 +15,23 @@ const {
   listFilesInFolder,
 } = require("./oauthHandler");
 const healthcareRoutes = require("./routes/healthcare/healthcare_routes");
+const settingsRoutes = require("./routes/photographer/settingsRoute");
+const driveRoutes = require("./routes/photographer/driveRoute");
+const photoRoutes = require("./routes/photographer/photoRoute");
 const userRoutes = require("./routes/userRoute");
 const projectManagerPortfolioRoutes = require("./routes/projectManager/portfolioRoute");
-// const uploadRoutes = require("./routes/photographer/uploadRoute");
+const softwareEngRoutes = require("./routes/softwareEngineer/portfolio");
+const testimonialRoutes = require("./routes/dataScientist/testimonialRoute");
+const dashboardRoutes = require("./routes/dataScientist/dashboardRoute");
+const bannerRoutes = require("./routes/localFoodVendor/bannerRoutes");
+const aboutRoutes = require("./routes/localFoodVendor/aboutRoutes");
+const menuRoutes = require("./routes/localFoodVendor/menuRoutes");
+const galleryRoutes = require("./routes/localFoodVendor/galleryRoutes");
+const reviewRoutes = require("./routes/localFoodVendor/reviewRoutes");
+const taggedImageRoutes = require("./routes/localFoodVendor/taggedImageRoutes");
+const handymanPortfolioRoutes = require("./routes/handyMan/handymanPortfolioRoutes");
+const dataScientistRoutes = require("./routes/dataScientist/dataScientistRoutes");
+const userRoutes2 = require("./routes/cleaningLady/userRoute2");
 const checkoutRoutes = require("./routes/stripePayment/checkoutRoutes");
 const authRoutes = require("./routes/auth"); // Import authentication routes
 const seedUsers = require("./seed/users"); // Import seed users function
@@ -48,6 +62,18 @@ const config = require("./config");
 const User = require("./models/User");
 
 const app = express();
+app.use((req, _res, next) => {
+  console.log("━━━━━━━━━━━━━━━━━━━━━━");
+  console.log("➡️ INCOMING REQUEST");
+  console.log("TIME:", new Date().toISOString());
+  console.log("METHOD:", req.method);
+  console.log("HOST HEADER:", req.headers.host);
+  console.log("URL:", req.originalUrl);
+  console.log("ACCEPT:", req.headers.accept);
+  console.log("USER-AGENT:", req.headers["user-agent"]);
+  console.log("━━━━━━━━━━━━━━━━━━━━━━");
+  next();
+});
 const PORT = process.env.PORT;
 const seededOrigins = [
   process.env.FRONTEND_URL,
@@ -152,17 +178,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-//app.use(cors());
-
-//needed for webContainers
-// app.use((req, res, next) => {
-//   res.set({
-//     "Cross-Origin-Opener-Policy": "same-origin",
-//     "Cross-Origin-Embedder-Policy": "require-corp",
-//     "Cross-Origin-Resource-Policy": "same-origin",
-//   });
-//   next();
-// });
 
 app.set("trust proxy", true);
 
@@ -172,9 +187,6 @@ app.use("/stripe-webhook", stripeWebhookRoutes);
 
 app.use(express.json({ limit: "1mb" }));
 
-// Domain resolver middleware - must be before other routes
-// app.use(domainResolver);
-// app.use("/api/portfolios", portfolio_Routes);
 app.use(domainRouting);
 app.get("/api/domain-context", (req, res) => {
   if (!req.domainContext) {
@@ -192,9 +204,6 @@ setCredentialsFromEnv();
 // Mount the main portfolio API routes at /portfolio
 app.use("/portfolio", projectManagerPortfolioRoutes);
 
-// Mount the software engineering portfolio API routes at /softwareeng
-//app.use("/softwareeng", softwareEngRoutes);
-
 // Test route to verify routing is working
 app.get("/test-route", (req, res) => {
   res.json({
@@ -207,20 +216,26 @@ app.get("/test-route", (req, res) => {
 app.use("/checkout", auth, checkoutRoutes);
 //IT admin routes to handle user subscriptions
 app.use("/subscriptions", auth, roleCheck(["admin"]), subscriptionRoutes);
-
-//onboarding
-// app.use("/onboarding", onboardingRoutes);
-
 app.use("/user", userRoutes); //onboarding now routes here
-//app.use("/upload", uploadRoutes);
+app.use("/settings", settingsRoutes);
+app.use("/drive", driveRoutes);
+app.use("/photo", photoRoutes);
+app.use("/testimonials", testimonialRoutes);
+app.use("/dashboard", dashboardRoutes);
+app.use("/banner", bannerRoutes);
+app.use("/about", aboutRoutes);
+app.use("/menu", menuRoutes);
+app.use("/gallery", galleryRoutes);
+app.use("/reviews", reviewRoutes);
+app.use("/tagged", taggedImageRoutes);
+app.use("/vendor", localVendorRoutes);
+app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
+app.use("/datascience-portfolio", dataScientistRoutes);
+app.use("/api/handyman-template", handymanTemplateRoutes);
+app.use("/api/handyman/inquiries", handymanInquiryRoutes);
 app.use("/support-form", supportFormRoutes);
 app.use("/api/domains", domainRoutes);
 app.use("/api/portfolio-edit-log", portfolioEditLogRoutes);
-
-// app.use("/cleaning/user", userRoutes2);
-// app.use('/services', serviceRoutes);
-// app.use('/quotes', quoteRoutes);
-// app.use('/rooms', roomRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.get("/health", (_req, res) =>
   res.status(200).json({ ok: true, ts: Date.now() })
@@ -265,41 +280,11 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true, mongo, time: nowIso() });
 });
 
-/**
- * Connect to MongoDB using the connection function from utils/db.js
- * @function
- * @returns {Promise<void>} Logs success or error to console
- * @notes Uses centralized database connection. Connection is required for API to function.
- */
-// connectDB()
-//   .then(async () => {
-//     // Seed users after successful database connection
-//     await seedUsers();
-//   })
-//   .catch((err) => console.error(err)); // Log connection errors
-
-// /**
-//  * Mount the authentication API routes at /auth
-//  * @function
-//  * @param {string} path - The base path for the routes
-//  * @param {Router} router - The Express router for authentication APIs
-//  */
-// app.use("/auth", authRoutes);
-
-// /**
-//  * Serve static files from uploads directory
-//  * @function
-//  * @param {string} path - The URL path to serve files from
-//  * @param {Function} middleware - Express static middleware
-//  */
-// app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
 // Serve static files from uploads directory
 app.use(
   `/${config.uploads.directory}`,
   express.static(path.join(__dirname, config.uploads.directory))
 );
-// app.use('/api/settings', settingRoutes2);
 // Make config available to the app
 app.set("config", config);
 
@@ -331,17 +316,5 @@ app.get("/oauth2callback", async (req, res) => {
     res.status(500).send("Auth failed");
   }
 });
-
-/**
- * Start the Express server on the specified port
- * @function
- * @param {number} PORT - The port number to listen on
- * @returns {void}
- */
-
-// Only start the server if this file is run directly (not imported for testing)
-// if (require.main === module) {
-//   server.listen(PORT, () => console.log(`✅ Server running on PORT: ${PORT}`));
-// }
 
 module.exports = app;
