@@ -196,8 +196,6 @@ exports.deleteDomainRoute = async (req, res) => {
   }
 };
 
-const axios = require('axios');
-
 exports.routingProxy = async (req, res) => {
   try {
     const host =
