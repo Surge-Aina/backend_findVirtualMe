@@ -196,47 +196,8 @@ exports.deleteDomainRoute = async (req, res) => {
   }
 };
 
-const BYPASS_PREFIXES = [
-  "/@",
-  "/vite",
-  "/src",
-  "/assets",
-  "/favicon",
-  "/node_modules",
-  "/__inspect",
-  "/manifest.json"
-];
-
-function shouldBypass(path) {
-  // Catch the prefixes
-  const isPrefix = BYPASS_PREFIXES.some(prefix => path.startsWith(prefix));
-  // Catch common file extensions just in case
-  const isFile = /\.(js|css|png|jpg|jpeg|svg|gif|ico|woff|woff2)$/i.test(path);
-  
-  return isPrefix || isFile;
-}
-
 exports.routingProxy = async (req, res) => {
   try {
-    // ----------------- PATH -----------------
-    let rawPath = req.query.path || "";
-    if (!rawPath.startsWith("/")) rawPath = "/" + rawPath;
-
-    // ----------------- BYPASS DEV FILES -----------------
-    if (shouldBypass(rawPath)) {
-      const frontend = process.env.FRONTEND_ORIGIN;
-      const targetUrl = `${frontend}${rawPath}`;
-      
-      // Use the same proxy logic here as you do for the portfolio
-      const response = await axios.get(targetUrl, {
-        responseType: "stream",
-      });
-
-      res.set("Content-Type", response.headers["content-type"]); // Crucial for JS files!
-      return response.data.pipe(res);
-    }
-
-    // ----------------- DETERMINE HOST -----------------
     const host =
       req.query.host?.toLowerCase() ||
       req.headers.host?.split(":")[0]?.toLowerCase();
@@ -246,41 +207,36 @@ exports.routingProxy = async (req, res) => {
     }
 
     const domain = host.replace(/^www\./, "");
+    const path = "/" + (req.query.path || "").replace(/^\/+/, "");
 
-    // ----------------- FIND DOMAIN ROUTE -----------------
+    console.log("ROUTING:", { domain, path });
+
     const route = await DomainRoute.findOne({
       domain,
       isActive: true
     }).lean();
 
-    // ----------------- BUILD TARGET PATH -----------------
     let targetPath;
 
     if (route) {
-      targetPath = `/portfolios/${route.portfolioType}/something/${route.portfolioId}${rawPath !== "/" ? rawPath : ""}`;
+      targetPath = `/portfolios/${route.portfolioType}/${route.portfolioId}${path === "/" ? "" : path}`;
     } else {
-      // fallback to normal path
-      targetPath = rawPath;
+      targetPath = path;
     }
 
-    // ----------------- FRONTEND URL -----------------
-    const frontend = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
+    const frontend = process.env.FRONTEND_ORIGIN;
     const targetUrl = `${frontend}${targetPath}`;
 
-    // ----------------- PROXY REQUEST -----------------
     const response = await axios.get(targetUrl, {
       responseType: "stream",
       headers: {
         "user-agent": req.headers["user-agent"],
-        // Optional: forward cookies if needed
-        cookie: req.headers.cookie || "",
-      },
+        cookie: req.headers.cookie || ""
+      }
     });
 
-    // ----------------- STREAM RESPONSE -----------------
     res.set(response.headers);
     response.data.pipe(res);
-
   } catch (err) {
     console.error("Routing proxy error:", err.message);
     res.status(500).send("Routing error");
