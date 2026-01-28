@@ -253,7 +253,6 @@ exports.routingProxy = async (req, res) => {
     res.status(response.status);
     res.set(response.headers);
     response.data.pipe(res);
-
   } catch (err) {
     console.error("Routing proxy error:", err.message);
     res.status(500).send("Routing error");
