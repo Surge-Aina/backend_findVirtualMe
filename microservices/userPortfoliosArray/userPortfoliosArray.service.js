@@ -1,17 +1,22 @@
 const User = require("../../models/User");
-const handymanModel = require("../../models/handyMan/HandymanTemplate");
-const localFoodVendorModel = require("../../models/localFoodVendor/LocalVendorPortfolio");
-const cleaningLadyModel = require("../../models/cleaningLady/Portfolio");
+// const handymanModel = require("../../models/handyMan/HandymanTemplate");
+// const localFoodVendorModel = require("../../models/localFoodVendor/LocalVendorPortfolio");
+// const cleaningLadyModel = require("../../models/cleaningLady/Portfolio");
 const projectManagerModel = require("../../models/projectManager/portfolioModel");
 
-const modelsArrayUserId = [handymanModel, cleaningLadyModel];
+const modelsArrayUserId = [
+  // handymanModel, 
+  // cleaningLadyModel
+];
 
-const modelsArrayEmail = [localFoodVendorModel, projectManagerModel];
+const modelsArrayEmail = [
+  // localFoodVendorModel, 
+  projectManagerModel];
 
 const portfolioModels = {
-  Handyman: handymanModel,
-  LocalVendor: localFoodVendorModel,
-  CleaningLady: cleaningLadyModel,
+  // Handyman: handymanModel,
+  // LocalVendor: localFoodVendorModel,
+  // CleaningLady: cleaningLadyModel,
   ProjectManager: projectManagerModel,
 };
 

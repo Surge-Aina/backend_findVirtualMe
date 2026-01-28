@@ -1,24 +1,28 @@
 const ProjectManager = require("../../models/projectManager/portfolioModel");
-const Handyman = require("../../models/handyMan/HandymanTemplate");
-const LocalVendor = require("../../models/localFoodVendor/LocalVendorPortfolio");
-const CleaningLady = require("../../models/cleaningLady/Portfolio");
+// const Handyman = require("../../models/handyMan/HandymanTemplate");
+// const LocalVendor = require("../../models/localFoodVendor/LocalVendorPortfolio");
+// const CleaningLady = require("../../models/cleaningLady/Portfolio");
 const Healthcare = require('../../models/healthcare/userData');
 
 const modelMap = {
   ProjectManager,
-  Handyman,
-  LocalVendor,
-  CleaningLady,
+  // Handyman,
+  // LocalVendor,
+  // CleaningLady,
   Healthcare
 };
 
 exports.getPublicPortfolios = async () => {
   try {
-    const [pm, hm, lv, cl, hc] = await Promise.all([
+    const [pm, 
+      // hm, 
+      // lv, 
+      // cl, 
+      hc] = await Promise.all([
       ProjectManager.find({ isPublic: true }).lean(),
-      Handyman.find({ isPublic: true }).lean(),
-      LocalVendor.find({ isPublic: true }).lean(),
-      CleaningLady.find({ isPublic: true }).lean(),
+      // Handyman.find({ isPublic: true }).lean(),
+      // LocalVendor.find({ isPublic: true }).lean(),
+      // CleaningLady.find({ isPublic: true }).lean(),
       Healthcare.find({ isPublic: true, isActive: true }).lean()
     ]);
 
@@ -28,7 +32,11 @@ exports.getPublicPortfolios = async () => {
       portfolioType: 'Healthcare'
     }));
 
-    return [...pm, ...hm, ...lv, ...cl, ...healthcareWithType];
+    return [...pm, 
+      // ...hm, 
+      // ...lv,
+      // ...cl, 
+      ...healthcareWithType];
   } catch (error) {
     console.log("getPublicPortfolios Error:", error);
     throw error;
