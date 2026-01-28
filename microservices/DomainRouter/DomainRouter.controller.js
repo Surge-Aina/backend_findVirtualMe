@@ -196,63 +196,87 @@ exports.deleteDomainRoute = async (req, res) => {
   }
 };
 
-exports.routingProxy = async (req, res) => {
+// exports.routingProxy = async (req, res) => {
+  // try {
+  //   const host =
+  //     req.query.host?.toLowerCase() ||
+  //     req.headers.host?.split(":")[0]?.toLowerCase();
+
+  //   if (!host) {
+  //     return res.status(400).send("Missing host");
+  //   }
+
+  //   const domain = host.replace(/^www\./, "");
+  //   const path = "/" + (req.query.path || "").replace(/^\/+/, "");
+
+  //   // 1. Look up the domain routing rules
+  //   const route = await DomainRoute.findOne({
+  //     domain,
+  //     isActive: true
+  //   }).lean();
+
+  //   // 2. Determine the internal target path
+  //   let targetPath;
+  //   if (route) {
+  //     targetPath = `/portfolios/${route.portfolioType}/${route.portfolioId}${path === "/" ? "" : path}`;
+  //   } else {
+  //     targetPath = path;
+  //   }
+
+  //   const frontend = process.env.FRONTEND_ORIGIN; 
+    
+  //   // If the request is for a page (no file extension), serve index.html
+  //   // If it has an extension (.js, .css, .png), fetch the actual file.
+  //   const hasExtension = /\.[a-z0-9]+$/i.test(path);
+  //   const targetUrl = hasExtension 
+  //     ? `${frontend}${targetPath}` 
+  //     : `${frontend}/index.html`;
+
+  //   console.log("ROUTING:", { domain, path, targetUrl });
+
+  //   // 4. Proxy the request
+  //   const response = await axios.get(targetUrl, {
+  //     responseType: "stream",
+  //     headers: {
+  //       "user-agent": req.headers["user-agent"],
+  //       "cookie": req.headers.cookie || "",
+  //       // Pass the original host if your frontend logic needs it
+  //       "x-forwarded-host": host 
+  //     },
+  //     // Prevent axios from throwing on 404s so you can pipe the 404 error instead
+  //     validateStatus: () => true 
+  //   });
+
+  //   // 5. Pipe the response back to the browser
+  //   res.status(response.status);
+  //   res.set(response.headers);
+  //   response.data.pipe(res);
+  // } catch (err) {
+  //   console.error("Routing proxy error:", err.message);
+  //   res.status(500).send("Routing error");
+  // }
+// };
+
+// ----------------- DOMAIN LOOKUP -----------------
+
+exports.domainLookup = async (req, res) => { 
   try {
-    const host =
-      req.query.host?.toLowerCase() ||
-      req.headers.host?.split(":")[0]?.toLowerCase();
-
-    if (!host) {
-      return res.status(400).send("Missing host");
-    }
-
-    const domain = host.replace(/^www\./, "");
-    const path = "/" + (req.query.path || "").replace(/^\/+/, "");
-
-    // 1. Look up the domain routing rules
+    const domain = req.query.domain?.toLowerCase().replace(/^www\./, '');
+    
     const route = await DomainRoute.findOne({
       domain,
       isActive: true
     }).lean();
 
-    // 2. Determine the internal target path
-    let targetPath;
     if (route) {
-      targetPath = `/portfolios/${route.portfolioType}/${route.portfolioId}${path === "/" ? "" : path}`;
+      res.json({
+        portfolioId: route.portfolioId,
+        portfolioType: route.portfolioType
+      });
     } else {
-      targetPath = path;
+      res.status(404).json({ error: 'Domain not found' });
     }
-
-    const frontend = process.env.FRONTEND_ORIGIN; 
-    
-    // If the request is for a page (no file extension), serve index.html
-    // If it has an extension (.js, .css, .png), fetch the actual file.
-    const hasExtension = /\.[a-z0-9]+$/i.test(path);
-    const targetUrl = hasExtension 
-      ? `${frontend}${targetPath}` 
-      : `${frontend}/index.html`;
-
-    console.log("ROUTING:", { domain, path, targetUrl });
-
-    // 4. Proxy the request
-    const response = await axios.get(targetUrl, {
-      responseType: "stream",
-      headers: {
-        "user-agent": req.headers["user-agent"],
-        "cookie": req.headers.cookie || "",
-        // Pass the original host if your frontend logic needs it
-        "x-forwarded-host": host 
-      },
-      // Prevent axios from throwing on 404s so you can pipe the 404 error instead
-      validateStatus: () => true 
-    });
-
-    // 5. Pipe the response back to the browser
-    res.status(response.status);
-    res.set(response.headers);
-    response.data.pipe(res);
   } catch (err) {
-    console.error("Routing proxy error:", err.message);
-    res.status(500).send("Routing error");
+    res.status(500).json({ error: 'Lookup failed' });
   }
 };

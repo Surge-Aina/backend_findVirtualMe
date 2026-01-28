@@ -56,7 +56,7 @@ const userPortfoliosArrayRoutes = require("./microservices/userPortfoliosArray/u
 const publicPortfoliosRoutes = require("./microservices/publicPortfolios/publicPortfolios.routes");
 const domainPaymentRouter = require("./microservices/domainPayment/stripe/stripe.route");
 const emailMvpRoutes = require("./microservices/emailmvp/emailmvp.routes");
-const domainRouting = require("./middleware/domainRouting");
+// const domainRouting = require("./middleware/domainRouting");
 const googleLoginRoutes = require("./microservices/googleLogin/googleLogin.routes.js");
 const contactMeRoutes = require("./microservices/contactMeForm/contactMeForm.routes.js");
 const domainRouterRoutes = require("./microservices/DomainRouter/DomainRouter.routes.js")
@@ -185,7 +185,7 @@ app.use("/stripe-webhook", stripeWebhookRoutes);
 
 app.use(express.json({ limit: "1mb" }));
 
-app.use(domainRouting);
+// app.use(domainRouting);
 app.get("/api/domain-context", (req, res) => {
   if (!req.domainContext) {
     return res.json({ mapped: false });
