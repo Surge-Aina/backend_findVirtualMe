@@ -7,20 +7,20 @@ const fs = require("fs");
 const http = require("http");
 const socketIo = require("socket.io");
 const { google } = require("googleapis");
-const {
-  oauth2Client,
-  getAuthUrl,
-  getTokensFromCode,
-  setCredentialsFromEnv,
-  listFilesInFolder,
-} = require("./oauthHandler");
+// const {
+//   oauth2Client,
+//   getAuthUrl,
+//   getTokensFromCode,
+//   setCredentialsFromEnv,
+//   listFilesInFolder,
+// } = require("./oauthHandler");
 const healthcareRoutes = require("./routes/healthcare/healthcare_routes");
 const userRoutes = require("./routes/userRoute");
 const projectManagerPortfolioRoutes = require("./routes/projectManager/portfolioRoute");
 // const uploadRoutes = require("./routes/photographer/uploadRoute");
 const checkoutRoutes = require("./routes/stripePayment/checkoutRoutes");
 const authRoutes = require("./routes/auth"); // Import authentication routes
-const seedUsers = require("./seed/users"); // Import seed users function
+// const seedUsers = require("./seed/users"); // Import seed users function
 const domainResolver = require("./middleware/domainResolver"); // Import domain resolver
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes");
@@ -187,7 +187,7 @@ app.get("/api/domain-context", (req, res) => {
   });
 });
 
-setCredentialsFromEnv();
+// setCredentialsFromEnv();
 
 // Mount the main portfolio API routes at /portfolio
 app.use("/portfolio", projectManagerPortfolioRoutes);
@@ -309,27 +309,23 @@ app.get("/", (req, res) => {
   });
 });
 
-app.get("/auth-url", (req, res) => {
-  // Call manually in browser
-  res.send(getAuthUrl());
-});
 
-// OAuth callback (Google will redirect here after consent)
-app.get("/oauth2callback", async (req, res) => {
-  const code = req.query.code;
-  try {
-    const tokens = await getTokensFromCode(code);
+// // OAuth callback (Google will redirect here after consent)
+// app.get("/oauth2callback", async (req, res) => {
+//   const code = req.query.code;
+//   try {
+//     const tokens = await getTokensFromCode(code);
 
-    if (tokens.refresh_token) {
-      fs.appendFileSync(".env", `\nREFRESH_TOKEN=${tokens.refresh_token}`);
-    }
+//     if (tokens.refresh_token) {
+//       fs.appendFileSync(".env", `\nREFRESH_TOKEN=${tokens.refresh_token}`);
+//     }
 
-    res.send("Authorization successful! You can close this tab.");
-  } catch (err) {
-    console.error("Error exchanging code:", err);
-    res.status(500).send("Auth failed");
-  }
-});
+//     res.send("Authorization successful! You can close this tab.");
+//   } catch (err) {
+//     console.error("Error exchanging code:", err);
+//     res.status(500).send("Auth failed");
+//   }
+// });
 
 /**
  * Start the Express server on the specified port
