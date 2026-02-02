@@ -1,8 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const UserData = require("../../models/healthcare/userData");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const User = require("../../models/User");
+const UserData = require("../../models/healthcare/userData");
 const verifyToken = require("../../middleware/auth");
+const auth = require("../../middleware/auth");
 
 // ==========================================
 // PUBLIC ROUTES (No Auth Required)
@@ -280,6 +283,147 @@ router.get("/my-portfolios", verifyToken, async (req, res) => {
   }
 });
 
+//Register new Practice
+router.post("/auth/register", auth, async (req, res) => {
+  try {
+    const { email, password, firstName, lastName, practiceName } = req.body;
+    const user = req.user;
+
+    // Validation
+    if (!email || !password || !firstName || !lastName || !practiceName) {
+      return res.status(400).json({
+        error: "All fields are required",
+      });
+    }
+
+    // Generate unique practice ID (kept for backward compatibility, but _id is primary)
+    const practiceId = `practice_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+
+    // Create practice data
+    const practiceData = new UserData({
+      practiceId, // Keep for legacy/reference
+      userId: user._id.toString(),
+      practice: {
+        name: practiceName,
+        tagline: "Your Health, Our Priority",
+        description: "Providing exceptional healthcare services.",
+      },
+      contact: {
+        phone: "",
+        whatsapp: "",
+        email: email,
+        address: {
+          street: "",
+          city: "",
+          state: "",
+          zip: "",
+        },
+      },
+      hours: {
+        weekdays: "Mon-Fri: 9:00 AM - 5:00 PM",
+        saturday: "Sat: Closed",
+        sunday: "Sun: Closed",
+      },
+      stats: {
+        yearsExperience: "0",
+        patientsServed: "0",
+        successRate: "0",
+        doctorsCount: "0",
+      },
+      services: [],
+      blogPosts: [],
+      gallery: {
+        facilityImages: [],
+        beforeAfterCases: [],
+      },
+      seo: {
+        siteTitle: `${practiceName} - Healthcare Services`,
+        metaDescription: "Quality healthcare services",
+        keywords: "healthcare, medical, clinic",
+      },
+    });
+
+    await practiceData.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Practice registered successfully",
+      practiceId,
+      portfolio: practiceData,
+    });
+  } catch (error) {
+    console.error("Registration error:", error);
+    res.status(500).json({
+      error: "Registration failed",
+      details: error.message,
+    });
+  }
+});
+
+
+router.post("/auth/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find user
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    // Check password
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
+
+    // Generate token
+    const token = jwt.sign(
+      {
+        id: user._id,
+        email: user.email,
+        practiceId: user.practiceId,
+        role: user.role,
+      },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "30d" }
+    );
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        practiceId: user.practiceId,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ error: "Login failed" });
+  }
+});
+// Get current user info
+router.get("/auth/me", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
 // Get admin data for authenticated user's portfolio
 router.get("/admin/data", verifyToken, async (req, res) => {
   try {
