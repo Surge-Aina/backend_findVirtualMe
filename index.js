@@ -52,7 +52,7 @@ const socialLinksRoutes = require("./microservices/socialLinks/socialLinks.route
 //const publicPortfoliosRoutes = require("./microservices/publicPortfolios/publicPortfolios.routes");
 const domainPaymentRouter = require("./microservices/domainPayment/stripe/stripe.route");
 const emailMvpRoutes = require("./microservices/emailmvp/emailmvp.routes");
-const domainRouting = require("./middleware/domainRouting");
+// const domainRouting = require("./middleware/domainRouting");
 const googleLoginRoutes = require("./microservices/googleLogin/googleLogin.routes.js");
 const contactMeRoutes = require("./microservices/contactMeForm/contactMeForm.routes.js");
 const domainRouterRoutes = require("./microservices/DomainRouter/DomainRouter.routes.js")
@@ -62,18 +62,7 @@ const config = require("./config");
 const User = require("./models/User");
 
 const app = express();
-app.use((req, _res, next) => {
-  console.log("━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("➡️ INCOMING REQUEST");
-  console.log("TIME:", new Date().toISOString());
-  console.log("METHOD:", req.method);
-  console.log("HOST HEADER:", req.headers.host);
-  console.log("URL:", req.originalUrl);
-  console.log("ACCEPT:", req.headers.accept);
-  console.log("USER-AGENT:", req.headers["user-agent"]);
-  console.log("━━━━━━━━━━━━━━━━━━━━━━");
-  next();
-});
+
 const PORT = process.env.PORT;
 const seededOrigins = [
   process.env.FRONTEND_URL,
@@ -88,8 +77,7 @@ const seededOrigins = [
   "http://127.0.0.1:5173",
   "http://dannizhou.me:5173",
   "https://localhost:5000",
-  "https://frontend-find-virtual-me-staging.vercel.app",
-  "https://staging.findvirtual.me",
+  "http://mytestdomain.local",
 ]
   .filter(Boolean)
   .flatMap((entry) =>
@@ -187,7 +175,6 @@ app.use("/stripe-webhook", stripeWebhookRoutes);
 
 app.use(express.json({ limit: "1mb" }));
 
-app.use(domainRouting);
 app.get("/api/domain-context", (req, res) => {
   if (!req.domainContext) {
     return res.json({ mapped: false });
