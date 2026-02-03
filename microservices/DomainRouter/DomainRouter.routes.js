@@ -41,6 +41,8 @@ const DomainRoute = require("./DomainRouter.model");
 //   next();
 // }, domainCtrl.routingProxy)
 
+// /domainRouter
+
 router.post("/", auth, domainCtrl.createDomainRoute);
 router.get("/", auth, domainCtrl.getMyDomainRoutes);
 router.patch("/:id", auth, domainCtrl.updateDomainRoute);

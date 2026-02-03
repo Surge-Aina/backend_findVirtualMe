@@ -1,76 +1,30 @@
 const DomainRoute = require("./DomainRouter.model");
 const axios = require("axios");
-
-// ----------------- Helpers -----------------
-
-function normalizeDomain(domain) {
-  return domain
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, "")
-    .replace(/^www\./, "")
-    .replace(/\/.*$/, "");
-}
-
-function getPortfolioMeta(user, portfolioId) {
-  return user.portfolios.find(p =>
-    p.portfolioId.equals(portfolioId)
-  );
-}
-
+const { createDomainMapping } = require("./DomainRouter.service");
+const { normalizeDomain, getPortfolioMeta } = require("./utils/domainHelpers");
+const  {addDomainToUser}  = require("../../services/domainService")
 // ----------------- CREATE -----------------
 
 // POST /api/domains
 exports.createDomainRoute = async (req, res) => {
   try {
-    const { domain, portfolioId, notes } = req.body;
-    const user = req.user;
-    const userId = user._id;
-
-    if (!domain || !portfolioId) {
-      return res.status(400).json({
-        message: "Domain and portfolioId are required"
-      });
-    }
-
-    const normalizedDomain = normalizeDomain(domain);
-
-    // Verify portfolio ownership and extract routing fields
-    const portfolio = getPortfolioMeta(user, portfolioId);
-
-    if (!portfolio) {
-      return res.status(403).json({
-        message: "You do not own this portfolio"
-      });
-    }
-
-    // Prevent duplicate domain
-    const existing = await DomainRoute.findOne({
-      domain: normalizedDomain
-    });
-
-    if (existing) {
-      return res.status(409).json({
-        message: "Domain already mapped"
-      });
-    }
-
-    const mapping = await DomainRoute.create({
-      domain: normalizedDomain,
-      userId,
-      portfolioId,
-      portfolioType: portfolio.portfolioType,
-      notes: notes || null,
-      createdBy: userId,
-      updatedBy: userId
+    const mapping = await createDomainMapping({
+      domain: req.body.domain,
+      portfolioId: req.body.portfolioId,
+      notes: req.body.notes,
+      user: req.user
     });
 
     res.status(201).json(mapping);
   } catch (err) {
     console.error("Create domain route error:", err);
-    res.status(500).json({ message: "Server error" });
+
+    res.status(err.status || 500).json({
+      message: err.message || "Server error"
+    });
   }
 };
+
 
 // ----------------- READ -----------------
 
@@ -134,7 +88,7 @@ exports.updateDomainRoute = async (req, res) => {
 
     // Portfolio update — verify ownership and refresh routing fields
     if (portfolioId) {
-      const portfolio = getPortfolioMeta(user, portfolioId);
+      const portfolio = user.portfolios.find((p) => p.portfolioId.equals(portfolioId));
 
       if (!portfolio) {
         return res.status(403).json({
@@ -156,6 +110,19 @@ exports.updateDomainRoute = async (req, res) => {
 
     route.updatedBy = userId;
     await route.save();
+
+    // Sync with User.domains
+    // Only call if domain exists
+    if (route.domain) {
+      const options = {
+        type: "platform", 
+        status: route.isActive ? "active" : "pending",
+        dnsConfigured: false,
+        registeredAt: route.createdAt,
+      };
+
+      await addDomainToUser(userId, route.domain, route.portfolioId, options);
+    }
 
     res.json(route);
   } catch (err) {
