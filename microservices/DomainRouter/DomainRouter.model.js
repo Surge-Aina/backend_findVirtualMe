@@ -18,12 +18,10 @@ const DomainRouteSchema = new mongoose.Schema(
 
     portfolioId: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
     },
 
     portfolioType: {
       type: String,
-      required: true,
       trim: true,
     },
 
