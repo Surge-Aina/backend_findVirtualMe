@@ -28,7 +28,7 @@ exports.getPortfolio = async (req, res) => {
 
     res.json(result);
   } catch (err) {
-    console.log("getPortfolio error: ", err);
+    console.log("getPortfolio error: ", err.message);
     res.status(500).json({ success: false, error: "Error getting my portfolio" });
   }
 };

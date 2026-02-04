@@ -4,40 +4,76 @@ const namecheap = require("./namecheapProxy.service");
 const { createDomainMapping } = require("../../DomainRouter/DomainRouter.service");
 
 exports.handleFulfillment = async (domain, userId, paymentIntentId) => {
+  console.log(`Starting fulfillment for ${domain} (User: ${userId})`);
+
   try {
-    // Purchase domain with Namecheap
+    //Don't process if this payment was already handled
+    const existingUser = await User.findOne({ "domains.paymentIntentId": paymentIntentId });
+    if (existingUser) {
+      console.log(`Payment ${paymentIntentId} already processed. Skipping.`);
+      return;
+    }
+
+    // Purchase Domain via Namecheap
     await namecheap.registerDomain({ domain });
+    console.log(`Domain ${domain} successfully registered via Namecheap.`);
 
-    // Add domain to Vercel
-    const vercelResult = await vercelService.addDomain(domain, userId);
+    // Add to Vercel
+    let vercelResult;
+    try {
+      vercelResult = await vercelService.addDomain(domain);
+    } catch (vercelErr) {
+      // If Namecheap succeeded but Vercel failed
+      console.error("Namecheap succeeded, but Vercel addition failed:", vercelErr);
+      await User.updateOne(
+        { _id: userId },
+        {
+          $push: {
+            domains: {
+              domain,
+              status: "manual_intervention_required",
+              failureReason: `Registered, but Vercel error: ${vercelErr.message}`,
+              paymentIntentId,
+              registeredAt: new Date(),
+            },
+          },
+        }
+      );
+      return; //don't proceed to mapping if Vercel failed
+    }
 
-    // Update user record with domain status
-    await User.updateOne(
+    //Update User & Create Mapping 
+    const updatedUser = await User.findOneAndUpdate(
       { _id: userId },
       {
         $push: {
           domains: {
             domain,
             status: vercelResult?.verified ? "active" : "pending_verification",
+            verificationRecords: vercelResult?.verification || [],
             registeredAt: new Date(),
             paymentIntentId,
           },
         },
-      }
+      },
+      { new: true }
     );
 
-    //Update DomainRouter.model records
-    const user = await User.findById(userId);
     await createDomainMapping({
-      domain: domain,
-      user: user,
+      domain,
+      user: updatedUser,
       portfolioId: null,
-      notes:null,
+      notes: "Automatic fulfillment via Stripe Webhook",
     });
 
+    console.log(`Fulfillment complete for ${domain}`);
+
   } catch (err) {
+    console.error("Critical fulfillment error:", err);
+
+    //Mark as failed if we haven't already handled it above
     await User.updateOne(
-      { _id: userId },
+      { _id: userId, "domains.paymentIntentId": { $ne: paymentIntentId } },
       {
         $push: {
           domains: {
@@ -49,7 +85,5 @@ exports.handleFulfillment = async (domain, userId, paymentIntentId) => {
         },
       }
     );
-
-    console.error("Domain fulfillment error:", err);
   }
 };
