@@ -74,15 +74,15 @@ exports.createCheckoutSession = async (req, res) => {
  */
 exports.handleStripeWebhook = async (req, res) => {
   const sig = req.headers["stripe-signature"];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET_CLI;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET_PURCHASE_DOMAIN;
   let event;
 
   try {
     // 1. Verify the event signature using the raw body
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
   } catch (err) {
-    console.error(`Webhook signature verification failed: ${err.message}`);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    console.error(`Domain Purchase Webhook signature verification failed: ${err.message}`);
+    return res.status(400).send(`Domain Purchase Webhook Error: ${err.message}`);
   }
 
   // 2. Handle the event type
@@ -95,7 +95,9 @@ exports.handleStripeWebhook = async (req, res) => {
 
     // 3. Trigger the asynchronous fulfillment service
     // NOTE: We don't wait for fulfillment here. We respond 200 immediately to Stripe.
-    handleFulfillment(domain, userId, paymentIntentId);
+    handleFulfillment(domain, userId, paymentIntentId).catch(err => {
+      console.error("FATAL: Background fulfillment failed to initialize:", err);
+    });
   }
 
   // 4. Return a 200 immediately to acknowledge receipt of the event
