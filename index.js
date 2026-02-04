@@ -120,6 +120,7 @@ const corsOptions = {
 
     const normalizedOrigin = `${parsed.protocol}//${parsed.host}`.toLowerCase();
     const hostname = parsed.hostname.toLowerCase();
+    const cleanHostname = hostname.replace(/^www\./, "");
 
     // 1. Instant check for whitelisted & previously cached domains
     if (
@@ -133,7 +134,7 @@ const corsOptions = {
     // 2. Dynamic check for custom domains
     try {
       const match = await User.exists({
-        "domains.domain": hostname,
+        "domains.domain": cleanHostname,
         "domains.status": { $in: ["active", "pending_verification", "pending"] }
       });
 
