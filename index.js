@@ -81,7 +81,6 @@ const seededOrigins = [
   "http://127.0.0.1:5173",
   "http://dannizhou.me:5173",
   "https://localhost:5000",
-  "http://mytestdomain.local",
 ]
   .filter(Boolean)
   .flatMap((entry) =>
@@ -111,58 +110,53 @@ for (const origin of seededOrigins) {
   }
 }
 
+
 const corsOptions = {
-  origin: seededOrigins,
-  origin: (origin, callback) => {
-    if (!origin) {
-      return callback(null, true);
-    }
+  origin: async (origin, callback) => {
+    if (!origin) return callback(null, true);
 
     let parsed;
     try {
       parsed = new URL(origin);
     } catch (error) {
-      console.warn(`[cors] Rejecting malformed origin "${origin}"`);
       return callback(new Error("Invalid origin"));
     }
 
     const normalizedOrigin = `${parsed.protocol}//${parsed.host}`.toLowerCase();
     const hostname = parsed.hostname.toLowerCase();
 
-    if (hostname.endsWith("surge-ainas-projects.vercel.app")) {
+    // 1. Instant check for whitelisted & previously cached domains
+    if (
+      hostname.endsWith("surge-ainas-projects.vercel.app") || 
+      staticOriginSet.has(normalizedOrigin) || 
+      staticHostnameSet.has(hostname)
+    ) {
       return callback(null, true);
     }
 
-    if (staticOriginSet.has(normalizedOrigin) || staticHostnameSet.has(hostname)) {
-      return callback(null, true);
-    }
-
-    User.exists({
-      "domains.domain": hostname,
-      "domains.status": "active",
-    })
-      .then((match) => {
-        if (match) {
-          staticOriginSet.add(normalizedOrigin);
-          staticHostnameSet.add(hostname);
-          return callback(null, true);
-        }
-
-        console.warn(`[cors] Blocked origin "${origin}" (no matching active domain)`);
-        return callback(new Error("Not allowed by CORS"));
-      })
-      .catch((error) => {
-        console.error(`[cors] Failed checking origin "${origin}": ${error.message}`);
-        return callback(new Error("Not allowed by CORS"));
+    // 2. Dynamic check for custom domains
+    try {
+      const match = await User.exists({
+        "domains.domain": hostname,
+        "domains.status": { $in: ["active", "pending_verification", "pending"] }
       });
+
+      if (match) {
+        // Cache it for this instance's lifetime
+        staticOriginSet.add(normalizedOrigin);
+        staticHostnameSet.add(hostname);
+        return callback(null, true);
+      }
+
+      console.warn(`[cors] Blocked: ${origin}`);
+      return callback(new Error("Not allowed by CORS"));
+    } catch (error) {
+      console.error(`[cors] DB Error: ${error.message}`);
+      // Fail safe: if DB is down, allow your main whitelist but block unknowns
+      return callback(new Error("CORS validation failed"));
+    }
   },
   credentials: true,
-  // allowedHeaders: [
-  //   "Content-Type",
-  //   "Authorization",
-  //   "Cross-Origin-Embedder-Policy",
-  //   "Cross-Origin-Opener-Policy",
-  // ],
 };
 
 app.use(cors(corsOptions));
