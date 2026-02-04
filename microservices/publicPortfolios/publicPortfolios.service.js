@@ -45,7 +45,7 @@ exports.getMyPortfolio = async (type, id) => {
 
     return portfolio || null;
   } catch (error) {
-    console.log("getMyPortfolio Error:", error);
+    console.log("getMyPortfolio Error:", error.message);
     throw error;
   }
 };
