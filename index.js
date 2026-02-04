@@ -138,7 +138,11 @@ const corsOptions = {
     // 2. Dynamic check for custom domains
     try {
       const match = await User.exists({
+<<<<<<< HEAD
         "domains.domain": cleanHostname,
+=======
+        "domains.domain": hostname,
+>>>>>>> main
         "domains.status": { $in: ["active", "pending_verification", "pending"] }
       });
 
