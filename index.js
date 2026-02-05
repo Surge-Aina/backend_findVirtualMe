@@ -36,6 +36,9 @@ const checkoutRoutes = require("./routes/stripePayment/checkoutRoutes");
 const authRoutes = require("./routes/auth"); // Import authentication routes
 const seedUsers = require("./seed/users"); // Import seed users function
 const domainResolver = require("./middleware/domainResolver"); // Import domain resolver
+const handymanTemplateRoutes = require("./routes/handyMan/handymanTemplateRoutes");
+const handymanInquiryRoutes = require("./routes/handyMan/handymanInquiryRoutes");
+const localVendorRoutes = require("./routes/localFoodVendor/localVendorRoutes");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes");
 const supportFormRoutes = require("./routes/supportFormRoutes");
@@ -47,9 +50,10 @@ const telemetryRoutes = require("./routes/telemetry");
 const guestUserRoutes = require("./microservices/guestLogin/guestUser.routes");
 const portfolioEditLogRoutes = require("./routes/portfolioEditLogRoutes");
 const guestAdminPanelRoutes = require("./microservices/guestAdminPanel/guestAdminPanel.routes");
+const portfolio_Routes = require("./routes/cleaningLady/portfolioRoutes");
 const socialLinksRoutes = require("./microservices/socialLinks/socialLinks.routes");
-//const userPortfoliosArrayRoutes = require("./microservices/userPortfoliosArray/userPortfoliosArray.routes.js");
-//const publicPortfoliosRoutes = require("./microservices/publicPortfolios/publicPortfolios.routes");
+const userPortfoliosArrayRoutes = require("./microservices/userPortfoliosArray/userPortfoliosArray.routes.js");
+const publicPortfoliosRoutes = require("./microservices/publicPortfolios/publicPortfolios.routes");
 const domainPaymentRouter = require("./microservices/domainPayment/stripe/stripe.route");
 const emailMvpRoutes = require("./microservices/emailmvp/emailmvp.routes");
 // const domainRouting = require("./middleware/domainRouting");
@@ -78,8 +82,6 @@ const seededOrigins = [
   "http://dannizhou.me:5173",
   "https://localhost:5000",
   "http://mytestdomain.local",
-  "https://frontend-find-virtual-me-staging.vercel.app",
-  "https://staging.findvirtual.me",
 ]
   .filter(Boolean)
   .flatMap((entry) =>
@@ -138,7 +140,6 @@ const corsOptions = {
     try {
       const match = await User.exists({
         "domains.domain": cleanHostname,
-        "domains.status": { $in: ["active", "pending_verification", "pending"] }
       });
 
       if (match) {
@@ -214,14 +215,11 @@ app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/datascience-portfolio", dataScientistRoutes);
 app.use("/api/handyman-template", handymanTemplateRoutes);
 app.use("/api/handyman/inquiries", handymanInquiryRoutes);
-//app.use("/upload", uploadRoutes);
 app.use("/support-form", supportFormRoutes);
 app.use("/api/domains", domainRoutes);
 app.use("/api/portfolio-edit-log", portfolioEditLogRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.get("/health", (_req, res) =>
-  res.status(200).json({ ok: true, ts: Date.now() })
-);
+app.get("/health", (_req, res) => res.status(200).json({ ok: true, ts: Date.now() }));
 app.use("/healthcare", healthcareRoutes);
 app.use("/api/telemetry", telemetryRoutes);
 
@@ -229,8 +227,8 @@ app.use("/api/telemetry", telemetryRoutes);
 app.use("/guestUser", guestUserRoutes);
 app.use("/guestAdminPanel", guestAdminPanelRoutes);
 app.use("/social-links", socialLinksRoutes);
-//app.use("/userPortfoliosArray", userPortfoliosArrayRoutes);
-//app.use("/publicPortfolios", publicPortfoliosRoutes);
+app.use("/userPortfoliosArray", userPortfoliosArrayRoutes);
+app.use("/publicPortfolios", publicPortfoliosRoutes);
 app.use("/api/domainPayment", domainPaymentRouter);
 app.use("/google-login/", googleLoginRoutes);
 app.use("/contactMe", contactMeRoutes);
