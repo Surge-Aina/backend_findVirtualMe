@@ -1,13 +1,17 @@
 const User = require("../../../models/User");
 const vercelService = require("../../../services/vercelService");
 const namecheap = require("./namecheapProxy.service");
+const { createDomainMapping } = require("../../DomainRouter/DomainRouter.service");
 
 exports.handleFulfillment = async (domain, userId, paymentIntentId) => {
   try {
+    // Purchase domain with Namecheap
     await namecheap.registerDomain({ domain });
 
+    // Add domain to Vercel
     const vercelResult = await vercelService.addDomain(domain, userId);
 
+    // Update user record with domain status
     await User.updateOne(
       { _id: userId },
       {
@@ -21,6 +25,16 @@ exports.handleFulfillment = async (domain, userId, paymentIntentId) => {
         },
       }
     );
+
+    //Update DomainRouter.model records
+    const user = await User.findById(userId);
+    await createDomainMapping({
+      domain: domain,
+      user: user,
+      portfolioId: null,
+      notes:null,
+    });
+
   } catch (err) {
     await User.updateOne(
       { _id: userId },
@@ -36,6 +50,6 @@ exports.handleFulfillment = async (domain, userId, paymentIntentId) => {
       }
     );
 
-    throw err;
+    console.error("Domain fulfillment error:", err);
   }
 };
