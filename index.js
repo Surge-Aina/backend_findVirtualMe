@@ -77,6 +77,9 @@ const seededOrigins = [
   "http://127.0.0.1:5173",
   "http://dannizhou.me:5173",
   "https://localhost:5000",
+  "http://mytestdomain.local",
+  "https://frontend-find-virtual-me-staging.vercel.app",
+  "https://staging.findvirtual.me",
 ]
   .filter(Boolean)
   .flatMap((entry) =>
@@ -211,6 +214,7 @@ app.use("/api/handyman/portfolio", handymanPortfolioRoutes);
 app.use("/datascience-portfolio", dataScientistRoutes);
 app.use("/api/handyman-template", handymanTemplateRoutes);
 app.use("/api/handyman/inquiries", handymanInquiryRoutes);
+//app.use("/upload", uploadRoutes);
 app.use("/support-form", supportFormRoutes);
 app.use("/api/domains", domainRoutes);
 app.use("/api/portfolio-edit-log", portfolioEditLogRoutes);
