@@ -82,7 +82,6 @@ const seededOrigins = [
   "http://dannizhou.me:5173",
   "https://localhost:5000",
   "http://mytestdomain.local",
-  "https://staging.findvirtual.me/",
 ]
   .filter(Boolean)
   .flatMap((entry) =>
@@ -141,7 +140,6 @@ const corsOptions = {
     try {
       const match = await User.exists({
         "domains.domain": cleanHostname,
-        "domains.status": { $in: ["active", "pending_verification", "pending"] }
       });
 
       if (match) {
