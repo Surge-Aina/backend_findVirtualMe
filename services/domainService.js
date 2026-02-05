@@ -618,5 +618,5 @@ const domainService = {
     }
   },
 };
-domainService.addDomainToUser = addDomainToUser;
+
 module.exports = domainService;
