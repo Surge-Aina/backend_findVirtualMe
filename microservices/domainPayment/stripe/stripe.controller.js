@@ -1,8 +1,4 @@
-const stripeSecretkey =
-  process.env.STRIPE_MODE === "live"
-    ? process.env.STRIPE_SECRET_KEY_LIVE
-    : process.env.STRIPE_SECRET_KEY_TEST;
-const stripe = require("stripe")(stripeSecretkey);
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY_TEST);
 const { checkDomainAndGetPrice } = require("../services/pricing.service");
 const { handleFulfillment } = require("../services/fulfillment.service");
 // The minimum price for non-premium domains to trigger your Namecheap purchase.
