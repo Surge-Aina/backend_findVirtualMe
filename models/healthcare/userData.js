@@ -2,34 +2,26 @@ const mongoose = require("mongoose");
 
 const UserDataSchema = new mongoose.Schema({
   portfolioType: { type: String, default: "Healthcare" },
-  portfolioName: { type: String, default: "New Healthcare Portfolio" },
+  portfolioName: { type: String, default: "New Healthcare Portftolio" },
   isPublic: { type: Boolean, default: false },
-  
-  // ✅ practiceId is just a reference field - NOT unique
-  // MongoDB _id is the primary identifier (like other portfolios)
   practiceId: {
     type: String,
-    required: false,
-    sparse: true,
+    required: true,
+    unique: true,
     index: true,
-    // NO unique constraint - allows multiple portfolios
   },
-  
   userId: {
     type: String,
     required: true,
     index: true,
   },
-  
   subdomain: {
     type: String,
-    required: true,   
     unique: true,
-    sparse: true,    
+    sparse: true, // Allow null but must be unique if present
     lowercase: true,
     trim: true,
   },
-  
   practice: {
     name: { type: String, required: true },
     tagline: { type: String, default: "" },
@@ -131,7 +123,10 @@ const UserDataSchema = new mongoose.Schema({
     },
     cta: {
       heading: { type: String, default: "Ready to Get Started?" },
-      description: { type: String, default: "Contact us today to schedule your appointment" },
+      description: {
+        type: String,
+        default: "Contact us today to schedule your appointment",
+      },
       buttonText: { type: String, default: "Schedule Appointment" },
     },
     social: {
@@ -142,17 +137,24 @@ const UserDataSchema = new mongoose.Schema({
       youtube: { type: String, default: "" },
     },
   },
-  createdAt: { type: Date, default: Date.now },
-  lastModified: { type: Date, default: Date.now },
-  isActive: { type: Boolean, default: true },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  lastModified: {
+    type: Date,
+    default: Date.now,
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
 });
 
+// Update lastModified on save
 UserDataSchema.pre("save", function (next) {
   this.lastModified = new Date();
   next();
 });
-
-// Compound index for efficient user portfolio queries
-UserDataSchema.index({ userId: 1, isActive: 1 });
 
 module.exports = mongoose.model("HealthcareSettings", UserDataSchema);
