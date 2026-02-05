@@ -97,9 +97,12 @@ const userSchema = new mongoose.Schema({
       },
       status: {
         type: String,
-        enum: ["pending", "active", "expired", "suspended", "failed_registration"],
+        enum: ["pending", "active", "expired", "suspended", "failed_registration", "manual_intervention_required"],
         default: "pending",
       },
+      failureReason: { type: String },
+      paymentIntentId: { type: String }, // Stripe Payment Intent ID for tracking
+      verificationRecords: { type: Array, default: [] }, // DNS verification records from Vercel
       registeredAt: { type: Date, default: Date.now },
       expiresAt: { type: Date },
       dnsConfigured: { type: Boolean, default: false },
