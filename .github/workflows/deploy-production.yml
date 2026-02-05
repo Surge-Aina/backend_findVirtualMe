@@ -1,0 +1,55 @@
+name: Deploy (production - backend)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref (branch/tag/SHA) for audit only"
+        required: true
+        default: "main"
+
+concurrency:
+  group: deploy-production-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy-backend-production
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.BACKEND_URL }}   # pulled from Production env variables
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Trigger Render deploy (production)
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}  # from Production env secrets
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "Missing secret RENDER_DEPLOY_HOOK"; exit 1
+          fi
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK"
+          echo "Deploy triggered."
+
+      - name: Wait for service to become healthy
+        env:
+          BACKEND_URL: ${{ vars.BACKEND_URL }}   # from Production env variables
+        run: |
+          if [ -z "$BACKEND_URL" ]; then
+            echo "vars.BACKEND_URL is not set."; exit 1
+          fi
+          echo "Pinging $BACKEND_URL/health ..."
+          for i in {1..60}; do
+            if curl -fsS "$BACKEND_URL/health" >/dev/null 2>&1; then
+              echo "Service is up ✅"; exit 0
+            fi
+            sleep 5
+          done
+          echo "Service did not become healthy in time ❌"; exit 1
+
+      - name: Mark deployment success
+        run: echo "Production deploy complete"

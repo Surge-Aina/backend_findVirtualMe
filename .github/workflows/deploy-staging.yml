@@ -1,0 +1,56 @@
+name: Deploy (staging - backend)
+
+on:
+  workflow_run:
+    workflows: ["CI (backend)"]   # must match your CI workflow's name
+    types: [completed]
+
+concurrency:
+  group: deploy-staging-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >
+      ${{
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'staging'
+      }}
+    name: deploy-backend-staging
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ vars.BACKEND_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trigger Render deploy (staging)
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "Missing secret RENDER_DEPLOY_HOOK"; exit 1
+          fi
+          echo "Calling Render deploy hook…"
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK"
+          echo "Deploy triggered."
+
+      - name: Wait for service to become healthy
+        env:
+          BACKEND_URL: ${{ vars.BACKEND_URL }}
+        run: |
+          if [ -z "$BACKEND_URL" ]; then
+            echo "vars.BACKEND_URL is not set."; exit 1
+          fi
+          echo "Pinging $BACKEND_URL/health ..."
+          for i in {1..40}; do
+            if curl -fsS "$BACKEND_URL/health" >/dev/null 2>&1; then
+              echo "Service is up ✅"; exit 0
+            fi
+            sleep 5
+          done
+          echo "Service did not become healthy in time ❌"; exit 1
+
+      - name: Mark deployment success
+        run: echo "Staging deploy complete"
