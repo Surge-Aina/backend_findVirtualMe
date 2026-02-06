@@ -116,6 +116,7 @@ const UserDataSchema = new mongoose.Schema({
     hero: {
       primaryButtonText: { type: String, default: "Get Started" },
       secondaryButtonText: { type: String, default: "Learn More" },
+      backgroundImage: { type: String, default: "" },
     },
     services: {
       viewAllText: { type: String, default: "View All Services" },
