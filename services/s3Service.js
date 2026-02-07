@@ -37,4 +37,4 @@
     }));
     }
 
-    module.exports = { uploadToS3, deleteFromS3 };
+    module.exports = { uploadToS3, deleteFromS3, s3 };
