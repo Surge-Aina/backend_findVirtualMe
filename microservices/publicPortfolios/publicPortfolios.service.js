@@ -52,27 +52,35 @@ exports.getMyPortfolio = async (type, id) => {
 
 exports.togglePublicPortfolio = async (portfolioId) => {
   try {
-    let foundDoc = null;
+    let updatedDoc = null;
     let modelType = null;
-
-    // Check all models by _id (including Healthcare)
+    
+    // Try to find and update in each model
     for (const [type, Model] of Object.entries(modelMap)) {
-      const doc = await Model.findById(portfolioId);
+      // First, find the document to get current isPublic value
+      const doc = await Model.findById(portfolioId).select('isPublic').lean();
+      
       if (doc) {
-        foundDoc = doc;
+        // Update without validation
+        updatedDoc = await Model.findByIdAndUpdate(
+          portfolioId,
+          { $set: { isPublic: !doc.isPublic } },
+          { 
+            new: true,
+            runValidators: false,  
+            select: '_id isPublic' 
+          }
+        );
         modelType = type;
         break;
       }
     }
-
-    if (!foundDoc) return null;
-
-    foundDoc.isPublic = !foundDoc.isPublic;
-    await foundDoc.save();
-
+    
+    if (!updatedDoc) return null;
+    
     return { 
-      _id: foundDoc._id,
-      isPublic: foundDoc.isPublic,
+      _id: updatedDoc._id,
+      isPublic: updatedDoc.isPublic,
       portfolioType: modelType
     };
   } catch (error) {

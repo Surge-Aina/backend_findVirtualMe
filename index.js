@@ -60,6 +60,8 @@ const emailMvpRoutes = require("./microservices/emailmvp/emailmvp.routes");
 const googleLoginRoutes = require("./microservices/googleLogin/googleLogin.routes.js");
 const contactMeRoutes = require("./microservices/contactMeForm/contactMeForm.routes.js");
 const domainRouterRoutes = require("./microservices/DomainRouter/DomainRouter.routes.js")
+const s3UploadRoutes = require("./microservices/S3Upload/S3Upload.routes.js")
+
 // Import configuration from separate file
 const config = require("./config");
 
@@ -81,6 +83,8 @@ const seededOrigins = [
   "http://127.0.0.1:5173",
   "http://dannizhou.me:5173",
   "https://localhost:5000",
+  "http://mytestdomain.local",
+  "https://staging.findvirtual.me/",
 ]
   .filter(Boolean)
   .flatMap((entry) =>
@@ -139,7 +143,6 @@ const corsOptions = {
     try {
       const match = await User.exists({
         "domains.domain": cleanHostname,
-        "domains.status": { $in: ["active", "pending_verification", "pending"] }
       });
 
       if (match) {
@@ -233,6 +236,7 @@ app.use("/api/domainPayment", domainPaymentRouter);
 app.use("/google-login/", googleLoginRoutes);
 app.use("/contactMe", contactMeRoutes);
 app.use("/domainRouter", domainRouterRoutes)
+app.use("/s3-upload-url", s3UploadRoutes);
 
 //aiPortfolioCreator
 const contactRouter = require("./microservices/aiPortfolioCreator/contact/aiPortfolioCreator.routes.js");
