@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const DomainRouterSchema = new mongoose.Schema(
+const DomainRouteSchema = new mongoose.Schema(
   {
     domain: {
       type: String,
@@ -10,13 +10,19 @@ const DomainRouterSchema = new mongoose.Schema(
       lowercase: true,
     },
 
-    portfolioId: { type: String },
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
 
-    portfolioSlug: {
+    portfolioId: {
+      type: mongoose.Schema.Types.ObjectId,
+    },
+
+    portfolioType: {
       type: String,
       trim: true,
-      lowercase: true,
-      default: null,
     },
 
     isActive: {
@@ -29,18 +35,35 @@ const DomainRouterSchema = new mongoose.Schema(
       trim: true,
       default: null,
     },
+
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-// lower case all domains
-DomainRouterSchema.pre("save", function (next) {
+// Normalize domain
+DomainRouteSchema.pre("save", function (next) {
   if (this.domain) {
-    this.domain = this.domain.trim().toLowerCase();
+    this.domain = this.domain.trim().toLowerCase().replace(/^www\./, "");
   }
   next();
 });
 
-module.exports = mongoose.model("DomainRouter", DomainRouterSchema);
+// Indexes
+DomainRouteSchema.index({ userId: 1 });
+DomainRouteSchema.index({ portfolioId: 1 });
+DomainRouteSchema.index({ isActive: 1 });
+
+module.exports = mongoose.model("DomainRoute", DomainRouteSchema);

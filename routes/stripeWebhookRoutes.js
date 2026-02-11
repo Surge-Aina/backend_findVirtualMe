@@ -39,21 +39,13 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
 
   //verify that the call came from stripe
   let event;
-  // Check if we are using stripe cli
-  let stripeWHSEC;
-  if (process.env.STRIPE_WEBHOOK_SECRET_CLI) {
-    stripeWHSEC = process.env.STRIPE_WEBHOOK_SECRET_CLI;
-  } else {
-    stripeWHSEC =
-      process.env.STRIPE_MODE === "live"
-        ? process.env.STRIPE_WEBHOOK_SECRET_LIVE
-        : process.env.STRIPE_WEBHOOK_SECRET_TEST;
-  }
+  const stripeWHSEC = process.env.STRIPE_WEBHOOK_SECRET_PURCHASE_SUBSCRIPTION;
+ 
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, stripeWHSEC);
   } catch (err) {
-    console.error("Webhook signature verification failed.", err.message);
-    return res.status(400).json({ message: `Webhook Error: ${err.message}` });
+    console.error("Subscription Purchase Webhook signature verification failed.", err.message);
+    return res.status(400).json({ message: `Subscription purchase Webhook Error: ${err.message}` });
   }
 
   try {

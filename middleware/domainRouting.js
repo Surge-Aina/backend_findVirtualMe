@@ -3,6 +3,10 @@ const DomainRouter = require("../microservices/DomainRouter/DomainRouter.model")
 
 module.exports = async function domainRouting(req, res, next) {
   try {
+    console.log("🌐 DOMAIN MIDDLEWARE");
+    console.log("HOSTNAME:", req.hostname);
+    console.log("ORIGINAL URL:", req.originalUrl);
+
     const host = req.hostname.toLowerCase();
 
     const route = await DomainRouter.findOne({
@@ -10,11 +14,12 @@ module.exports = async function domainRouting(req, res, next) {
       isActive: true,
     });
 
+    console.log("DOMAIN MATCH:", route ? "FOUND" : "NONE");
+    
     if (route) {
       req.domainContext = {
         domain: host,
         portfolioId: route.portfolioId,
-        portfolioSlug: route.portfolioSlug || null,
       };
     } else {
       req.domainContext = null;
