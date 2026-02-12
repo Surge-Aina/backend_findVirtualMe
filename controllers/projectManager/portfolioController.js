@@ -130,23 +130,36 @@ exports.addPDF = async(req, res) => {
     }
 };
 
-exports.editPortfolioByEmail = async(req, res) => {
-    const email = req.user.email; //obtained from middleware
-    const portfolio = req.body.portfolio;
+    exports.editPortfolioByEmail = async (req, res) => {
+    const email = req.user.email; // obtained from auth middleware
+    const portfolio = req.body.portfolio || {};
+
+    // ✅ Prefer id if client sends it; fall back to email for older callers
+    const id = portfolio._id || portfolio.id;
+    const filter = id ? { _id: id } : { email };
+
+    // Don't try to overwrite the _id field itself
+    delete portfolio._id;
+    delete portfolio.id;
+
     try {
-        const updatedPortfolio = await Portfolio.findOneAndUpdate({ email: email }, { $set: portfolio }, { new: true } //return updated document
+        const updatedPortfolio = await Portfolio.findOneAndUpdate(
+        filter,
+        { $set: portfolio },
+        { new: true } // return updated document
         );
 
         if (!updatedPortfolio) {
-            res.status(404).json({ message: "item not found" });
-            return;
+        return res.status(404).json({ message: "item not found" });
         }
+
         res.json(updatedPortfolio);
     } catch (error) {
         console.log("could not edit item", error);
         res.status(500).json({ message: "could not edit item" });
     }
-};
+    };
+
 
 exports.deletePortfolioByEmail = async(req, res) => {
     const email = req.query.email;
