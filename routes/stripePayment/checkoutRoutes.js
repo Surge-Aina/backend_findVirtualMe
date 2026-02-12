@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Stripe = require("stripe");
+const User = require("../../models/User");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
@@ -90,8 +91,10 @@ router.post("/checkout-session", async (req, res) => {
       });
 
       //save stripeCustomerId to user
-      user.stripeCustomerId = customer.id;
-      await user.save();
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { stripeCustomerId: customer.id } }
+      );
     }
 
     const lineItems = [
