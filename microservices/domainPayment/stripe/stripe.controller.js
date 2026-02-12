@@ -37,7 +37,8 @@ exports.createCheckoutSession = async (req, res) => {
       });
     }
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
+      adaptive_pricing: { enabled: true},
+      automatic_tax: { enabled: true },
       mode: "payment",
       line_items: [
         {
