@@ -34,6 +34,8 @@ const UserDataSchema = new mongoose.Schema({
     name: { type: String, required: true },
     tagline: { type: String, default: "" },
     description: { type: String, default: "" },
+    logoImage: { type: String, default: "" },
+    icon: { type: String, default: "" },
   },
   contact: {
     phone: { type: String, default: "" },
