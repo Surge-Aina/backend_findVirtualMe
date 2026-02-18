@@ -57,8 +57,8 @@ exports.createCheckoutSession = async (req, res) => {
         domain: domain,
         userId: userId.toString(),
       },
-      success_url: `${BASE_URL}/profile?tab=Domain+Management?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${BASE_URL}/profile?tab=Domain+Management?domain=${domain}`,
+      success_url: `${BASE_URL}/profile?tab=Domain+Management&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${BASE_URL}/profile?tab=Domain+Management&domain=${domain}`,
       customer_email: userEmail,
     });
 
@@ -92,6 +92,7 @@ exports.handleStripeWebhook = async (req, res) => {
     console.log(`Checkout session ${session.id} completed! Initiating fulfillment.`);
 
     const { domain, userId } = session.metadata;
+    console.log("Metadata extracted from session:", { domain, userId });
     const paymentIntentId = session.payment_intent; // Charge ID for potential refund
 
     // 3. Trigger the asynchronous fulfillment service

@@ -4,7 +4,6 @@ const Stripe = require("stripe");
 const Subscription = require("../models/Subscriptions");
 const User = require("../models/Subscriptions");
 const stripeController = require("../microservices/domainPayment/stripe/stripe.controller");
-const bodyParser = require("body-parser");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
@@ -30,7 +29,7 @@ const PRICE_MAP = {
 // The path should be /webhook or /stripe/webhook, depending on how you mount the router.
 router.post(
   "/domainPayment-webhook",
-  bodyParser.raw({ type: "application/json" }),
+  express.raw({ type: "application/json" }),
   stripeController.handleStripeWebhook
 );
 
