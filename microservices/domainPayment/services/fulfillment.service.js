@@ -64,7 +64,8 @@ exports.handleFulfillment = async (domain, userId, paymentIntentId) => {
             paymentIntentId,
           },
         },
-      }
+      },
+      { new: true }
     );
     console.log(`User ${userId} updated with domain ${domain}. Creating domain mapping...`);
     
