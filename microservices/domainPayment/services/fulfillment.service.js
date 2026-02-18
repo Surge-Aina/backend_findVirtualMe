@@ -8,16 +8,23 @@ exports.handleFulfillment = async (domain, userId, paymentIntentId) => {
 
   try {
     //Don't process if this payment was already handled
-    const existingUser = await User.findOne({ "domains.paymentIntentId": paymentIntentId });
+    const existingUser = await User.findOne(
+      { "domains.paymentIntentId": paymentIntentId },
+      { _id: 1 }    
+    );
     if (existingUser) {
       console.log(`Payment ${paymentIntentId} already processed. Skipping.`);
       return;
     }
 
     // Purchase Domain via Namecheap
-    await namecheap.registerDomain({ domain });
-    console.log(`Domain ${domain} successfully registered via Namecheap.`);
-
+    if (process.env.STRIPE_MODE === "live") {
+      await namecheap.registerDomain({ domain });
+      console.log(`Domain ${domain} successfully registered via Namecheap.`);
+    } else {
+      // Skip registration entirely in sandbox mode
+      console.warn(`[SANDBOX] Skipping Namecheap registration for ${domain}`);
+    }
     // Add to Vercel
     let vercelResult;
     try {
@@ -43,28 +50,31 @@ exports.handleFulfillment = async (domain, userId, paymentIntentId) => {
     }
 
     //Update User & Create Mapping 
-    const updatedUser = await User.findOneAndUpdate(
+    await User.findOneAndUpdate(
       { _id: userId },
       {
         $push: {
           domains: {
             domain,
             status: vercelResult?.verified ? "active" : "pending_verification",
-            verificationRecords: vercelResult?.verification || [],
+            verificationRecords: Array.isArray(vercelResult?.verification)
+              ? vercelResult.verification.map(r => ({ type: r.type, name: r.name, value: r.value }))
+              : [],
             registeredAt: new Date(),
             paymentIntentId,
           },
         },
-      },
-      { new: true }
+      }
     );
-
+    console.log(`User ${userId} updated with domain ${domain}. Creating domain mapping...`);
+    
     await createDomainMapping({
       domain,
-      user: updatedUser,
+      user: { _id: userId },
       portfolioId: null,
       notes: "Automatic fulfillment via Stripe Webhook",
     });
+    console.log(`Domain mapping created for ${domain}. Fulfillment complete.`);
 
     console.log(`Fulfillment complete for ${domain}`);
 
