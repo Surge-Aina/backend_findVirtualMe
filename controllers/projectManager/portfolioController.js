@@ -2,6 +2,7 @@ const req = require("express/lib/request");
 const Portfolio = require("../../models/projectManager/portfolioModel");
 const pdfParse = require("pdf-parse");
 const { generatePortfolioJSON, generateMatchSummary } = require("../../services/openAiService");
+const { uploadToS3, deleteFromS3 } = require("../../services/s3Service");
 
 exports.getPortfolioByEmail = async(req, res) => {
     const email = req.params.email;
@@ -188,3 +189,101 @@ exports.aiSummary = async(req, res) => {
         res.status(500).json({ error: "Generation failed" });
     }
 };
+
+// Upload / update profile image for a portfolio
+exports.uploadProfileImage = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!req.file) {
+        return res.status(400).json({ message: "No image file uploaded" });
+        }
+
+        const portfolio = await Portfolio.findById(id);
+        if (!portfolio) {
+        return res.status(404).json({ message: "Portfolio not found" });
+        }
+
+        // If there was a previous image stored, try to delete it from S3
+        if (portfolio.profileImageKey) {
+        try {
+            await deleteFromS3(portfolio.profileImageKey);
+        } catch (err) {
+            console.error("Error deleting old profile image from S3:", err.message);
+            // don't fail the request if delete fails
+        }
+        }
+
+        // Upload new file to S3
+        const { url, key } = await uploadToS3(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype,
+        `Ports/ProjectManager/${id}`  // S3 prefix/folder
+        );
+
+        // Save S3 info on portfolio
+        portfolio.profileImage = url;
+        portfolio.profileImageKey = key;
+        await portfolio.save();
+
+        return res.status(200).json({
+        message: "Profile image uploaded successfully",
+        profileImage: url,
+        profileImageKey: key,
+        portfolio,
+        });
+    } catch (error) {
+        console.error("Error uploading profile image:", error);
+        return res.status(500).json({ message: "Error uploading profile image" });
+    }
+};
+
+// Upload or update resume PDF for a portfolio
+exports.uploadResume = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!req.file) {
+        return res.status(400).json({ message: "No resume file uploaded" });
+        }
+
+        const portfolio = await Portfolio.findById(id);
+        if (!portfolio) {
+        return res.status(404).json({ message: "Portfolio not found" });
+        }
+
+        // If an old resume exists, try to delete it
+        if (portfolio.resumeKey) {
+        try {
+            await deleteFromS3(portfolio.resumeKey);
+        } catch (err) {
+            console.error("Error deleting old resume from S3:", err.message);
+            // don't fail the whole request if delete fails
+        }
+        }
+
+        // Upload new resume to S3 (into Ports/... with capital P)
+        const { url, key } = await uploadToS3(
+        req.file.buffer,
+        req.file.originalname,
+        req.file.mimetype,
+        `Ports/ProjectManager/${id}/resumes`
+        );
+
+        portfolio.resumeUrl = url;
+        portfolio.resumeKey = key;
+        await portfolio.save();
+
+        return res.status(200).json({
+        message: "Resume uploaded successfully",
+        resumeUrl: url,
+        resumeKey: key,
+        portfolio,
+        });
+    } catch (error) {
+        console.error("Error uploading resume:", error);
+        return res.status(500).json({ message: "Error uploading resume" });
+    }
+};
+

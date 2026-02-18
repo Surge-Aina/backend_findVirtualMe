@@ -48,7 +48,11 @@ const PortfolioSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true },
     phone: { type: String },
     location: { type: String },
+    resumeUrl: { type: String },  // public URL to open in new tab
+    resumeKey: { type: String },  // S3 object key (for replace/delete)
     skills: [{ type: String }],
+    profileImage: { type: String },      // S3 URL
+    profileImageKey: { type: String },   // S3 object key (for deletes),
     experiences: [ExperienceSchema],
     education: [EducationSchema],
     projects: [ProjectSchema],
