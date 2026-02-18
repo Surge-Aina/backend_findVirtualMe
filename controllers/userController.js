@@ -175,8 +175,14 @@ exports.getUserById = async (req, res) => {
 exports.getSubInfo = async (req, res) => {
   try {
     const { stripeCustomerId } = req.user; // obtained from auth middleware
+    
+    if (!stripeCustomerId) {
+      return res.status(200).json({ subscriptionList: [] });
+    }
+
     //get subscription info from stripe
     const subscriptions = await stripe.subscriptions.list({
+      status: "active",
       limit: 1,
       customer: stripeCustomerId,
       expand: ["data.plan.product"],
