@@ -69,6 +69,14 @@ const DEFAULT_BACKEND_LINES = {
   20: 'app.listen(3001, () => console.log("Server on 3001"));',
 };
 
+function cloneLines(linesObj) {
+  // Prevent accidental shared references between projects.
+  // Values are strings so JSON clone is sufficient as a fallback.
+  if (!linesObj || typeof linesObj !== "object") return {};
+  if (typeof structuredClone === "function") return structuredClone(linesObj);
+  return JSON.parse(JSON.stringify(linesObj));
+}
+
 function projectToClient(project) {
   return helpers.projectToClient(project);
 }
@@ -86,8 +94,8 @@ exports.addProject = async (name, user) => {
     projectId: pid,
     name: projectName,
     status: "active",
-    frontendJson: { lines: DEFAULT_FRONTEND_LINES },
-    backendJson: { lines: DEFAULT_BACKEND_LINES },
+    frontendJson: { lines: cloneLines(DEFAULT_FRONTEND_LINES) },
+    backendJson: { lines: cloneLines(DEFAULT_BACKEND_LINES) },
     dataJson: { name: "" },
     createdAt: new Date(),
     updatedAt: new Date(),
