@@ -59,6 +59,13 @@ const UserDataSchema = new mongoose.Schema({
     successRate: { type: String, default: "0" },
     doctorsCount: { type: String, default: "0" },
   },
+  statsVisibility: {
+  showStatsSection: Boolean,  // Master toggle
+  yearsExperience: Boolean,
+  patientsServed: Boolean,
+  successRate: Boolean,
+  doctorsCount: Boolean
+},
   services: [
     {
       id: String,
