@@ -3,6 +3,7 @@ const voucherService = require("./voucher.service");
 
 /**
  * GET /vouchers/my
+ * Returns active vouchers for the authenticated user, including voucher details.
  */
 exports.getMyVouchers = async (req, res) => {
   try {
@@ -39,6 +40,7 @@ exports.grantVoucher = async (req, res) => {
 
 /**
  * POST /vouchers/apply-domain
+ * Applies the best available voucher for a domain purchase and returns the final price after discount.
  */
 exports.applyDomainVoucher = async (req, res) => {
   try {
@@ -59,6 +61,7 @@ exports.applyDomainVoucher = async (req, res) => {
 
 /**
  * POST /vouchers/redeem
+ * Marks a voucher as redeemed after successful use (e.g., after domain purchase is completed).
  */
 exports.redeemVoucher = async (req, res) => {
   try {

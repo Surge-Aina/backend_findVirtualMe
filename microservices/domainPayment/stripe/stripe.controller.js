@@ -1,3 +1,5 @@
+const { applyDomainVoucher } = require("../../vouchers/voucher.service");
+const { redeemVoucher } = require("../../vouchers/voucher.service");
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
     ? process.env.STRIPE_SECRET_KEY_LIVE
@@ -5,8 +7,6 @@ const stripeSecretkey =
 const stripe = require("stripe")(stripeSecretkey);
 const { checkDomainAndGetPrice } = require("../services/pricing.service");
 const { handleFulfillment } = require("../services/fulfillment.service");
-// The minimum price for non-premium domains to trigger your Namecheap purchase.
-const MINIMUM_PURCHASE_PRICE_USD = 12.99;
 
 /**
  * Handles POST /api/payment/checkout
@@ -14,20 +14,30 @@ const MINIMUM_PURCHASE_PRICE_USD = 12.99;
  */
 exports.createCheckoutSession = async (req, res) => {
   try {
-    const { domain, totalPrice } = req.body;
+    const { domain, voucherId } = req.body;
     const userId = req.user?.id;
     const userEmail = req.user?.email;
 
-    // Simple validation checks
-    if (!domain || !totalPrice || !userId) {
-      return res.status(400).json({ error: "Missing domain, price, or portfolio ID." });
+    if (!domain || !userId) {
+      return res.status(400).json({ error: "Missing domain, or portfolio ID." });
     }
 
-    const amountInCents = Math.round(parseFloat(totalPrice) * 100);
+    // 1. Always calculate price server-side
+    const priceData = await checkDomainAndGetPrice(domain);
+    if (!priceData.available)
+      return res.status(400).json({ error: "Domain not available" });
 
-    // if (amountInCents < MINIMUM_PURCHASE_PRICE_USD * 100) {
-    //   return res.status(400).json({ error: "Price is below minimum allowed value." });
-    // }
+    let finalPrice = priceData.totalPrice;
+    let appliedVoucher = null;
+
+    // 2. Apply voucher if provided
+    if (voucherId) {
+      const result = await applyDomainVoucher(userId, finalPrice);
+      finalPrice = result.finalPrice;
+      appliedVoucher = result.voucher;
+    }
+
+    const amountInCents = Math.round(finalPrice * 100);
 
     const BASE_URL = process.env.FRONTEND_URL;
     if (!BASE_URL || !BASE_URL.startsWith("http")) {
@@ -54,8 +64,9 @@ exports.createCheckoutSession = async (req, res) => {
       ],
       // CRITICAL: Metadata for fulfillment. Must be strings.
       metadata: {
-        domain: domain,
+        domain,
         userId: userId.toString(),
+        voucherId: appliedVoucher?._id?.toString() || "",
       },
       success_url: `${BASE_URL}/profile?tab=Domain+Management&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${BASE_URL}/profile?tab=Domain+Management&domain=${domain}`,
@@ -91,8 +102,8 @@ exports.handleStripeWebhook = async (req, res) => {
     const session = event.data.object;
     console.log(`Checkout session ${session.id} completed! Initiating fulfillment.`);
 
-    const { domain, userId } = session.metadata;
-    console.log("Metadata extracted from session:", { domain, userId });
+    const { domain, userId, voucherId } = session.metadata;
+    console.log("Metadata extracted from session:", { domain, userId, voucherId });
     const paymentIntentId = session.payment_intent; // Charge ID for potential refund
 
     // 3. Trigger the asynchronous fulfillment service
@@ -100,10 +111,15 @@ exports.handleStripeWebhook = async (req, res) => {
     handleFulfillment(domain, userId, paymentIntentId).catch(err => {
       console.error("FATAL: Background fulfillment failed to initialize:", err);
     });
+
+    if (voucherId) {
+      await redeemVoucher(voucherId);
+    }
   }
 
   // 4. Return a 200 immediately to acknowledge receipt of the event
   res.json({ received: true });
+  
 };
 
 /**

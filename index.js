@@ -237,6 +237,7 @@ app.use("/google-login/", googleLoginRoutes);
 app.use("/contactMe", contactMeRoutes);
 app.use("/domainRouter", domainRouterRoutes)
 app.use("/s3-upload-url", s3UploadRoutes);
+app.use("/vouchers", require("./microservices/vouchers/voucher.routes.js"));
 
 //aiPortfolioCreator
 const contactRouter = require("./microservices/aiPortfolioCreator/contact/aiPortfolioCreator.routes.js");
