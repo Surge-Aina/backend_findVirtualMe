@@ -1,7 +1,7 @@
 const namecheap = require("./namecheapProxy.service");
 
 // --- Pricing constants ---
-const TLD_PREMIUM = 5.0;
+const TLD_PREMIUM = 2.0;
 const FLAT_PRICE = 12.99;
 
 // --- Pricing cache ---

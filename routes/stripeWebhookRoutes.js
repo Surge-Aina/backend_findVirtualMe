@@ -2,8 +2,9 @@ const express = require("express");
 const router = express.Router();
 const Stripe = require("stripe");
 const Subscription = require("../models/Subscriptions");
-const User = require("../models/Subscriptions");
+const User = require("../models/User");
 const stripeController = require("../microservices/domainPayment/stripe/stripe.controller");
+const voucherService = require("../microservices/vouchers/voucher.service");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
@@ -310,6 +311,26 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
             latestInvoiceId: invoice.id,
           }
         );
+
+        console.log(`Invoice billing_reason: ${invoice.billing_reason}`);
+
+        // ---- GRANT VOUCHER ONLY ON FIRST PAYMENT ----
+        if (invoice.billing_reason === "subscription_create") {
+          const user = await User.findOne({
+            stripeCustomerId: invoice.customer
+          });
+          console.log("Granting voucher for user:", user ? user._id : "User not found");
+
+          if (user) {
+            await voucherService.grantVoucher({
+              userId: user._id,
+              trigger: "first_subscription",
+              metadata: { subscriptionId: invoice.subscription }
+            });
+
+            console.log(`Voucher granted to user ${user._id}`);
+          }
+        }
 
         console.log(
           `Invoice payment succeeded for ${invoice.customer} - Amount: ${
