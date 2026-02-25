@@ -80,7 +80,7 @@
         return res.status(403).json({ message: 'Forbidden: not your portfolio' });
         }
 
-        // prevent important takeover attempts
+        // prevent takeover attempts
         const update = { ...req.body };
         delete update.userId;
 

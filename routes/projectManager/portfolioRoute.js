@@ -11,6 +11,8 @@ const {
   getPortfolioById,
   aiSummary,
   getAllPortfolios,
+  uploadProfileImage,
+  uploadResume, 
 } = require("../../controllers/projectManager/portfolioController");
 const {
   submitContact,
@@ -28,7 +30,8 @@ router.post("/upload-pdf", upload.single("resume"), addPDF);
 router.post("/ai-summary", aiSummary);
 router.post("/contact", submitContact);
 router.patch("/edit", auth, editPortfolioByEmail);
-
+router.post("/profile-image/:id",auth,upload.single("image"),uploadProfileImage);
 router.delete("/delete", deletePortfolioByEmail);
+router.post("/resume/:id", auth, upload.single("resume"), uploadResume);
 
 module.exports = router;

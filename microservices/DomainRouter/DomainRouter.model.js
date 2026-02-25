@@ -66,4 +66,7 @@ DomainRouteSchema.index({ userId: 1 });
 DomainRouteSchema.index({ portfolioId: 1 });
 DomainRouteSchema.index({ isActive: 1 });
 
-module.exports = mongoose.model("DomainRoute", DomainRouteSchema);
+const DomainRoute = mongoose.model("DomainRoute", DomainRouteSchema);
+
+module.exports = DomainRoute;
+module.exports.DomainRouteSchema = DomainRouteSchema;

@@ -56,32 +56,9 @@ router.post("/checkout-session", async (req, res) => {
       return res.status(400).json({ error: "Invalid plan selected" });
     }
 
-    // //check if stripe customer has active subscriptions
-    // //redirect to billing if so
-    // if (user.stripeCustomerId) {
-    //   const subscriptions = await stripe.subscriptions.list({
-    //     customer: user.stripeCustomerId,
-    //     status: { in: ["active", "trialing", "past_due"] },
-    //     limit: 1,
-    //   });
-
-    //   //redirect to billing
-    //   if (subscriptions.data.length > 0) {
-    //     const portalSession = await stripe.billingPortal.sessions.create({
-    //       customer: user.stripeCustomerId,
-    //       return_url: `${process.env.FRONTEND_URL}/profile`,
-    //     });
-
-    //     //save subscriptionID to user
-    //     user.stripeSubscriptionId = subscriptions.data[0].id;
-    //     user.save();
-
-    //     return res.json({ checkoutUrl: portalSession.url });
-    //   }
-    // }
-
     //if user does not have stripe customer ID create a new customer on stripe
     //and save the id to user in mongodb
+    let stripeCustomerId = user.stripeCustomerId;
     if (!user.stripeCustomerId) {
       //create customer on stripe
       const customer = await stripe.customers.create({
@@ -90,10 +67,12 @@ router.post("/checkout-session", async (req, res) => {
         metadata: { userId: user._id?.toString() },
       });
 
+      stripeCustomerId = customer.id;
+
       //save stripeCustomerId to user
       await User.updateOne(
         { _id: user._id },
-        { $set: { stripeCustomerId: customer.id } }
+        { $set: { stripeCustomerId: stripeCustomerId } }
       );
     }
 
@@ -106,9 +85,10 @@ router.post("/checkout-session", async (req, res) => {
 
     //create checkout session using stripe customer ID
     const session = await stripe.checkout.sessions.create({
+      // automatic_tax: { enabled: true }, // Enable automatic tax calculation( must have tax settings configured in Stripe dashboard)
       payment_method_types: ["card"],
       mode: "subscription",
-      customer: user.stripeCustomerId,
+      customer: stripeCustomerId,
       line_items: lineItems,
       success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.FRONTEND_URL}/profile`,

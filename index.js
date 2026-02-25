@@ -36,6 +36,9 @@ const checkoutRoutes = require("./routes/stripePayment/checkoutRoutes");
 const authRoutes = require("./routes/auth"); // Import authentication routes
 const seedUsers = require("./seed/users"); // Import seed users function
 const domainResolver = require("./middleware/domainResolver"); // Import domain resolver
+const handymanTemplateRoutes = require("./routes/handyMan/handymanTemplateRoutes");
+const handymanInquiryRoutes = require("./routes/handyMan/handymanInquiryRoutes");
+const localVendorRoutes = require("./routes/localFoodVendor/localVendorRoutes");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes");
 const supportFormRoutes = require("./routes/supportFormRoutes");
@@ -47,9 +50,10 @@ const telemetryRoutes = require("./routes/telemetry");
 const guestUserRoutes = require("./microservices/guestLogin/guestUser.routes");
 const portfolioEditLogRoutes = require("./routes/portfolioEditLogRoutes");
 const guestAdminPanelRoutes = require("./microservices/guestAdminPanel/guestAdminPanel.routes");
+const portfolio_Routes = require("./routes/cleaningLady/portfolioRoutes");
 const socialLinksRoutes = require("./microservices/socialLinks/socialLinks.routes");
-//const userPortfoliosArrayRoutes = require("./microservices/userPortfoliosArray/userPortfoliosArray.routes.js");
-//const publicPortfoliosRoutes = require("./microservices/publicPortfolios/publicPortfolios.routes");
+const userPortfoliosArrayRoutes = require("./microservices/userPortfoliosArray/userPortfoliosArray.routes.js");
+const publicPortfoliosRoutes = require("./microservices/publicPortfolios/publicPortfolios.routes");
 const domainPaymentRouter = require("./microservices/domainPayment/stripe/stripe.route");
 const emailMvpRoutes = require("./microservices/emailmvp/emailmvp.routes");
 // const domainRouting = require("./middleware/domainRouting");
@@ -227,13 +231,14 @@ app.use("/api/telemetry", telemetryRoutes);
 app.use("/guestUser", guestUserRoutes);
 app.use("/guestAdminPanel", guestAdminPanelRoutes);
 app.use("/social-links", socialLinksRoutes);
-//app.use("/userPortfoliosArray", userPortfoliosArrayRoutes);
-//app.use("/publicPortfolios", publicPortfoliosRoutes);
+app.use("/userPortfoliosArray", userPortfoliosArrayRoutes);
+app.use("/publicPortfolios", publicPortfoliosRoutes);
 app.use("/api/domainPayment", domainPaymentRouter);
 app.use("/google-login/", googleLoginRoutes);
 app.use("/contactMe", contactMeRoutes);
 app.use("/domainRouter", domainRouterRoutes);
 app.use("/s3-upload-url", s3UploadRoutes);
+app.use("/vouchers", require("./microservices/vouchers/voucher.routes.js"));
 
 //aiPortfolioCreator
 const contactRouter = require("./microservices/aiPortfolioCreator/contact/aiPortfolioCreator.routes.js");
