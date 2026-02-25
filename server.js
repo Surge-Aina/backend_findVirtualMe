@@ -7,7 +7,6 @@ const connectDB = require("./utils/db");
 const app = require("./index");
 
 const PORT = process.env.PORT;
-
 connectDB()
   .then(() => {
     app.listen(PORT, () => {
