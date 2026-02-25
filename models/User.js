@@ -31,7 +31,7 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     trim: true,
   },
-  googleId: { type: String, index: true },
+  googleId: { type: String, unique: true, sparse: true },
   authProvider: {
     type: String,
     enum: ["local", "google"],
@@ -51,7 +51,9 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+    required: function () { // Only require password if authProvider is local, not for google or other providers
+      return this.authProvider === "local";
+    },
   },
   bio: {
     type: String,
@@ -68,7 +70,7 @@ const userSchema = new mongoose.Schema({
   skills: [{ type: String }],
   role: {
     type: String,
-    enum: ["admin", "customer"],
+    enum: ["admin", "customer", "user", "subUser"],
     default: "customer",
   },
   practiceId: {
