@@ -7,7 +7,6 @@ const connectDB = require("./utils/db");
 const app = require("./index");
 
 const PORT = process.env.PORT;
-console.log("Connecting to database mongodb env variable: ", process.env.MONGODB_URI);
 connectDB()
   .then(() => {
     app.listen(PORT, () => {
