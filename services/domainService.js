@@ -2,6 +2,8 @@ const xml2js = require("xml2js");
 const parser = new xml2js.Parser();
 const User = require("../models/User");
 const vercelService = require("./vercelService");
+const { createDomainMapping } = require("../microservices/DomainRouter/DomainRouter.service");
+const DomainRoute = require("../microservices/DomainRouter/DomainRouter.model");
 
 const determinePortfolioPath = ({ user, domainConfig }) => {
   if (!user || !domainConfig) {
@@ -80,9 +82,6 @@ const addDomainToUser = async (userId, domain, portfolioId, options = {}) => {
   if (!userId) {
     throw new Error("User ID is required to associate domain");
   }
-  if (!domain) {
-    throw new Error("Domain is required to associate domain");
-  }
 
   let changedPortfolioId =
     Array.isArray(portfolioId) && portfolioId.length > 0
@@ -115,6 +114,8 @@ const addDomainToUser = async (userId, domain, portfolioId, options = {}) => {
   if (portfolioId) {
     updateOps.$addToSet = { portfolios: portfolioId };
   }
+
+  console.log(`Associating domain ${domain} with user ${userId} and portfolio ${portfolioId}`);
 
   return User.findByIdAndUpdate(userId, updateOps, { new: true });
 };
@@ -223,11 +224,11 @@ const domainService = {
       // if the domain is not a string, convert it to a string
       // if the domain is not a string, convert it to a string
       domain = Array.isArray(domain) ? domain.join("") : String(domain || "");
-      domain = domain.trim().toLowerCase();
+      domain = domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
       portfolioId = Array.isArray(portfolioId) ? portfolioId[0] : portfolioId;
 
-      if (!domain || !portfolioId) {
-        return res.status(400).json({ error: "Domain and portfolioId are required" });
+      if (!domain) {
+        return res.status(400).json({ error: "Domain is required" });
       }
       if (
         !process.env.USER_FIRST_NAME ||
@@ -286,9 +287,25 @@ const domainService = {
         if (apiResponse.$.Status === "OK") {
           // Update user's domains in database
           try {
+            //check database to see if the domain is already registered by any user
+            try {
+              await createDomainMapping({
+                domain,
+                user: { _id: userId },
+                portfolioId: portfolioId || null,
+                notes: "BYOD registration",
+              });
+              console.log(`Domain mapping created for ${domain} and user ${userId}`);
+            } catch (error) {
+              console.error("Error creating domain mapping:", error.message);
+              return res.status(error.status || 500).json({
+                error: error.message || "Internal server error",
+              });
+            }
+
             // Add domain to Vercel project
             try {
-              vercelResult = await vercelService.addDomain(domain, userId, portfolioId);
+              vercelResult = await vercelService.addDomain(domain);
               console.log(`Domain ${domain} added to Vercel project`);
             } catch (vercelErr) {
               console.error("Vercel add domain error:", vercelErr.message);
@@ -336,8 +353,8 @@ const domainService = {
         return res.status(200).json({
           message: "Domain registration initiated",
           domain: domain,
-          portfolioId,
-          plan,
+          portfolioId: portfolioId || null,
+          plan: plan || null,
           status: responseStatus,
           apiResponse: domainRegistration,
         });
@@ -366,15 +383,31 @@ const domainService = {
         portfolioId = portfolioId[0];
       }
 
-      if (!domain || !portfolioId) {
-        return res.status(400).json({ error: "Domain and portfolioId are required" });
+      if (!domain) {
+        return res.status(400).json({ error: "Domain is required" });
+      }
+
+      //check database to see if the domain is already registered by any user
+      try {
+        await createDomainMapping({
+          domain,
+          user: { _id: userId },
+          portfolioId: portfolioId || null,
+          notes: "BYOD registration",
+        });
+        console.log(`Domain mapping created for ${domain} and user ${userId}`);
+      } catch (error) {
+        console.error("Error creating domain mapping:", error.message);
+        return res.status(error.status || 500).json({
+          error: error.message || "Internal server error",
+        });
       }
 
       // Add domain to Vercel project
       let vercelResult;
       try {
         // add the domain to the vercel project
-        vercelResult = await vercelService.addDomain(domain, userId, portfolioId);
+        vercelResult = await vercelService.addDomain(domain);
         console.log(`Custom domain ${domain} added to Vercel project`);
       } catch (vercelErr) {
         // if the domain is not added to the vercel project, return an error
@@ -387,6 +420,13 @@ const domainService = {
             ? vercelError.message
             : "Failed to add domain to Vercel";
 
+        //delete domainMapping if vercel fails to add the domain
+        try {
+          await DomainRoute.deleteOne({ domain, userId });
+          console.log(`Domain mapping for ${domain} and user ${userId} deleted due to Vercel failure`);
+        } catch (deleteErr) {
+          console.error("Error deleting domain mapping after Vercel failure:", deleteErr.message);
+        }
         return res.status(statusCode).json({
           error: "Failed to add domain to Vercel",
           message: detailMessage,
@@ -413,7 +453,7 @@ const domainService = {
       res.status(200).json({
         message: "Custom domain configured - please verify DNS settings",
         domain: domain,
-        portfolioId: portfolioId,
+        portfolioId: portfolioId || null,
         status: isVerified ? "active" : "pending_verification",
         verification: vercelResult?.verification, // DNS records to configure
         instructions: {

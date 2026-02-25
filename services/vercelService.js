@@ -127,33 +127,47 @@ function buildVercelError(error, options = {}) {
 
 // Add domain to Vercel project
 async function addDomain(domain) {
-  try {
-    // Ensure project + team envs are present
-    validateProjectAndTeamEnv();
+  validateProjectAndTeamEnv();
 
-    const vercel = await getVercelClient();
-    const projectId = process.env.VERCEL_PROJECT_ID;
+  const vercel = await getVercelClient();
+  const projectId = process.env.VERCEL_PROJECT_ID;
 
-    const result = await vercel.projects.addProjectDomain({
-      idOrName: projectId,
-      requestBody: {
-        name: domain,
-      },
-      teamId: process.env.VERCEL_TEAM_ID,
-    });
+  domain = domain
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .trim()
+    .toLowerCase();
 
-    console.log(`Domain added to Vercel: ${domain}`);
+  const domainsToAdd = [domain, `www.${domain}`];
+  const results = [];
 
-    return {
-      success: true,
-      domain: result.name,
-      verified: result.verified,
-      verification: result.verification, // DNS records needed
-    };
-  } catch (error) {
-    console.error(`Failed to add domain ${domain}:`, error.message);
-    throw buildVercelError(error, { prefix: "Vercel API error" });
+  for (const d of domainsToAdd) {
+    try {
+      const result = await vercel.projects.addProjectDomain({
+        idOrName: projectId,
+        requestBody: { name: d },
+        teamId: process.env.VERCEL_TEAM_ID,
+      });
+
+      results.push({
+        domain: result.name,
+        verified: result.verified,
+        verification: result.verification || [],
+      });
+    } catch (error) {
+      if (error.code === "domain_already_exists") {
+        console.log(`Domain ${d} already added`);
+        continue;
+      }
+      throw error;
+    }
   }
+
+  return {
+    domains: results,
+    verified: results.every(d => d.verified),
+    verification: results.flatMap(d => d.verification),
+  };
 }
 
 // Verify domain after DNS configured
