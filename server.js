@@ -1,4 +1,8 @@
 require("dotenv").config();
+if (process.env.DNS_FIX === 'true') {
+  const dns = require('dns');
+  dns.setServers(['8.8.8.8', '8.8.4.4']);
+}
 const connectDB = require("./utils/db");
 const app = require("./index");
 
