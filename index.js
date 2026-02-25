@@ -36,9 +36,6 @@ const checkoutRoutes = require("./routes/stripePayment/checkoutRoutes");
 const authRoutes = require("./routes/auth"); // Import authentication routes
 const seedUsers = require("./seed/users"); // Import seed users function
 const domainResolver = require("./middleware/domainResolver"); // Import domain resolver
-const handymanTemplateRoutes = require("./routes/handyMan/handymanTemplateRoutes");
-const handymanInquiryRoutes = require("./routes/handyMan/handymanInquiryRoutes");
-const localVendorRoutes = require("./routes/localFoodVendor/localVendorRoutes");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes");
 const supportFormRoutes = require("./routes/supportFormRoutes");
@@ -50,17 +47,16 @@ const telemetryRoutes = require("./routes/telemetry");
 const guestUserRoutes = require("./microservices/guestLogin/guestUser.routes");
 const portfolioEditLogRoutes = require("./routes/portfolioEditLogRoutes");
 const guestAdminPanelRoutes = require("./microservices/guestAdminPanel/guestAdminPanel.routes");
-const portfolio_Routes = require("./routes/cleaningLady/portfolioRoutes");
 const socialLinksRoutes = require("./microservices/socialLinks/socialLinks.routes");
-const userPortfoliosArrayRoutes = require("./microservices/userPortfoliosArray/userPortfoliosArray.routes.js");
-const publicPortfoliosRoutes = require("./microservices/publicPortfolios/publicPortfolios.routes");
+//const userPortfoliosArrayRoutes = require("./microservices/userPortfoliosArray/userPortfoliosArray.routes.js");
+//const publicPortfoliosRoutes = require("./microservices/publicPortfolios/publicPortfolios.routes");
 const domainPaymentRouter = require("./microservices/domainPayment/stripe/stripe.route");
 const emailMvpRoutes = require("./microservices/emailmvp/emailmvp.routes");
 // const domainRouting = require("./middleware/domainRouting");
 const googleLoginRoutes = require("./microservices/googleLogin/googleLogin.routes.js");
 const contactMeRoutes = require("./microservices/contactMeForm/contactMeForm.routes.js");
-const domainRouterRoutes = require("./microservices/DomainRouter/DomainRouter.routes.js")
-const s3UploadRoutes = require("./microservices/S3Upload/S3Upload.routes.js")
+const domainRouterRoutes = require("./microservices/DomainRouter/DomainRouter.routes.js");
+const s3UploadRoutes = require("./microservices/S3Upload/S3Upload.routes.js");
 
 // Import configuration from separate file
 const config = require("./config");
@@ -91,7 +87,7 @@ const seededOrigins = [
     entry
       .split(",")
       .map((value) => value.trim())
-      .filter(Boolean)
+      .filter(Boolean),
   );
 
 const staticOriginSet = new Set();
@@ -109,11 +105,10 @@ for (const origin of seededOrigins) {
     }
   } catch (error) {
     console.warn(
-      `[cors] Skipping invalid configured origin "${origin}": ${error.message}`
+      `[cors] Skipping invalid configured origin "${origin}": ${error.message}`,
     );
   }
 }
-
 
 const corsOptions = {
   origin: async (origin, callback) => {
@@ -132,8 +127,8 @@ const corsOptions = {
 
     // 1. Instant check for whitelisted & previously cached domains
     if (
-      hostname.endsWith("surge-ainas-projects.vercel.app") || 
-      staticOriginSet.has(normalizedOrigin) || 
+      hostname.endsWith("surge-ainas-projects.vercel.app") ||
+      staticOriginSet.has(normalizedOrigin) ||
       staticHostnameSet.has(hostname)
     ) {
       return callback(null, true);
@@ -222,7 +217,9 @@ app.use("/support-form", supportFormRoutes);
 app.use("/api/domains", domainRoutes);
 app.use("/api/portfolio-edit-log", portfolioEditLogRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-app.get("/health", (_req, res) => res.status(200).json({ ok: true, ts: Date.now() }));
+app.get("/health", (_req, res) =>
+  res.status(200).json({ ok: true, ts: Date.now() }),
+);
 app.use("/healthcare", healthcareRoutes);
 app.use("/api/telemetry", telemetryRoutes);
 
@@ -230,12 +227,12 @@ app.use("/api/telemetry", telemetryRoutes);
 app.use("/guestUser", guestUserRoutes);
 app.use("/guestAdminPanel", guestAdminPanelRoutes);
 app.use("/social-links", socialLinksRoutes);
-app.use("/userPortfoliosArray", userPortfoliosArrayRoutes);
-app.use("/publicPortfolios", publicPortfoliosRoutes);
+//app.use("/userPortfoliosArray", userPortfoliosArrayRoutes);
+//app.use("/publicPortfolios", publicPortfoliosRoutes);
 app.use("/api/domainPayment", domainPaymentRouter);
 app.use("/google-login/", googleLoginRoutes);
 app.use("/contactMe", contactMeRoutes);
-app.use("/domainRouter", domainRouterRoutes)
+app.use("/domainRouter", domainRouterRoutes);
 app.use("/s3-upload-url", s3UploadRoutes);
 
 //aiPortfolioCreator
@@ -267,7 +264,7 @@ app.get("/api/health", (_req, res) => {
 // Serve static files from uploads directory
 app.use(
   `/${config.uploads.directory}`,
-  express.static(path.join(__dirname, config.uploads.directory))
+  express.static(path.join(__dirname, config.uploads.directory)),
 );
 // Make config available to the app
 app.set("config", config);
