@@ -165,4 +165,10 @@ UserDataSchema.pre("save", function (next) {
 // Compound index for efficient user portfolio queries
 UserDataSchema.index({ userId: 1, isActive: 1 });
 
-module.exports = mongoose.model("HealthcareSettings", UserDataSchema);
+module.exports =
+  mongoose.models.HealthcarePortfolio ||
+  mongoose.model(
+    "HealthcarePortfolio",
+    UserDataSchema,
+    "healthcaresettings" // keeps existing collection
+  );

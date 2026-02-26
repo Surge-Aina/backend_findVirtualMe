@@ -66,4 +66,10 @@ const PortfolioSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("portfolio", PortfolioSchema);
+module.exports =
+  mongoose.models.ProjectManagerPortfolio ||
+  mongoose.model(
+    "ProjectManagerPortfolio",
+    PortfolioSchema,
+    "portfolios" // keeps existing collection
+  );
