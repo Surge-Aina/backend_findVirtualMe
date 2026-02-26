@@ -238,6 +238,7 @@ app.use("/contactMe", contactMeRoutes);
 app.use("/domainRouter", domainRouterRoutes)
 app.use("/s3-upload-url", s3UploadRoutes);
 app.use("/vouchers", require("./microservices/vouchers/voucher.routes.js"));
+app.use("/qrCode", require("./microservices/qrCode/qrCode.routes.js"));
 
 //aiPortfolioCreator
 const contactRouter = require("./microservices/aiPortfolioCreator/contact/aiPortfolioCreator.routes.js");
