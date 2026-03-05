@@ -149,9 +149,9 @@ const HandymanTemplateSchema = new Schema(
 );
 
 module.exports =
-  mongoose.models.HandymanPortfolio ||
+  mongoose.models.HandymanMainPortfolio ||
   mongoose.model(
-    "HandymanPortfolio",
+    "HandymanMainPortfolio",
     HandymanTemplateSchema,
     "handymantemplates"
   );
