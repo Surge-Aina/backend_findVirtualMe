@@ -37,6 +37,10 @@ const ProjectSchema = new mongoose.Schema(
 
 const PortfolioSchema = new mongoose.Schema(
   {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     isPublic: { type: Boolean, default: false },
     portfolioType: { type: String, default: "ProjectManager" },
     portfolioName: { type: String, default: "New Project Manager Portfolio" },
@@ -66,4 +70,10 @@ const PortfolioSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("portfolio", PortfolioSchema);
+module.exports =
+  mongoose.models.ProjectManagerPortfolio ||
+  mongoose.model(
+    "ProjectManagerPortfolio",
+    PortfolioSchema,
+    "portfolios" // keeps existing collection
+  );
