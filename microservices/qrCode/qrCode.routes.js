@@ -12,6 +12,8 @@ router.get("/public", controller.getPublicQrCodes);
 router.get("/public/:id", controller.getOnePublicQrCode);
 
 //-----protected routes-----
+//get all qr codes for authenticated user
+router.get("/", auth, controller.getUserQrCodes);
 //get single qr code by id
 router.get("/:id", controller.getOneQrCode);
 //create new qr code
