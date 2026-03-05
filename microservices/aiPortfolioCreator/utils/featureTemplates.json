@@ -1,0 +1,15 @@
+{
+  "templates": [
+    {
+      "id": "form_to_mongo_v1",
+      "keywords": ["form", "contact", "save", "database", "store", "message", "submit"],
+      "rules": [
+        "Create a Mongoose model in the existing code style",
+        "Create a POST endpoint matching the frontend fetch path",
+        "Validate required fields",
+        "Save document to MongoDB using existing connection",
+        "Return {success:true,message:'...'}"
+      ]
+    }
+  ]
+}

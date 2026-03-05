@@ -34,6 +34,8 @@ const UserDataSchema = new mongoose.Schema({
     name: { type: String, required: true },
     tagline: { type: String, default: "" },
     description: { type: String, default: "" },
+    logoImage: { type: String, default: "" },
+    icon: { type: String, default: "" },
   },
   contact: {
     phone: { type: String, default: "" },
@@ -57,6 +59,13 @@ const UserDataSchema = new mongoose.Schema({
     successRate: { type: String, default: "0" },
     doctorsCount: { type: String, default: "0" },
   },
+  statsVisibility: {
+  showStatsSection: Boolean,  // Master toggle
+  yearsExperience: Boolean,
+  patientsServed: Boolean,
+  successRate: Boolean,
+  doctorsCount: Boolean
+},
   services: [
     {
       id: String,
@@ -156,4 +165,10 @@ UserDataSchema.pre("save", function (next) {
 // Compound index for efficient user portfolio queries
 UserDataSchema.index({ userId: 1, isActive: 1 });
 
-module.exports = mongoose.model("HealthcareSettings", UserDataSchema);
+module.exports =
+  mongoose.models.HealthcarePortfolio ||
+  mongoose.model(
+    "HealthcarePortfolio",
+    UserDataSchema,
+    "healthcaresettings" // keeps existing collection
+  );

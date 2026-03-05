@@ -148,4 +148,10 @@ const HandymanTemplateSchema = new Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("HandymanTemplate", HandymanTemplateSchema);
+module.exports =
+  mongoose.models.HandymanPortfolio ||
+  mongoose.model(
+    "HandymanPortfolio",
+    HandymanTemplateSchema,
+    "handymantemplates"
+  );

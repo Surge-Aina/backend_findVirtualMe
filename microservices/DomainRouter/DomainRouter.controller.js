@@ -88,8 +88,7 @@ exports.updateDomainRoute = async (req, res) => {
 
     // Portfolio update — verify ownership and refresh routing fields
     if (portfolioId) {
-      const portfolio = user.portfolios.find((p) => p.portfolioId.equals(portfolioId));
-
+      const portfolio = user.portfolios.find((p) => p.portfolioId?.toString() === portfolioId.toString());
       if (!portfolio) {
         return res.status(403).json({
           message: "You do not own this portfolio"

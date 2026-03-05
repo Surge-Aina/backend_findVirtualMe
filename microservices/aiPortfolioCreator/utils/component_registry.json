@@ -1,0 +1,35 @@
+{
+  "version": "1.0",
+  "components": [
+    {
+      "id": "ContactPage_DataScientist_v1",
+      "feature": "contact_form",
+      "keywords": ["contact", "contact page", "contact form", "message", "email", "inquiry", "reach out"],
+      "frontend": {
+        "files": [
+          "frontend_findVirtualMe/src/pages/dataScientist/components/pages/ContactPage.jsx"
+        ],
+        "exports": ["ContactPage"],
+        "usageNotes": "Shows contact info (email/location/social links) + a contact form (name/email/message) with snackbar feedback.",
+        "env": ["VITE_BACKEND_API"]
+      },
+      "backend": {
+        "endpoints": [
+          {
+            "method": "POST",
+            "path": "/datascience-portfolio/contact",
+            "body": ["name", "email", "message", "portfolioId"],
+            "returns": ["success", "message"]
+          }
+        ],
+        "files": [],
+        "notes": "Backend route must accept form payload and store/send message. This endpoint is called by ContactPage.jsx."
+      },
+      "integrationSteps": [
+        "Ensure ContactPage is routed in the portfolio router/nav.",
+        "Ensure backend implements POST /datascience-portfolio/contact.",
+        "Make sure VITE_BACKEND_API is set and CORS allows frontend origin."
+      ]
+    }
+  ]
+}
