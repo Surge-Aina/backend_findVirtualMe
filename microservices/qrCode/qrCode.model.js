@@ -1,5 +1,4 @@
 // qrCode.model.js
-// qrCode.model.js
 const mongoose = require("mongoose");
 
 const qrCodeSchema = new mongoose.Schema(
@@ -21,7 +20,7 @@ const qrCodeSchema = new mongoose.Schema(
         enum: [
           "ProjectManagerPortfolio",
           "HealthcarePortfolio",
-          "HandymanPortfolio"
+          "HandymanMainPortfolio"
         ],
         default: null,
       },
