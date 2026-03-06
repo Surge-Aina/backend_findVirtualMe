@@ -15,8 +15,17 @@ exports.getPublicQrCodesByPortfolio = (portf) => {
   return QrCode.find(filter);
 };
 
+// ===================public above pricate below========================
+
 exports.getOneQrCode = (id, ownerId) =>
   QrCode.findOne({ _id: id, ownerId });
+
+exports.getQrCodesbyPortfolio = (ownerId, portfolioId, type) => {
+  const filter = { ownerId };
+  if (portfolioId) filter["portfolio.id"] = portfolioId;
+  if (type) filter["portfolio.type"] = type;
+  return QrCode.find(filter);
+};
 
 exports.createQrCode = (data, ownerId) =>
   new QrCode({ ...data, ownerId }).save();
@@ -26,3 +35,16 @@ exports.updateQrCode = (id, ownerId, data) =>
 
 exports.deleteQrCode = (id, ownerId) =>
   QrCode.findOneAndDelete({ _id: id, ownerId });
+
+exports.toggleActiveQrCode = async (id, ownerId) => {
+  try {
+    const qr = await QrCode.findOne({ _id: id, ownerId });
+    if (!qr) {
+      throw new Error("QR code not found");
+    }
+    qr.active = !qr.active;
+    return await qr.save();
+  } catch (err) {
+    throw new Error(err.message);
+  }
+};
