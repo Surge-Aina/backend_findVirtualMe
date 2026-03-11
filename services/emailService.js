@@ -398,7 +398,7 @@ async function sendSupportFormEmails(formData) {
   }
 }
 
-async function sendGenericContactEmails(formData, ownerEmail, ownerName, portfolioType) {
+async function sendGenericContactEmails(formData, ownerEmail, ownerName) {
   try {
     console.log("📧 Starting generic contact email sequence...");
 
@@ -432,7 +432,7 @@ async function sendGenericContactEmails(formData, ownerEmail, ownerName, portfol
               <p><strong>Name:</strong> ${formData.name}</p>
               <p><strong>Email:</strong> ${formData.email}</p>
               <p><strong>Message:</strong><br>${formData.message}</p>
-              <p><strong>Portfolio Type:</strong> ${portfolioType}</p>
+              <p><strong>Portfolio Type:</strong> ${formData.portfolioType}</p>
             </div>
             
             <p><strong>Expected Response Time:</strong> Within 24-48 hours</p>
@@ -479,7 +479,7 @@ async function sendGenericContactEmails(formData, ownerEmail, ownerName, portfol
             <h1>🎉 New Contact Message!</h1>
           </div>
           <div class="content">
-            <p>You have a new message from your ${businessName}, ${portfolioType} portfolio.</p>
+            <p>You have a new message from your ${businessName}, ${formData.portfolioType} portfolio.</p>
             
             <div class="highlight">
               <h3>📞 Contact Details</h3>
@@ -537,7 +537,7 @@ async function sendGenericContactEmails(formData, ownerEmail, ownerName, portfol
           </div>
           <div class="content">
             <h3>Portfolio: ${businessName}</h3>
-            <p><strong>Portfolio Type:</strong> ${portfolioType}</p>
+            <p><strong>Portfolio Type:</strong> ${formData.portfolioType}</p>
             
             <div class="info-box">
               <h4>Owner Information:</h4>
