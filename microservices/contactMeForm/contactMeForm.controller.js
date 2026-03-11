@@ -6,7 +6,7 @@ const contactMeFormDB = require("./contactMeForm.model");
 
 exports.submitContact = async (req, res) => {
   try {
-    const { name, email, message, portfolioId, ownerEmail, ownerName } = req.body;
+    const { name, email, message, portfolioId, ownerEmail, ownerName, portfolioType } = req.body;
 
     // Validation
     if (!name || !email || !message || !portfolioId || !ownerEmail || !ownerName) {
@@ -20,6 +20,7 @@ exports.submitContact = async (req, res) => {
     // Save contact to database
     const contact = await contactMeFormDB.create({
       portfolioId,
+      portfolioType,
       ownerEmail,
       ownerName,
       name,
@@ -35,6 +36,7 @@ exports.submitContact = async (req, res) => {
       name,
       email,
       message,
+      portfolioType,
     };
 
     // Send emails (non-blocking)
