@@ -14,10 +14,15 @@ router.get("/public", controller.getPublicQrCodes);
 router.get("/public/:id", controller.getOnePublicQrCode);
 
 //-----protected routes-----
+//get all qr codes for authenticated user
+//GET qrCode/byPortfolio?portfolioId=PORTFOLIO_ID&type=PORTFOLIO_TYPE
+router.get("/byPortfolio", auth, controller.getQrCodesByPortfolio);
 //get single qr code by id
 router.get("/:id", auth, controller.getOneQrCode);
 //create new qr code
 router.post("/", auth, controller.createQrCode);
+//toggle active status of qr code by id
+router.patch("/:id/toggleActive", auth, controller.toggleActiveQrCode);
 //update qr code by id
 router.put("/:id", auth, controller.updateQrCode);
 //delete qr code by id

@@ -31,7 +31,7 @@ exports.getPublicQrCodes = async (req, res) => {
 exports.getPublicQrCodesByPortfolio = async (req, res) => {
   try {
     const { portfolioId, type } = req.query;
-    console.log("getPublicQrCodesByPortfolio called with portfolioId:", portfolioId, "type:", type);
+    console.log("+++++++++getPublicQrCodesByPortfolio called with portfolioId:", portfolioId, "type:", type);
     if (!portfolioId || !type) {
       return res.status(400).json({ message: "Portfolio id and type are required" });
     }
@@ -98,4 +98,31 @@ exports.deleteQrCode = async (req, res) => {
   }
 };
 
+exports.toggleActiveQrCode = async (req, res) => {
+  try { 
+    const qr = await service.toggleActiveQrCode(req.params.id, req.user.id);
+    if (!qr) {
+      return res.status(404).json({ message: "QR code not found" });
+    }
+    res.json(qr);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getQrCodesByPortfolio = async (req, res) => {
+  try {
+    const { portfolioId, type } = req.query;
+    if (!portfolioId || !type) {
+      return res.status(400).json({ message: "Portfolio id and type are required" });
+    }
+    console.log("========getQrCodesByPortfolio called with portfolioId:", portfolioId, "type:", type, "ownerId:", req.user.id);
+    const qrCodes = await service.getQrCodesbyPortfolio(req.user.id, portfolioId, type);
+    res.json(qrCodes);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+};
 

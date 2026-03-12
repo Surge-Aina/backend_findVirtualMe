@@ -7,6 +7,9 @@ const ContactMeFormSchema = new mongoose.Schema(
       ref: "portfolio",
       required: true,
     },
+    portfolioType: {
+      type: String,
+    },
     ownerEmail: {
       type: String,
       required: true,
