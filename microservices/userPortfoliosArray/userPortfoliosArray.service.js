@@ -3,8 +3,9 @@ const handymanModel = require("../../models/handyMan/HandymanTemplate");
 const localFoodVendorModel = require("../../models/localFoodVendor/LocalVendorPortfolio");
 const cleaningLadyModel = require("../../models/cleaningLady/Portfolio");
 const projectManagerModel = require("../../models/projectManager/portfolioModel");
+const healthcareModel = require("../../models/healthcare/userData");
 
-const modelsArrayUserId = [handymanModel, cleaningLadyModel];
+const modelsArrayUserId = [handymanModel, cleaningLadyModel, healthcareModel];
 
 const modelsArrayEmail = [localFoodVendorModel, projectManagerModel];
 
@@ -13,6 +14,7 @@ const portfolioModels = {
   LocalVendor: localFoodVendorModel,
   CleaningLady: cleaningLadyModel,
   ProjectManager: projectManagerModel,
+  Healthcare: healthcareModel,
 };
 
 exports.getUserPortfoliosArrayByEmail = async (email) => {
