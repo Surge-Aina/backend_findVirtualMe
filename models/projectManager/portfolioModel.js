@@ -42,6 +42,7 @@ const PortfolioSchema = new mongoose.Schema(
       ref: "User",
     },
     isPublic: { type: Boolean, default: false },
+    hideBranding: { type: Boolean, default: false },
     portfolioType: { type: String, default: "ProjectManager" },
     portfolioName: { type: String, default: "New Project Manager Portfolio" },
 
@@ -63,6 +64,8 @@ const PortfolioSchema = new mongoose.Schema(
     socialLinks: {
       github: { type: String },
       linkedin: { type: String },
+      twitter: { type: String },
+      instagram: { type: String },
       website: { type: String },
     },
     sessionId: { type: String, default: null },
