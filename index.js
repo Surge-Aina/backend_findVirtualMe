@@ -240,6 +240,8 @@ app.use("/domainRouter", domainRouterRoutes);
 app.use("/s3-upload-url", s3UploadRoutes);
 app.use("/vouchers", require("./microservices/vouchers/voucher.routes.js"));
 app.use("/qrCode", require("./microservices/qrCode/qrCode.routes.js"));
+app.use("/privacy-policy", require("./microservices/privacyPolicy/privacyPolicy.routes"));
+app.use("/terms-of-service", require("./microservices/termsOfService/termsOfService.routes"));
 
 //aiPortfolioCreator
 const contactRouter = require("./microservices/aiPortfolioCreator/contact/aiPortfolioCreator.routes.js");

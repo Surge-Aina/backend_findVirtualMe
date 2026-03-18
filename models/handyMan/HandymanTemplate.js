@@ -43,6 +43,7 @@ const HandymanTemplateSchema = new Schema(
     portfolioType: { type: String, default: "Handyman" },
     portfolioName: { type: String, default: "New HandyMan Portfolio" },
     isPublic: { type: Boolean, default: false },
+    hideBranding: { type: Boolean, default: false },
     userId: { type: String },
 
     // Projects / gallery copy
@@ -143,6 +144,14 @@ const HandymanTemplateSchema = new Schema(
           service: "General Repairs",
         },
       ],
+    },
+
+    socialLinks: {
+      github: { type: String, default: "" },
+      linkedin: { type: String, default: "" },
+      twitter: { type: String, default: "" },
+      instagram: { type: String, default: "" },
+      website: { type: String, default: "" },
     },
   },
   { timestamps: true }
