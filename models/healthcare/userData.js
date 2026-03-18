@@ -4,6 +4,7 @@ const UserDataSchema = new mongoose.Schema({
   portfolioType: { type: String, default: "Healthcare" },
   portfolioName: { type: String, default: "New Healthcare Portfolio" },
   isPublic: { type: Boolean, default: false },
+  hideBranding: { type: Boolean, default: false },
   
   // ✅ practiceId is just a reference field - NOT unique
   // MongoDB _id is the primary identifier (like other portfolios)
@@ -151,6 +152,13 @@ const UserDataSchema = new mongoose.Schema({
       linkedin: { type: String, default: "" },
       youtube: { type: String, default: "" },
     },
+  },
+  socialLinks: {
+    github: { type: String, default: "" },
+    linkedin: { type: String, default: "" },
+    twitter: { type: String, default: "" },
+    instagram: { type: String, default: "" },
+    website: { type: String, default: "" },
   },
   createdAt: { type: Date, default: Date.now },
   lastModified: { type: Date, default: Date.now },
