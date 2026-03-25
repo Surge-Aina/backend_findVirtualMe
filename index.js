@@ -238,6 +238,7 @@ app.use("/google-login/", googleLoginRoutes);
 app.use("/contactMe", contactMeRoutes);
 app.use("/domainRouter", domainRouterRoutes);
 app.use("/s3-upload-url", s3UploadRoutes);
+app.use("/api/portfolios", require("./routes/portfolio.routes"));
 app.use("/vouchers", require("./microservices/vouchers/voucher.routes.js"));
 app.use("/qrCode", require("./microservices/qrCode/qrCode.routes.js"));
 app.use("/privacy-policy", require("./microservices/privacyPolicy/privacyPolicy.routes"));

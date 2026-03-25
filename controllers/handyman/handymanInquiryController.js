@@ -1,5 +1,6 @@
 const HandymanInquiry = require('../../models/handyMan/handymanInquiryModel');
 const HandymanTemplate = require('../../models/handyMan/HandymanTemplate');
+const UnifiedPortfolio = require('../../models/portfolio/Portfolio');
 const UserModel = require('../../models/userModel');
 const nodemailer = require('nodemailer');
 
@@ -18,15 +19,39 @@ function buildTransporter() {
 const createInquiry = async (req, res) => {
   try {
     const {
-      templateId, name, email, phone, message,
+      templateId,
+      portfolioId,
+      name, email, phone, message,
       selectedServiceTitles = []   // ✅ array from form
     } = req.body;
 
     let ownerEmail = null;
     let selectedPrices = [];
     let total = 0;
+    let saveTemplateId = templateId || undefined;
+    let savePortfolioId = portfolioId || undefined;
 
-    if (templateId) {
+    // ─── Unified v2 handyman portfolio (portfolios_v2) ───
+    if (portfolioId) {
+      const pf = await UnifiedPortfolio.findById(portfolioId).lean();
+      if (!pf || pf.template !== 'handyman') {
+        return res.status(400).json({ message: 'Invalid handyman portfolio' });
+      }
+      saveTemplateId = undefined;
+      const owner = await UserModel.findById(pf.owner).lean();
+      ownerEmail = owner?.email || null;
+
+      const servicesSection = (pf.sections || []).find((s) => s.type === 'services');
+      const svcItems = servicesSection?.data?.items || [];
+      if (Array.isArray(selectedServiceTitles) && svcItems.length) {
+        selectedPrices = selectedServiceTitles.map((title) => {
+          const match = svcItems.find((s) => (s.title || s.name) === title);
+          const p = Number(match?.price || 0);
+          total += p;
+          return p;
+        });
+      }
+    } else if (templateId) {
       const tpl = await HandymanTemplate.findById(templateId).lean();
       ownerEmail = tpl?.contact?.email || null;
       if (!ownerEmail && tpl?.userId) {
@@ -47,7 +72,8 @@ const createInquiry = async (req, res) => {
 
     // Save inquiry with snapshot
     await HandymanInquiry.create({
-      templateId: templateId || undefined,
+      templateId: saveTemplateId,
+      portfolioId: savePortfolioId,
       name, email, phone, message,
       selectedServiceTitles,
       selectedServicePrices: selectedPrices,
@@ -110,7 +136,7 @@ Total (sum of your set prices): ${selectedServiceTitles.length ? `$${total}` : '
 Message:
 ${message || '—'}
 
-Portfolio ID: ${templateId || '—'}
+Portfolio ID: ${templateId || portfolioId || '—'}
 Time: ${new Date().toISOString()}
 
 — System notification`
