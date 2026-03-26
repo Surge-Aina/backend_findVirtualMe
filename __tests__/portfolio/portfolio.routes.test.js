@@ -147,6 +147,78 @@ describe("Unified portfolio routes", () => {
     expect(cs.data.metrics).toEqual(["Activation +22%", "Tickets -18%"]);
   });
 
+  it("accepts the richer agent-only portfolio blocks", async () => {
+    const res = await request(app)
+      .post("/api/portfolios/agent")
+      .send({
+        baseTemplate: "agent",
+        title: "Rich agent portfolio",
+        generationModel: "gpt-5.4",
+        generationVersion: "2026-03-26",
+        generationPromptHash: "rich456",
+        sections: [
+          {
+            type: "summary",
+            data: {
+              name: "Northstar Studio",
+              title: "Creative studio",
+            },
+          },
+          {
+            type: "faq",
+            data: {
+              sectionTitle: "FAQ",
+              items: [{ question: "Do you work remotely?", answer: "Yes, with global teams." }],
+            },
+          },
+          {
+            type: "clientLogos",
+            data: {
+              items: [{ name: "Acme", logoUrl: "https://example.com/acme.png", url: "https://example.com" }],
+            },
+          },
+          {
+            type: "certifications",
+            data: {
+              items: [{ name: "PMP", issuer: "PMI", credentialId: "12345" }],
+            },
+          },
+          {
+            type: "languages",
+            data: {
+              items: [{ name: "English", proficiency: "Native" }],
+            },
+          },
+          {
+            type: "team",
+            data: {
+              items: [{ name: "Alex", role: "Strategist", bio: "Leads discovery and delivery." }],
+            },
+          },
+          {
+            type: "videoEmbed",
+            data: {
+              title: "Showreel",
+              embedUrl: "https://www.youtube.com/embed/demo-video",
+            },
+          },
+        ],
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.portfolio.sections.map((section) => section.type)).toEqual(
+      expect.arrayContaining([
+        "faq",
+        "clientLogos",
+        "certifications",
+        "languages",
+        "team",
+        "videoEmbed",
+      ])
+    );
+  });
+
   it("rejects unknown block types on create with structured unsupported-block details", async () => {
     const res = await request(app)
       .post("/api/portfolios")
@@ -286,6 +358,12 @@ describe("Unified portfolio routes", () => {
         "projects",
         "contact",
         "dashboardChart",
+        "faq",
+        "clientLogos",
+        "certifications",
+        "languages",
+        "team",
+        "videoEmbed",
         "caseStudy",
       ])
     );

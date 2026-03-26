@@ -246,6 +246,89 @@ const BLOCK_DATA_HINTS = {
       ],
     },
   },
+  faq: {
+    description: "Frequently asked questions that reduce objections and explain how the work fits.",
+    dataShape: {
+      sectionTitle: "Frequently asked questions",
+      sectionIntro: "Optional short intro",
+      items: [
+        {
+          question: "Common question",
+          answer: "Short, clear answer",
+        },
+      ],
+    },
+  },
+  clientLogos: {
+    description: "Logo strip or client cloud for trust, partner proof, or brands worked with.",
+    dataShape: {
+      sectionTitle: "Trusted by",
+      sectionIntro: "Optional short credibility statement",
+      items: [
+        {
+          name: "Client or partner",
+          logoUrl: "https://example.com/logo.png",
+          url: "",
+        },
+      ],
+    },
+  },
+  certifications: {
+    description: "Licenses, certifications, and credentials separate from formal education.",
+    dataShape: {
+      sectionTitle: "Certifications",
+      items: [
+        {
+          name: "Certification name",
+          issuer: "Issuing organization",
+          credentialId: "",
+          earnedDate: "",
+          expiresDate: "",
+          url: "",
+        },
+      ],
+    },
+  },
+  languages: {
+    description: "Spoken languages with proficiency to support international or multilingual positioning.",
+    dataShape: {
+      sectionTitle: "Languages",
+      items: [
+        {
+          name: "English",
+          proficiency: "Native",
+        },
+      ],
+    },
+  },
+  team: {
+    description: "Roster of team members for an agency, studio, or collective portfolio.",
+    dataShape: {
+      sectionTitle: "Team",
+      sectionIntro: "Optional short intro",
+      items: [
+        {
+          name: "Team member",
+          role: "Role",
+          bio: "Short bio",
+          imageUrl: "",
+          profileUrl: "",
+        },
+      ],
+    },
+  },
+  videoEmbed: {
+    description: "Featured reel, talk, or walkthrough using an embed URL or hosted video URL.",
+    dataShape: {
+      sectionTitle: "Featured video",
+      title: "Video title",
+      description: "Short context for the video",
+      provider: "YouTube",
+      embedUrl: "https://www.youtube.com/embed/example",
+      videoUrl: "",
+      posterImageUrl: "",
+    },
+  },
   caseStudy: {
     description: "Narrative challenge/solution/outcome proof.",
     dataShape: {
@@ -498,6 +581,107 @@ function createServicesSection(prompt) {
   };
 }
 
+function createFaqSection() {
+  return {
+    type: "faq",
+    data: {
+      sectionTitle: "Frequently asked questions",
+      sectionIntro: "Helpful answers that remove friction before the first conversation.",
+      items: [
+        {
+          question: "What kinds of engagements are the best fit?",
+          answer: "Add a concise answer that sets expectations and clarifies scope.",
+        },
+      ],
+    },
+  };
+}
+
+function createClientLogosSection() {
+  return {
+    type: "clientLogos",
+    data: {
+      sectionTitle: "Trusted by",
+      sectionIntro: "Add clients, partners, or brands that strengthen credibility.",
+      items: [
+        {
+          name: "Client name",
+          logoUrl: "",
+          url: "",
+        },
+      ],
+    },
+  };
+}
+
+function createCertificationsSection() {
+  return {
+    type: "certifications",
+    data: {
+      sectionTitle: "Certifications",
+      items: [
+        {
+          name: "Certification name",
+          issuer: "Issuing organization",
+          credentialId: "",
+          earnedDate: "",
+          expiresDate: "",
+          url: "",
+        },
+      ],
+    },
+  };
+}
+
+function createLanguagesSection() {
+  return {
+    type: "languages",
+    data: {
+      sectionTitle: "Languages",
+      items: [
+        {
+          name: "English",
+          proficiency: "Fluent",
+        },
+      ],
+    },
+  };
+}
+
+function createTeamSection() {
+  return {
+    type: "team",
+    data: {
+      sectionTitle: "Team",
+      sectionIntro: "Introduce the people behind the delivery.",
+      items: [
+        {
+          name: "Team member",
+          role: "Role",
+          bio: "Add a short bio describing this person's contribution.",
+          imageUrl: "",
+          profileUrl: "",
+        },
+      ],
+    },
+  };
+}
+
+function createVideoEmbedSection() {
+  return {
+    type: "videoEmbed",
+    data: {
+      sectionTitle: "Featured video",
+      title: "Reel or walkthrough",
+      description: "Add a featured video that helps visitors understand the work quickly.",
+      provider: "",
+      embedUrl: "",
+      videoUrl: "",
+      posterImageUrl: "",
+    },
+  };
+}
+
 function createCaseStudySection() {
   return {
     type: "caseStudy",
@@ -592,17 +776,35 @@ function buildFallbackDraft(prompt, userContext, payload = {}) {
     /(data|dashboard|analytics|machine learning|ml|ai|insight|experiment|model)/.test(lower);
   const looksLikeNarrative =
     /(product|case study|strategy|consultant|designer|growth|ux)/.test(lower);
+  const wantsFaq =
+    /(faq|frequently asked|common questions|objections|pricing questions)/.test(lower);
+  const wantsClientProof =
+    /(trusted by|logos|logo cloud|logo strip|brands worked with|clients worked with|partners)/.test(lower);
+  const wantsCredentials =
+    /(certif|credential|licensed|license|accredit|board[- ]certified|pmp|scrum|aws certification)/.test(lower);
+  const wantsLanguages =
+    /(language|languages|bilingual|multilingual|english|spanish|french|german|arabic|portuguese)/.test(lower);
+  const wantsTeam =
+    /(agency|studio|collective|team|crew)/.test(lower);
+  const wantsVideo =
+    /(video|reel|showreel|demo|walkthrough|youtube|vimeo|loom|talk)/.test(lower);
 
   const sections = [];
   if (looksLikeService) sections.push(createHeroSection(prompt, userContext));
   sections.push(createSummarySection(prompt, userContext));
 
   if (looksLikeService) sections.push(createServicesSection(prompt));
+  if (wantsFaq) sections.push(createFaqSection());
+  if (wantsClientProof) sections.push(createClientLogosSection());
+  if (wantsTeam) sections.push(createTeamSection());
   if (looksLikeData) {
     sections.push(createChartSection());
     sections.push(createTableSection());
   }
   if (looksLikeNarrative) sections.push(createCaseStudySection());
+  if (wantsCredentials) sections.push(createCertificationsSection());
+  if (wantsLanguages) sections.push(createLanguagesSection());
+  if (wantsVideo) sections.push(createVideoEmbedSection());
 
   sections.push(createProjectsSection(prompt));
   if (!looksLikeService && userContext.skills.length) sections.push(createSkillsSection(userContext));
@@ -613,7 +815,7 @@ function buildFallbackDraft(prompt, userContext, payload = {}) {
     themeId: inferThemeId(prompt),
     layoutMode: "stacked",
     socialLinks: userContext.socialLinks,
-    sections: sections.slice(0, 7),
+    sections: sections.slice(0, 10),
   };
 }
 
@@ -709,6 +911,12 @@ function createGallerySection() {
 function buildEditFallbackDraft(instruction, currentPortfolio) {
   const lower = cleanString(instruction).toLowerCase();
   const next = JSON.parse(JSON.stringify(currentPortfolio));
+  const insertBeforeContact = (section) => {
+    if (next.sections.some((item) => item.type === section.type)) return;
+    const contactIndex = next.sections.findIndex((item) => item.type === "contact");
+    const insertIndex = contactIndex >= 0 ? contactIndex : next.sections.length;
+    next.sections.splice(insertIndex, 0, section);
+  };
 
   if (/(single[ -]?section|one[ -]?page|one section|single page)/.test(lower)) {
     next.layoutMode = "singleSection";
@@ -771,6 +979,30 @@ function buildEditFallbackDraft(instruction, currentPortfolio) {
         cleanString(summary.data.summary) ||
         "A polished portfolio focused on credibility, clarity, and measurable outcomes.";
     }
+  }
+
+  if (/(faq|common questions|objections)/.test(lower)) {
+    insertBeforeContact(createFaqSection());
+  }
+
+  if (/(trusted by|logos|logo strip|partners|brands worked with)/.test(lower)) {
+    insertBeforeContact(createClientLogosSection());
+  }
+
+  if (/(certif|credential|licensed|license|accredit)/.test(lower)) {
+    insertBeforeContact(createCertificationsSection());
+  }
+
+  if (/(language|languages|bilingual|multilingual)/.test(lower)) {
+    insertBeforeContact(createLanguagesSection());
+  }
+
+  if (/(team|agency|studio|collective|crew)/.test(lower)) {
+    insertBeforeContact(createTeamSection());
+  }
+
+  if (/(video|reel|showreel|demo|walkthrough|youtube|vimeo|loom|talk)/.test(lower)) {
+    insertBeforeContact(createVideoEmbedSection());
   }
 
   return next;

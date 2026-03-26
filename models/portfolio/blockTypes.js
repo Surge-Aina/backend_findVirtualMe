@@ -109,6 +109,36 @@ const BLOCK_TYPES = {
     description: "table for displaying data",
     templates: ["dataScientist"],
   },
+  faq: {
+    label: "FAQ",
+    description: "Frequently asked questions with concise answers",
+    templates: ["agent"],
+  },
+  clientLogos: {
+    label: "Client Logos",
+    description: "Trusted-by logo strip or partner logo cloud",
+    templates: ["agent"],
+  },
+  certifications: {
+    label: "Certifications",
+    description: "Credentials, licenses, and professional certifications",
+    templates: ["agent"],
+  },
+  languages: {
+    label: "Languages",
+    description: "Spoken languages and proficiency levels",
+    templates: ["agent"],
+  },
+  team: {
+    label: "Team",
+    description: "Team roster for studios, agencies, or collectives",
+    templates: ["agent"],
+  },
+  videoEmbed: {
+    label: "Video Embed",
+    description: "Embedded reel, talk, or featured video section",
+    templates: ["agent"],
+  },
   caseStudy: {
     label: "Case Study",
     description: "Case study with challenge, solution, and outcome",
