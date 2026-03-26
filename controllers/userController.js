@@ -5,6 +5,7 @@ const req = require("express/lib/request");
 const jwt = require("jsonwebtoken");
 const Stripe = require("stripe");
 const Portfolio = require("../models/projectManager/portfolioModel");
+const subscriptionAccess = require("../services/subscriptionAccess.service");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
@@ -231,6 +232,28 @@ exports.getHasSubscription = async (req, res) => {
     console.error("Error in getHasSubscription:", error);
     res.status(500).json({
       message: "Error checking hasSubscription",
+      error: error.message,
+    });
+  }
+};
+
+exports.getAiEditAccess = async (req, res) => {
+  try {
+    const user = req.user || {};
+    console.log(`[AI-ACCESS] checking for email=${user.email}, stripeCustomerId=${user.stripeCustomerId}`);
+    const access = await subscriptionAccess.getAiEditingAccess(user);
+    console.log(`[AI-ACCESS] result: hasAccess=${access.hasAccess}, subscription=${JSON.stringify(access.subscription?._id || null)}, usage=${JSON.stringify(access.usage)}`);
+    const planName = access.subscription?.subscriptionType || null;
+
+    res.status(200).json({
+      hasAccess: access.hasAccess,
+      planName,
+      usage: access.usage,
+    });
+  } catch (error) {
+    console.error("Error in getAiEditAccess:", error);
+    res.status(500).json({
+      message: "Error checking AI edit access",
       error: error.message,
     });
   }

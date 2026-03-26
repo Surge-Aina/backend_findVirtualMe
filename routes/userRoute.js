@@ -9,6 +9,7 @@ const {
   deleteUser,
   getSubInfo,
   getHasSubscription,
+  getAiEditAccess,
   getMe,
   addPortfolioID,
 } = require("../controllers/userController");
@@ -22,6 +23,7 @@ router.get("/getAllUsers", getAllUsers);
 router.get("/getUser/:id", getUserById);
 router.get("/subInfo", auth, getSubInfo);
 router.get("/hasSubscription", auth, getHasSubscription);
+router.get("/ai-edit-access", auth, getAiEditAccess);
 router.get("/me", auth, getMe);
 router.post("/addUser", addUser); //onboarding
 

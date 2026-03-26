@@ -105,6 +105,13 @@ const userSchema = new mongoose.Schema({
       autoRenew: { type: Boolean, default: true },
     },
   ],
+  aiUsage: {
+    agentEdits: {
+      periodKey: { type: String, default: "" },
+      used: { type: Number, default: 0 },
+      lastUsedAt: { type: Date, default: null },
+    },
+  },
   createdAt: {
     type: Date,
     default: Date.now,

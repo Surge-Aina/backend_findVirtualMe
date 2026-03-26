@@ -13,6 +13,7 @@ router.get("/mine", auth, ctrl.getMine);
 router.post("/", auth, ctrl.create);
 router.post("/agent", auth, ctrl.createAgent);
 router.post("/agent/generate", auth, ctrl.generateAgentFromPrompt);
+router.post("/:id/agent-edit", auth, ctrl.proposeAgentEdit);
 
 // Public param route
 router.get("/:id", ctrl.getById);

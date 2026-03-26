@@ -25,6 +25,10 @@ const PRICE_MAP = {
       : process.env.PRICE_PRO_TEST,
 };
 
+function normalizeCustomerEmail(email) {
+  return typeof email === "string" ? email.trim().toLowerCase() : "";
+}
+
 // Endpoint for Stripe to send real-time payment status updates (Webhook)
 // NOTE: Use raw body for this route for Stripe signature verification!
 // The path should be /webhook or /stripe/webhook, depending on how you mount the router.
@@ -77,7 +81,7 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
         }
 
         const updateData = {
-          email: customer.email,
+          email: normalizeCustomerEmail(customer.email),
           name: customer.name,
           customerId: subscription.customer,
           subscriptionId: subscription.id,
@@ -156,7 +160,7 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
         await Subscription.findOneAndUpdate(
           { customerId: subscription.customer },
           {
-            email: customer.email,
+            email: normalizeCustomerEmail(customer.email),
             name: customer.name,
             customerId: subscription.customer,
             status: "canceled",

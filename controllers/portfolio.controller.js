@@ -1,5 +1,6 @@
 const portfolioService = require("../services/portfolio.service");
 const agentPortfolioGenerator = require("../services/agentPortfolioGenerator.service");
+const subscriptionAccess = require("../services/subscriptionAccess.service");
 
 function sendPortfolioError(res, err, fallbackMessage) {
   if (err.code === 11000) {
@@ -138,6 +139,60 @@ exports.generateAgentFromPrompt = async (req, res) => {
   } catch (err) {
     console.error("portfolio.generateAgentFromPrompt error:", err);
     return sendPortfolioError(res, err, "Failed to generate agent portfolio");
+  }
+};
+
+exports.proposeAgentEdit = async (req, res) => {
+  try {
+    if (!(await denyUnlessOwner(req, res))) return;
+
+    const access = await subscriptionAccess.getAiEditingAccess(req.user || {});
+    if (!access.hasAccess) {
+      return res.status(403).json({
+        error: "AI portfolio editing requires an active paid subscription",
+        code: "PREMIUM_REQUIRED",
+      });
+    }
+    if (access.usage?.remaining <= 0) {
+      return res.status(429).json({
+        error: "You have reached your monthly AI edit limit",
+        code: "AI_EDIT_LIMIT_REACHED",
+        usage: access.usage,
+      });
+    }
+
+    const portfolio = await portfolioService.getPortfolio(req.params.id);
+    if (!portfolio) {
+      return res.status(404).json({ error: "Portfolio not found" });
+    }
+
+    if (portfolio.template !== "agent") {
+      return res.status(400).json({
+        error: "AI portfolio editing is currently available for AI-generated agent portfolios only",
+        code: "AGENT_TEMPLATE_REQUIRED",
+      });
+    }
+
+    const result = await agentPortfolioGenerator.proposeAgentPortfolioEdit(
+      req.user || {},
+      portfolio,
+      req.body || {}
+    );
+    const updatedAccess = await subscriptionAccess.consumeAiEditCredit(
+      req.user?._id || req.user?.id,
+      access
+    );
+
+    res.json({
+      success: true,
+      source: result.source,
+      proposal: result.proposal,
+      changes: result.changes,
+      usage: updatedAccess?.usage || access.usage,
+    });
+  } catch (err) {
+    console.error("portfolio.proposeAgentEdit error:", err);
+    return sendPortfolioError(res, err, "Failed to generate AI edit proposal");
   }
 };
 

@@ -11,7 +11,18 @@ const {
 const OPENAI_MODEL = "gpt-4o-mini";
 const GENERATION_VERSION = "2026-03-25";
 const DEFAULT_THEME = "aurora";
-const ALLOWED_THEMES = ["aurora", "sunrise", "paper"];
+/** Must match keys in frontend `AGENT_THEME_PRESETS` (agentThemeResolver.js). */
+const ALLOWED_THEMES = [
+  "aurora",
+  "clay",
+  "forest",
+  "midnight",
+  "ocean",
+  "paper",
+  "rose",
+  "slate",
+  "sunrise",
+];
 const UNSUPPORTED_HINTS = [
   {
     label: "booking calendar",
@@ -307,11 +318,29 @@ function normalizeThemeId(themeId) {
 
 function inferThemeId(prompt) {
   const lower = cleanString(prompt).toLowerCase();
+  if (/(minimal|editorial|paper|clean|light|airy)/.test(lower)) {
+    return "paper";
+  }
   if (/(warm|sunset|sunrise|hospitality|food|creative|bold)/.test(lower)) {
     return "sunrise";
   }
-  if (/(minimal|editorial|paper|clean|light)/.test(lower)) {
-    return "paper";
+  if (/(forest|nature|organic|eco|sustainable|garden|woodland)/.test(lower)) {
+    return "forest";
+  }
+  if (/(ocean|marine|coastal|nautical|aqua|seaside|underwater|beach)/.test(lower)) {
+    return "ocean";
+  }
+  if (/(midnight|cosmic|galaxy|vaporwave|neon|purple|noir)/.test(lower)) {
+    return "midnight";
+  }
+  if (/(clay|terracotta|earth|rustic|earthy|pottery)/.test(lower)) {
+    return "clay";
+  }
+  if (/(slate|corporate|enterprise|formal|finance|banking|executive)/.test(lower)) {
+    return "slate";
+  }
+  if (/(rose|blush|feminine|spa|wedding|bouquet)/.test(lower)) {
+    return "rose";
   }
   return DEFAULT_THEME;
 }
@@ -616,6 +645,315 @@ function normalizeGeneratedDraft(draft, prompt, userContext, payload = {}) {
   };
 }
 
+function normalizeEditableSections(sections, fallbackSections = []) {
+  const nextSections = Array.isArray(sections)
+    ? sections
+        .filter((section) => isPlainObject(section) && cleanString(section.type))
+        .map((section) => ({
+          type: cleanString(section.type),
+          visible: section.visible === undefined ? true : Boolean(section.visible),
+          data: isPlainObject(section.data) ? section.data : {},
+        }))
+    : [];
+
+  return nextSections.length ? nextSections : fallbackSections;
+}
+
+function normalizeEditablePortfolio(currentPortfolio, currentDraft) {
+  const base = isPlainObject(currentDraft) ? currentDraft : currentPortfolio;
+  const fallbackSections = Array.isArray(currentPortfolio?.sections)
+    ? currentPortfolio.sections.map((section) => ({
+        type: cleanString(section.type),
+        visible: section.visible !== false,
+        data: isPlainObject(section.data) ? section.data : {},
+      }))
+    : [];
+
+  return {
+    title: cleanString(base?.title) || cleanString(currentPortfolio?.title) || "Portfolio",
+    themeId: normalizeThemeId(base?.themeId || currentPortfolio?.themeId || DEFAULT_THEME),
+    layoutMode:
+      cleanString(base?.layoutMode) === "singleSection" ||
+      cleanString(currentPortfolio?.layoutMode) === "singleSection"
+        ? "singleSection"
+        : "stacked",
+    themeTokens: isPlainObject(base?.themeTokens)
+      ? base.themeTokens
+      : isPlainObject(currentPortfolio?.themeTokens)
+        ? currentPortfolio.themeTokens
+        : {},
+    socialLinks: isPlainObject(base?.socialLinks)
+      ? base.socialLinks
+      : isPlainObject(currentPortfolio?.socialLinks)
+        ? currentPortfolio.socialLinks
+        : {},
+    sections: normalizeEditableSections(base?.sections, fallbackSections),
+  };
+}
+
+function createGallerySection() {
+  return {
+    type: "gallery",
+    data: {
+      items: [
+        {
+          title: "Featured visual",
+          image: "",
+          description: "Add a visual example that supports the story you want to tell.",
+        },
+      ],
+    },
+  };
+}
+
+function buildEditFallbackDraft(instruction, currentPortfolio) {
+  const lower = cleanString(instruction).toLowerCase();
+  const next = JSON.parse(JSON.stringify(currentPortfolio));
+
+  if (/(single[ -]?section|one[ -]?page|one section|single page)/.test(lower)) {
+    next.layoutMode = "singleSection";
+  }
+
+  if (/(stacked|scrolling|full page)/.test(lower)) {
+    next.layoutMode = "stacked";
+  }
+
+  if (/(minimal|clean|editorial|lighter)/.test(lower)) {
+    next.themeId = "paper";
+  }
+
+  if (/(bold|bolder|vibrant|warmer|creative)/.test(lower)) {
+    next.themeId = "sunrise";
+  }
+
+  if (/(professional|sleek|polished)/.test(lower)) {
+    next.themeId = "aurora";
+  }
+
+  if (/(forest|nature|organic|eco|sustainable)/.test(lower)) {
+    next.themeId = "forest";
+  }
+  if (/(ocean|marine|coastal|nautical|aqua)/.test(lower)) {
+    next.themeId = "ocean";
+  }
+  if (/(midnight|cosmic|galaxy|vaporwave)/.test(lower)) {
+    next.themeId = "midnight";
+  }
+  if (/(terracotta|rustic|earthy|clay)/.test(lower)) {
+    next.themeId = "clay";
+  }
+  if (/(corporate|enterprise|formal|slate)/.test(lower)) {
+    next.themeId = "slate";
+  }
+  if (/(blush|feminine|spa|wedding|rose)\b/.test(lower)) {
+    next.themeId = "rose";
+  }
+
+  if (/(more visual|show visuals|image-heavy|add gallery)/.test(lower)) {
+    const hasGallery = next.sections.some((section) => section.type === "gallery");
+    if (!hasGallery) {
+      const insertIndex = Math.max(0, next.sections.length - 1);
+      next.sections.splice(insertIndex, 0, createGallerySection());
+    }
+  }
+
+  if (/(more minimal|simpler|streamline|trim)/.test(lower)) {
+    next.sections = next.sections.filter(
+      (section) => !["blog", "gallery", "dashboardTable"].includes(section.type)
+    );
+  }
+
+  if (/(more professional|executive)/.test(lower)) {
+    next.sections = next.sections.filter((section) => section.type !== "gallery");
+    const summary = next.sections.find((section) => section.type === "summary");
+    if (summary && isPlainObject(summary.data)) {
+      summary.data.summary =
+        cleanString(summary.data.summary) ||
+        "A polished portfolio focused on credibility, clarity, and measurable outcomes.";
+    }
+  }
+
+  return next;
+}
+
+function normalizeEditDraft(draft, currentPortfolio, instruction) {
+  if (!isPlainObject(draft)) {
+    return buildEditFallbackDraft(instruction, currentPortfolio);
+  }
+
+  return {
+    title: cleanString(draft.title) || currentPortfolio.title,
+    themeId: normalizeThemeId(draft.themeId || currentPortfolio.themeId),
+    layoutMode: cleanString(draft.layoutMode) === "singleSection" ? "singleSection" : "stacked",
+    themeTokens: isPlainObject(draft.themeTokens) ? draft.themeTokens : currentPortfolio.themeTokens,
+    socialLinks: isPlainObject(draft.socialLinks) ? draft.socialLinks : currentPortfolio.socialLinks,
+    sections: normalizeEditableSections(draft.sections, currentPortfolio.sections),
+  };
+}
+
+function buildEditChangeSummary(currentPortfolio, nextPortfolio) {
+  const beforeTypes = currentPortfolio.sections.map((section) => section.type);
+  const afterTypes = nextPortfolio.sections.map((section) => section.type);
+  const addedSections = afterTypes.filter((type) => !beforeTypes.includes(type));
+  const removedSections = beforeTypes.filter((type) => !afterTypes.includes(type));
+  const changedSections = nextPortfolio.sections
+    .filter((section, index) => {
+      const before = currentPortfolio.sections[index];
+      if (!before || before.type !== section.type) return false;
+      return JSON.stringify(before.data || {}) !== JSON.stringify(section.data || {});
+    })
+    .map((section) => section.type);
+
+  const summary = [];
+
+  if (currentPortfolio.themeId !== nextPortfolio.themeId) {
+    summary.push(`Theme changes from ${currentPortfolio.themeId} to ${nextPortfolio.themeId}.`);
+  }
+
+  if (currentPortfolio.layoutMode !== nextPortfolio.layoutMode) {
+    summary.push(
+      `Layout changes from ${currentPortfolio.layoutMode} to ${nextPortfolio.layoutMode}.`
+    );
+  }
+
+  if (currentPortfolio.title !== nextPortfolio.title) {
+    summary.push("Portfolio title is updated.");
+  }
+
+  if (addedSections.length) {
+    summary.push(`Adds ${addedSections.join(", ")} section${addedSections.length === 1 ? "" : "s"}.`);
+  }
+
+  if (removedSections.length) {
+    summary.push(
+      `Removes ${removedSections.join(", ")} section${removedSections.length === 1 ? "" : "s"}.`
+    );
+  }
+
+  if (changedSections.length) {
+    summary.push(
+      `Rewrites content in ${changedSections.join(", ")} section${changedSections.length === 1 ? "" : "s"}.`
+    );
+  }
+
+  if (!summary.length) {
+    summary.push("Keeps the current structure and makes only light refinements.");
+  }
+
+  return {
+    addedSections,
+    removedSections,
+    changedSections,
+    summary,
+  };
+}
+
+async function generateEditDraftWithOpenAI(instruction, userContext, currentPortfolio) {
+  const client = getOpenAIClient();
+  if (!client) {
+    return {
+      source: "fallback",
+      draft: buildEditFallbackDraft(instruction, currentPortfolio),
+    };
+  }
+
+  const blockCatalog = buildBlockCatalogPrompt();
+  const response = await client.chat.completions.create({
+    model: OPENAI_MODEL,
+    temperature: 0.35,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are editing an existing block-based portfolio. Output valid JSON only. Preserve the same overall identity unless the instruction explicitly asks for a stronger change. Use only allowed themes and block types. Return a full proposed portfolio state rather than prose.",
+      },
+      {
+        role: "user",
+        content: JSON.stringify(
+          {
+            task: "Edit this existing agent portfolio according to the instruction.",
+            instruction,
+            allowedThemes: ALLOWED_THEMES,
+            userContext,
+            blockCatalog,
+            currentPortfolio,
+            outputSchema: {
+              title: "string",
+              themeId: `one of: ${ALLOWED_THEMES.join(", ")}`,
+              layoutMode: "stacked | singleSection",
+              themeTokens: {
+                accent: "",
+                accentStrong: "",
+                page: "",
+                text: "",
+              },
+              socialLinks: {
+                github: "",
+                linkedin: "",
+                twitter: "",
+                instagram: "",
+                website: "",
+              },
+              sections: [
+                {
+                  type: "one allowed block type",
+                  visible: true,
+                  data: "object that matches the selected block shape",
+                },
+              ],
+            },
+          },
+          null,
+          2
+        ),
+      },
+    ],
+  });
+
+  const content = response.choices?.[0]?.message?.content || "{}";
+  return {
+    source: "openai",
+    draft: normalizeEditDraft(JSON.parse(content), currentPortfolio, instruction),
+  };
+}
+
+async function proposeAgentPortfolioEdit(user = {}, savedPortfolio = {}, payload = {}) {
+  const instruction = cleanString(payload.instruction);
+  if (!instruction) {
+    throw new PortfolioValidationError("instruction is required", {
+      code: "INSTRUCTION_REQUIRED",
+    });
+  }
+
+  const heuristicUnsupportedNeed = findUnsupportedNeed(instruction);
+  if (heuristicUnsupportedNeed) {
+    throw buildUnsupportedCapabilityError(instruction, heuristicUnsupportedNeed);
+  }
+
+  const currentPortfolio = normalizeEditablePortfolio(savedPortfolio, payload.currentDraft);
+  const userContext = buildUserContext(user);
+
+  let generated;
+  try {
+    generated = await generateEditDraftWithOpenAI(instruction, userContext, currentPortfolio);
+  } catch (err) {
+    console.error("agentPortfolioGenerator.generateEditDraftWithOpenAI error:", err);
+    generated = {
+      source: "fallback",
+      draft: buildEditFallbackDraft(instruction, currentPortfolio),
+    };
+  }
+
+  const proposal = normalizeEditDraft(generated.draft, currentPortfolio, instruction);
+
+  return {
+    source: generated.source,
+    proposal,
+    changes: buildEditChangeSummary(currentPortfolio, proposal),
+  };
+}
+
 async function generateDraftWithOpenAI(prompt, userContext, payload = {}) {
   const client = getOpenAIClient();
   if (!client) {
@@ -648,7 +986,7 @@ async function generateDraftWithOpenAI(prompt, userContext, payload = {}) {
             blockCatalog,
             outputSchema: {
               title: "string",
-              themeId: "aurora | sunrise | paper",
+              themeId: `one of: ${ALLOWED_THEMES.join(", ")}`,
               layoutMode: "stacked | singleSection",
               unsupportedNeed: "string or empty",
               socialLinks: {
@@ -739,4 +1077,5 @@ module.exports = {
   GENERATION_VERSION,
   OPENAI_MODEL,
   generateAgentPortfolioFromPrompt,
+  proposeAgentPortfolioEdit,
 };
