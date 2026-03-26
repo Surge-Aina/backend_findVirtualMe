@@ -12,6 +12,7 @@ router.get("/slug/:slug", ctrl.getBySlug);
 router.get("/mine", auth, ctrl.getMine);
 router.post("/", auth, ctrl.create);
 router.post("/agent", auth, ctrl.createAgent);
+router.post("/agent/generate", auth, ctrl.generateAgentFromPrompt);
 
 // Public param route
 router.get("/:id", ctrl.getById);

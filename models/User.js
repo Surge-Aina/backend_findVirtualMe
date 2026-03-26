@@ -1,15 +1,8 @@
 const mongoose = require("mongoose");
 
-const {
-  AIProjectSchema,
-} = require("../microservices/aiPortfolioCreator/contact/aiPortfolioCreator.model");
-
 const userSchema = new mongoose.Schema({
-  //ai user schema merge
   userKey: { type: String, unique: true, index: true },
   displayName: { type: String, default: "Default Display Name" },
-  activeProjectId: { type: String, default: "" },
-  projects: { type: [AIProjectSchema], default: [] },
 
   firstName: {
     type: String,

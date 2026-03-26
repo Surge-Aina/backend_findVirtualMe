@@ -480,6 +480,7 @@ module.exports = {
   MAX_PORTFOLIO_SECTIONS,
   MAX_SECTION_DATA_BYTES,
   PortfolioValidationError,
+  getClosestKnownBlocks,
   normalizeSections,
   createAgentPortfolio,
   createPortfolio,

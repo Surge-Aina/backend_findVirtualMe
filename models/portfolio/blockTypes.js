@@ -109,6 +109,11 @@ const BLOCK_TYPES = {
     description: "table for displaying data",
     templates: ["dataScientist"],
   },
+  caseStudy: {
+    label: "Case Study",
+    description: "Case study with challenge, solution, and outcome",
+    templates: ["agent","projectManager","dataScientist"],
+  },
 };
 
 for (const meta of Object.values(BLOCK_TYPES)) {

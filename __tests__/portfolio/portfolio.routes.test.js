@@ -3,6 +3,17 @@ const request = require("supertest");
 const Portfolio = require("../../models/portfolio/Portfolio");
 
 const TEST_USER_ID = "507f1f77bcf86cd799439011";
+const mockCreate = jest.fn();
+
+jest.mock("openai", () =>
+  jest.fn().mockImplementation(() => ({
+    chat: {
+      completions: {
+        create: mockCreate,
+      },
+    },
+  }))
+);
 
 jest.mock("../../middleware/auth", () => (req, _res, next) => {
   req.user = {
@@ -21,6 +32,10 @@ app.use("/api/portfolios", portfolioRoutes);
 app.use((req, res) => res.status(404).json({ error: "not found" }));
 
 describe("Unified portfolio routes", () => {
+  beforeEach(() => {
+    mockCreate.mockReset();
+  });
+
   it("creates an agent-composed portfolio with theme metadata", async () => {
     const res = await request(app)
       .post("/api/portfolios/agent")
@@ -89,15 +104,58 @@ describe("Unified portfolio routes", () => {
     );
   });
 
+  it("accepts caseStudy sections on agent portfolio create", async () => {
+    const res = await request(app)
+      .post("/api/portfolios/agent")
+      .send({
+        baseTemplate: "agent",
+        title: "Case study portfolio",
+        generationModel: "gpt-5.4",
+        generationVersion: "2026-03-24",
+        generationPromptHash: "abc123",
+        sections: [
+          {
+            type: "summary",
+            data: {
+              name: "Alex Rivera",
+              title: "Product Consultant",
+            },
+          },
+          {
+            type: "caseStudy",
+            data: {
+              title: "Onboarding uplift",
+              client: "Northstar SaaS",
+              industry: "B2B SaaS",
+              challenge: "High drop-off during setup.",
+              solution: "Streamlined onboarding and clearer CTAs.",
+              outcome: "Higher activation and fewer support tickets.",
+              metrics: ["Activation +22%", "Tickets -18%"],
+              tools: ["Figma", "React"],
+              link: "https://example.com/case-study",
+            },
+          },
+        ],
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.portfolio.template).toBe("agent");
+    const cs = res.body.portfolio.sections.find((s) => s.type === "caseStudy");
+    expect(cs).toBeTruthy();
+    expect(cs.data.title).toBe("Onboarding uplift");
+    expect(cs.data.metrics).toEqual(["Activation +22%", "Tickets -18%"]);
+  });
+
   it("rejects unknown block types on create with structured unsupported-block details", async () => {
     const res = await request(app)
       .post("/api/portfolios")
       .send({
         template: "healthcare",
-        requestedCapability: "case studies",
+        requestedCapability: "booking calendar",
         sections: [
           {
-            type: "caseStudy",
+            type: "calendar",
             data: {},
           },
         ],
@@ -106,7 +164,7 @@ describe("Unified portfolio routes", () => {
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("UNSUPPORTED_BLOCK_NEED");
     expect(res.body.error).toContain("Unknown block type");
-    expect(res.body.details.requestedCapability).toBe("case studies");
+    expect(res.body.details.requestedCapability).toBe("booking calendar");
     expect(Array.isArray(res.body.details.closestKnownBlocks)).toBe(true);
     expect(res.body.details.closestKnownBlocks.length).toBeGreaterThan(0);
   });
@@ -228,7 +286,91 @@ describe("Unified portfolio routes", () => {
         "projects",
         "contact",
         "dashboardChart",
+        "caseStudy",
       ])
     );
+  });
+
+  it("generates an agent portfolio from a prompt", async () => {
+    mockCreate.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              title: "Northstar Growth Portfolio",
+              themeId: "sunrise",
+              layoutMode: "stacked",
+              socialLinks: {
+                linkedin: "https://linkedin.com/in/alex",
+              },
+              sections: [
+                {
+                  type: "hero",
+                  data: {
+                    title: "Northstar Growth",
+                    subtitle: "Product strategy and lifecycle execution",
+                    description: "A bold portfolio for customer-led product work.",
+                    ctaText: "Start a conversation",
+                    secondaryButtonText: "View work",
+                  },
+                },
+                {
+                  type: "caseStudy",
+                  data: {
+                    title: "Activation redesign",
+                    challenge: "Users stalled during onboarding.",
+                    solution: "Reduced steps and clarified value moments.",
+                    outcome: "Higher activation and fewer support tickets.",
+                    metrics: ["Activation +22%"],
+                  },
+                },
+                {
+                  type: "contact",
+                  data: {
+                    email: "agent@example.com",
+                    location: "Remote",
+                  },
+                },
+              ],
+            }),
+          },
+        },
+      ],
+    });
+
+    const res = await request(app)
+      .post("/api/portfolios/agent/generate")
+      .send({
+        prompt: "Create a warm, product-strategy portfolio with one standout case study and a clear CTA.",
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.source).toBe("openai");
+    expect(res.body.portfolio.template).toBe("agent");
+    expect(res.body.portfolio.createdBy).toBe("agent");
+    expect(res.body.portfolio.themeId).toBe("sunrise");
+    expect(res.body.portfolio.sections.map((section) => section.type)).toEqual([
+      "hero",
+      "caseStudy",
+      "contact",
+    ]);
+    expect(res.body.portfolio.generationPromptHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns structured unsupported capability guidance for prompt generation", async () => {
+    const res = await request(app)
+      .post("/api/portfolios/agent/generate")
+      .send({
+        prompt: "Create a portfolio with a booking calendar and appointment scheduling flow for my clinic.",
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("UNSUPPORTED_BLOCK_NEED");
+    expect(res.body.details.blockType).toBe("booking calendar");
+    expect(res.body.details.requestedCapability).toContain("booking calendar");
+    expect(Array.isArray(res.body.details.closestKnownBlocks)).toBe(true);
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 });

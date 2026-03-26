@@ -1,4 +1,5 @@
 const portfolioService = require("../services/portfolio.service");
+const agentPortfolioGenerator = require("../services/agentPortfolioGenerator.service");
 
 function sendPortfolioError(res, err, fallbackMessage) {
   if (err.code === 11000) {
@@ -117,6 +118,26 @@ exports.createAgent = async (req, res) => {
   } catch (err) {
     console.error("portfolio.createAgent error:", err);
     return sendPortfolioError(res, err, "Failed to create agent portfolio");
+  }
+};
+
+exports.generateAgentFromPrompt = async (req, res) => {
+  try {
+    const ownerId = req.user._id || req.user.id;
+    const result = await agentPortfolioGenerator.generateAgentPortfolioFromPrompt(
+      ownerId,
+      req.user,
+      req.body || {}
+    );
+
+    res.status(201).json({
+      success: true,
+      portfolio: result.portfolio,
+      source: result.source,
+    });
+  } catch (err) {
+    console.error("portfolio.generateAgentFromPrompt error:", err);
+    return sendPortfolioError(res, err, "Failed to generate agent portfolio");
   }
 };
 

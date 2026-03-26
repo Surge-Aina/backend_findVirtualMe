@@ -196,35 +196,7 @@ const dataScientistDefaults = [
     type: "projects",
     order: 4,
     data: {
-      items: [
-      //   {
-      //     name: "Project 1",
-      //     about: "Description of Project 1",
-      //     time: "2022-2023",
-      //     points: ["Point 1", "Point 2", "Point 3"],
-      //     technologies: ["Technology 1", "Technology 2", "Technology 3"],
-      //     githubUrl: "https://www.github.com/project1",
-      //     liveUrl: "https://www.project1.com",
-      //   },
-      // {
-      //   name: "Project 2",
-      //   about: "Description of Project 2",
-      //   time: "2022-2023",
-      //   points: ["Point 1", "Point 2", "Point 3"],
-      //   technologies: ["Technology 1", "Technology 2", "Technology 3"],
-      //   githubUrl: "https://www.github.com/project2",
-      //   liveUrl: "https://www.project2.com",
-      // },
-      // {
-      //   name: "Project 3",
-      //   about: "Description of Project 3",
-      //   time: "2022-2023",
-      //   points: ["Point 1", "Point 2", "Point 3"],
-      //   technologies: ["Technology 1", "Technology 2", "Technology 3"],
-      //   githubUrl: "https://www.github.com/project3",
-      //   liveUrl: "https://www.project3.com",
-      // },
-      ],
+      items: [],
     },
   },
   {
@@ -440,6 +412,21 @@ const agentDefaults = [
       location: "",
       website: "",
     },
+  },
+  {
+    type: "caseStudy",
+    order: 3,
+    data: {
+      title: "",
+      client: "",
+      industry: "",
+      challenge: "",
+      solution: "",
+      outcome: "",
+      metrics: [],
+      tools: [],
+      link: ""
+    }
   },
 ];
 
