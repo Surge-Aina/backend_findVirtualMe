@@ -24,6 +24,18 @@ jest.mock("../../middleware/auth", () => (req, _res, next) => {
   next();
 });
 
+jest.mock("../../middleware/optionalAuth", () => (req, _res, next) => {
+  const token = req.headers.authorization?.replace("Bearer ", "");
+  if (token === "owner-token") {
+    req.user = {
+      _id: TEST_USER_ID,
+      id: TEST_USER_ID,
+      email: "agent@example.com",
+    };
+  }
+  next();
+});
+
 const portfolioRoutes = require("../../routes/portfolio.routes");
 
 const app = express();
@@ -297,6 +309,57 @@ describe("Unified portfolio routes", () => {
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("SECTION_DATA_TOO_LARGE");
     expect(res.body.details.blockType).toBe("hero");
+  });
+
+  it("returns 404 for private portfolios when unauthenticated", async () => {
+    const portfolio = await Portfolio.create({
+      owner: TEST_USER_ID,
+      template: "agent",
+      title: "Private Portfolio",
+      visibility: "private",
+      sections: [{ type: "summary", order: 0, data: { name: "Private Owner" } }],
+    });
+
+    const res = await request(app).get(`/api/portfolios/${portfolio._id}`);
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe("Portfolio not found");
+  });
+
+  it("returns private portfolios to the owner with auth", async () => {
+    const portfolio = await Portfolio.create({
+      owner: TEST_USER_ID,
+      template: "agent",
+      title: "Private Portfolio",
+      visibility: "private",
+      sections: [{ type: "summary", order: 0, data: { name: "Private Owner" } }],
+    });
+
+    const res = await request(app)
+      .get(`/api/portfolios/${portfolio._id}`)
+      .set("Authorization", "Bearer owner-token");
+
+    expect(res.status).toBe(200);
+    expect(res.body._id.toString()).toBe(portfolio._id.toString());
+  });
+
+  it("returns public portfolios without auth", async () => {
+    const portfolio = await Portfolio.create({
+      owner: TEST_USER_ID,
+      template: "agent",
+      title: "Public Portfolio",
+      visibility: "public",
+      slug: "public-portfolio-for-anon",
+      sections: [{ type: "summary", order: 0, data: { name: "Public Owner" } }],
+    });
+
+    const byId = await request(app).get(`/api/portfolios/${portfolio._id}`);
+    expect(byId.status).toBe(200);
+    expect(byId.body._id.toString()).toBe(portfolio._id.toString());
+
+    const bySlug = await request(app).get(`/api/portfolios/slug/${portfolio.slug}`);
+    expect(bySlug.status).toBe(200);
+    expect(bySlug.body.slug).toBe(portfolio.slug);
   });
 
   it("adds a known section and normalizes the resulting section order", async () => {

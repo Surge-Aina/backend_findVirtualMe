@@ -198,7 +198,8 @@ exports.proposeAgentEdit = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const portfolio = await portfolioService.getPortfolio(req.params.id);
+    const viewerId = req.user?._id || req.user?.id;
+    const portfolio = await portfolioService.getPortfolioForViewer(req.params.id, viewerId);
     if (!portfolio) return res.status(404).json({ error: "Portfolio not found" });
     res.json(portfolio);
   } catch (err) {
@@ -209,7 +210,8 @@ exports.getById = async (req, res) => {
 
 exports.getBySlug = async (req, res) => {
   try {
-    const portfolio = await portfolioService.getPortfolioBySlug(req.params.slug);
+    const viewerId = req.user?._id || req.user?.id;
+    const portfolio = await portfolioService.getPortfolioBySlugForViewer(req.params.slug, viewerId);
     if (!portfolio) return res.status(404).json({ error: "Portfolio not found" });
     res.json(portfolio);
   } catch (err) {

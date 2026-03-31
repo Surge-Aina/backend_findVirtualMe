@@ -297,14 +297,31 @@ async function getPortfolioBySlug(slug) {
   return Portfolio.findOne({ slug }).lean();
 }
 
+function canViewerAccessPortfolio(portfolio, viewerUserId) {
+  if (!portfolio) return false;
+  if (portfolio.visibility === "public") return true;
+  if (!viewerUserId) return false;
+  return portfolio.owner?.toString?.() === viewerUserId.toString();
+}
+
+async function getPortfolioForViewer(id, viewerUserId) {
+  const portfolio = await getPortfolio(id);
+  return canViewerAccessPortfolio(portfolio, viewerUserId) ? portfolio : null;
+}
+
+async function getPortfolioBySlugForViewer(slug, viewerUserId) {
+  const portfolio = await getPortfolioBySlug(slug);
+  return canViewerAccessPortfolio(portfolio, viewerUserId) ? portfolio : null;
+}
+
 async function getUserPortfolios(ownerId) {
-  return Portfolio.find({ owner: ownerId }).lean();
+  return Portfolio.find({ owner: ownerId }).sort({ updatedAt: -1 }).lean();
 }
 
 async function getPublicPortfolios(template) {
   const filter = { visibility: "public" };
   if (template) filter.template = template;
-  return Portfolio.find(filter).lean();
+  return Portfolio.find(filter).sort({ updatedAt: -1 }).lean();
 }
 
 /**
@@ -486,6 +503,8 @@ module.exports = {
   createPortfolio,
   getPortfolio,
   getPortfolioBySlug,
+  getPortfolioForViewer,
+  getPortfolioBySlugForViewer,
   getUserPortfolios,
   getPublicPortfolios,
   assertPortfolioOwner,

@@ -1,4 +1,5 @@
 const Portfolio = require("../../models/portfolio/Portfolio");
+const portfolioService = require("../../services/portfolio.service");
 
 exports.getPublicPortfolios = async () => {
   try {
@@ -10,10 +11,9 @@ exports.getPublicPortfolios = async () => {
   }
 };
 
-exports.getMyPortfolio = async (type, id) => {
+exports.getMyPortfolio = async (type, id, viewerUserId) => {
   try {
-    const portfolio = await Portfolio.findById(id).lean();
-    return portfolio || null;
+    return portfolioService.getPortfolioForViewer(id, viewerUserId);
   } catch (error) {
     console.log("getMyPortfolio Error:", error.message);
     throw error;
