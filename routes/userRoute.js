@@ -12,6 +12,7 @@ const {
   getAiEditAccess,
   getMe,
   addPortfolioID,
+  changePassword,
 } = require("../controllers/userController");
 const auth = require("../middleware/auth");
 const router = express.Router();
@@ -26,7 +27,7 @@ router.get("/hasSubscription", auth, getHasSubscription);
 router.get("/ai-edit-access", auth, getAiEditAccess);
 router.get("/me", auth, getMe);
 router.post("/addUser", addUser); //onboarding
-
+router.patch("/change-password", auth, changePassword);
 router.patch("/updateUser", auth, updateUser);
 router.patch("/addPortfolioId", auth, addPortfolioID);
 

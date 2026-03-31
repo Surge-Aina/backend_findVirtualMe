@@ -18,12 +18,15 @@ exports.signupUser = async (req, res) => {
   try {
     const { name, username, email, password } = req.body;
     if (!name || !username || !email || !password) {
-      return res.status(500).json({ error: "name, username, email or password missing" });
+      return res
+        .status(500)
+        .json({ error: "name, username, email or password missing" });
     }
 
     // Can add checks with validator later to ensure email valid / password strong
     const userExists = await User.findOne({ email });
-    if (userExists) return res.status(400).json({ message: "User already exists" });
+    if (userExists)
+      return res.status(400).json({ message: "User already exists" });
 
     // Hash password
     const hashed = await bcrypt.hash(password, 10);
@@ -49,7 +52,9 @@ exports.loginUser = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user)
-      return res.status(400).json({ message: "User not found for this portfolio" });
+      return res
+        .status(400)
+        .json({ message: "User not found for this portfolio" });
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ message: "Invalid credentials" });
@@ -60,7 +65,7 @@ exports.loginUser = async (req, res) => {
       //{ id: user._id, isAdmin: user.isAdmin },// removed this so users are not signed in as admin. ADD BACK ONLY IF NECESSARY -CarlosG
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
     const portfolioIds = user.portfolios || [];
     // console.log("📁 User's portfolio IDs:", portfolioIds);
@@ -135,7 +140,7 @@ exports.addUser = async (req, res) => {
       if (sessionId) {
         await Portfolio.updateMany(
           { sessionId },
-          { $set: { email: onboardingUser.email, sessionId: null } }
+          { $set: { email: onboardingUser.email, sessionId: null } },
         );
       }
       // end sessionId linking
@@ -176,7 +181,7 @@ exports.getUserById = async (req, res) => {
 exports.getSubInfo = async (req, res) => {
   try {
     const { stripeCustomerId } = req.user; // obtained from auth middleware
-    
+
     if (!stripeCustomerId) {
       return res.status(200).json({ subscriptionList: [] });
     }
@@ -192,9 +197,10 @@ exports.getSubInfo = async (req, res) => {
     console.log(`fetched subscription info for ${req.user.email} from stripe`);
     res.status(200).json({ subscriptionList: subscriptions.data });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "error getting subscription info", error: error.message });
+    res.status(500).json({
+      message: "error getting subscription info",
+      error: error.message,
+    });
   }
 };
 
@@ -213,7 +219,9 @@ exports.getHasSubscription = async (req, res) => {
     // Find user
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ message: "No User found", hasSubscription: false });
+      return res
+        .status(404)
+        .json({ message: "No User found", hasSubscription: false });
     }
 
     // Update user's subscription details if needed
@@ -271,6 +279,61 @@ exports.updateUser = async (req, res) => {
   }
 };
 
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.user._id; // from middleware
+
+    const { currentPassword, newPassword } = req.body;
+    const passwordRegex =
+      /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check current password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+
+    // Prevent same password reuse
+    const isSame = await bcrypt.compare(newPassword, user.password);
+
+    if (isSame) {
+      return res
+        .status(400)
+        .json({ message: "New password must be different" });
+    }
+
+    // regex check for password strength
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        message:
+          "Password must be at least 8 characters and include uppercase, lowercase, number, and special character",
+      });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+
+    await user.save();
+
+    res.json({ message: "Password updated successfully" });
+  } catch (err) {
+    console.error("Change password error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 exports.deleteUser = async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
@@ -310,7 +373,7 @@ exports.addPortfolioID = async (req, res) => {
       userID,
       { $push: { portfolios: req.body } },
       { new: true, runValidators: true },
-      { $addToSet: { portfolios: req.body } }
+      { $addToSet: { portfolios: req.body } },
     );
 
     if (!user) {
