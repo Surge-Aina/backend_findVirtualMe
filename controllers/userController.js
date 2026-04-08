@@ -1,4 +1,5 @@
 const User = require("../models/User");
+const { normalizeUserAppTheme } = require("../utils/userSerialize");
 const Subscriptions = require("../models/Subscriptions");
 const bcrypt = require("bcrypt");
 const req = require("express/lib/request");
@@ -71,32 +72,18 @@ exports.loginUser = async (req, res) => {
     // console.log("📁 User's portfolio IDs:", portfolioIds);
 
     //res.status(201).json({ token, isAdmin: user.isAdmin, }); //this one removed as well -CarlosG
-    res
-      .status(201)
-      .json({ message: "logged in successfully", token, user, portfolioIds });
+    res.status(201).json({
+      message: "logged in successfully",
+      token,
+      user: normalizeUserAppTheme(user),
+      portfolioIds,
+    });
   } catch (err) {
     console.log("error loggin in: ", err);
     res.status(500).json({ message: "error loggin in", error: err.message });
   }
 };
 
-exports.getMe = async (req, res) => {
-  try {
-    // console.log("🔍 getMe called, req.user:", req.user);
-
-    const user = await User.findById(req.user.id).select("-password");
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // console.log("✅ User found:", user.email);
-    res.status(200).json({ user });
-  } catch (error) {
-    console.error("❌ Error in getMe:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
 exports.addUser = async (req, res) => {
   const { data } = req.body;
   try {
@@ -279,6 +266,27 @@ exports.updateUser = async (req, res) => {
   }
 };
 
+exports.updateAppTheme = async (req, res) => {
+  try {
+    const { appTheme } = req.body;
+    if (appTheme !== "light" && appTheme !== "dark") {
+      return res
+        .status(400)
+        .json({ message: "appTheme must be 'light' or 'dark'" });
+    }
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: { appTheme } },
+      { new: true, runValidators: true },
+    ).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.status(200).json({ user: normalizeUserAppTheme(user) });
+  } catch (error) {
+    console.error("updateAppTheme error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.changePassword = async (req, res) => {
   try {
     const userId = req.user._id; // from middleware
@@ -358,7 +366,10 @@ exports.getMe = async (req, res) => {
     // console.log("✅ User found:", user.email);
     const portfolioIds = user.portfolios || [];
     // console.log("📁 User's portfolio IDs (from getMe):", portfolioIds);
-    res.status(200).json({ user, portfolioIds });
+    res.status(200).json({
+      user: normalizeUserAppTheme(user),
+      portfolioIds,
+    });
   } catch (error) {
     console.error("❌ Error in getMe:", error);
     res.status(500).json({ message: "Server error" });

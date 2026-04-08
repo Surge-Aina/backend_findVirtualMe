@@ -13,6 +13,7 @@ const {
   getMe,
   addPortfolioID,
   changePassword,
+  updateAppTheme,
 } = require("../controllers/userController");
 const auth = require("../middleware/auth");
 const router = express.Router();
@@ -29,6 +30,7 @@ router.get("/me", auth, getMe);
 router.post("/addUser", addUser); //onboarding
 router.patch("/change-password", auth, changePassword);
 router.patch("/updateUser", auth, updateUser);
+router.patch("/app-theme", auth, updateAppTheme);
 router.patch("/addPortfolioId", auth, addPortfolioID);
 
 router.delete("/deleteUser/:id", deleteUser);

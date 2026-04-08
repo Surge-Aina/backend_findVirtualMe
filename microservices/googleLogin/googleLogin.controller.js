@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../../models/User");
+const { normalizeUserAppTheme } = require("../../utils/userSerialize");
 const { verifyGoogleToken } = require("./googleLogin.service");
 
 exports.googleLogin = async (req, res) => {
@@ -44,10 +45,10 @@ exports.googleLogin = async (req, res) => {
 
     const portfolioIds = user.portfolios || [];
 
-    res.status(200).json({ 
-      message: "logged in successfully", 
-      token, 
-      user, 
+    res.status(200).json({
+      message: "logged in successfully",
+      token,
+      user: normalizeUserAppTheme(user),
       portfolioIds,
       isNewUser: isNewUser,
     });

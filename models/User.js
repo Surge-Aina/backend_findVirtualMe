@@ -133,6 +133,12 @@ const userSchema = new mongoose.Schema({
     default: Date.now,
   },
   updatedAt: { type: Date, default: () => new Date() },
+  /** UI theme for the main app (light/dark). */
+  appTheme: {
+    type: String,
+    enum: ["light", "dark"],
+    default: "light",
+  },
   lastLogin: {
     type: Date,
   },
