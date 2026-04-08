@@ -8,10 +8,11 @@ const {
   deletePortfolio,
 } = require("./publicPortfolios.controller");
 const auth = require("../../middleware/auth");
+const optionalAuth = require("../../middleware/optionalAuth");
 
 // Routes
 router.get("/public", getPublicPortfolios);
-router.get("/:type/:id", getPortfolio);
+router.get("/:type/:id", optionalAuth, getPortfolio);
 router.patch("/:id/toggle-public", togglePublicPortfolio);
 router.delete("/:id", auth, deletePortfolio);
 

@@ -1,5 +1,6 @@
 const ProjectManagerContact = require('../../models/projectManager/ProjectManagerContact');
 const Portfolio = require('../../models/projectManager/portfolioModel');
+const UnifiedPortfolio = require('../../models/portfolio/Portfolio');
 const { sendProjectManagerContactEmails } = require('../../services/emailService');
 
 exports.submitContact = async (req, res) => {
@@ -17,18 +18,32 @@ exports.submitContact = async (req, res) => {
       });
     }
     
-    // Get portfolio to fetch owner info
-    const portfolio = await Portfolio.findById(portfolioId);
-    
-    if (!portfolio) {
-      return res.status(404).json({ 
-        success: false,
-        message: 'Portfolio not found' 
-      });
+    // Get portfolio to fetch owner info (legacy ProjectManager or unified v2)
+    let portfolio = await Portfolio.findById(portfolioId);
+    let ownerEmail;
+    let ownerName = 'Project Manager';
+
+    if (portfolio) {
+      ownerEmail = portfolio.email;
+      ownerName = portfolio.name || 'Project Manager';
+    } else {
+      const v2 = await UnifiedPortfolio.findById(portfolioId).lean();
+      if (!v2 || v2.template !== 'projectManager') {
+        return res.status(404).json({
+          success: false,
+          message: 'Portfolio not found',
+        });
+      }
+      const summary = (v2.sections || []).find((s) => s.type === 'summary')?.data || {};
+      ownerEmail = summary.email;
+      ownerName = summary.name || 'Project Manager';
+      if (!ownerEmail) {
+        return res.status(400).json({
+          success: false,
+          message: 'Portfolio owner email is not set in the summary section',
+        });
+      }
     }
-    
-    const ownerEmail = portfolio.email;
-    const ownerName = portfolio.name || 'Project Manager';
     
     console.log('✅ Portfolio found:', ownerName);
     console.log('📧 Owner email:', ownerEmail);

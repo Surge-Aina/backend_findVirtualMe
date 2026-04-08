@@ -1,15 +1,8 @@
 const mongoose = require("mongoose");
 
-const {
-  AIProjectSchema,
-} = require("../microservices/aiPortfolioCreator/contact/aiPortfolioCreator.model");
-
 const userSchema = new mongoose.Schema({
-  //ai user schema merge
   userKey: { type: String, unique: true, index: true },
   displayName: { type: String, default: "Default Display Name" },
-  activeProjectId: { type: String, default: "" },
-  projects: { type: [AIProjectSchema], default: [] },
 
   firstName: {
     type: String,
@@ -128,11 +121,24 @@ const userSchema = new mongoose.Schema({
       autoRenew: { type: Boolean, default: true },
     },
   ],
+  aiUsage: {
+    agentEdits: {
+      periodKey: { type: String, default: "" },
+      used: { type: Number, default: 0 },
+      lastUsedAt: { type: Date, default: null },
+    },
+  },
   createdAt: {
     type: Date,
     default: Date.now,
   },
   updatedAt: { type: Date, default: () => new Date() },
+  /** UI theme for the main app (light/dark). */
+  appTheme: {
+    type: String,
+    enum: ["light", "dark"],
+    default: "light",
+  },
   lastLogin: {
     type: Date,
   },
