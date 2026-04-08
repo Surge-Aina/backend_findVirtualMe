@@ -24,6 +24,106 @@ function randomDelay() {
   return 2000 + Math.random() * 2000;
 }
 
+// password reset email (non-blocking, called from passwordReset.service.js)
+async function sendPasswordResetEmail(email, name, resetURL) {
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          background: #f4f4f4;
+          margin: 0;
+          padding: 0;
+        }
+        .container {
+          max-width: 600px;
+          margin: 40px auto;
+          background: white;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+          background: #3B82F6;
+          color: white;
+          text-align: center;
+          padding: 20px;
+        }
+        .content {
+          padding: 30px;
+          color: #333;
+        }
+        .button {
+          display: inline-block;
+          margin: 20px 0;
+          padding: 12px 20px;
+          background: #3B82F6;
+          color: white;
+          text-decoration: none;
+          border-radius: 6px;
+          font-weight: bold;
+        }
+        .footer {
+          font-size: 13px;
+          color: #777;
+          margin-top: 20px;
+        }
+        .warning {
+          margin-top: 15px;
+          padding: 10px;
+          background: #FEF3C7;
+          border-left: 4px solid #F59E0B;
+          border-radius: 4px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h2>Password Reset Request</h2>
+        </div>
+
+        <div class="content">
+          <p>Hi <strong>${name || "there"}</strong>,</p>
+
+          <p>We received a request to reset your password.</p>
+
+          <p>Click the button below to set a new password:</p>
+
+          <a href="${resetURL}" class="button">
+            Reset Your Password
+          </a>
+
+          <p>If the button doesn't work, copy and paste this link into your browser:</p>
+          <p style="word-break: break-all; color:#3B82F6;">
+            ${resetURL}
+          </p>
+
+          <div class="warning">
+            ⏳ This link will expire in 15 minutes.
+          </div>
+
+          <p>If you didn’t request this, you can safely ignore this email.</p>
+
+          <div class="footer">
+            <p>— FindVirtualMe Team</p>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return transporter.sendMail({
+    from: `"FindVirtualMe" <${process.env.SMTP_USER}>`,
+    to: email,
+    subject: "Reset Your Password",
+    html: htmlContent,
+  });
+}
+
 // 1. Send VISITOR email (acknowledgment)
 async function sendVisitorEmail(formData, ownerEmail, businessName) {
   const servicesList = formData.services.join(", ");
@@ -54,7 +154,7 @@ async function sendVisitorEmail(formData, ownerEmail, businessName) {
             <h3>Your Request Details:</h3>
             <p><strong>Services:</strong> ${servicesList}</p>
             <p><strong>Due Date:</strong> ${new Date(
-              formData.dueDate
+              formData.dueDate,
             ).toLocaleDateString()}</p>
             <p><strong>Email:</strong> ${formData.email}</p>
             <p><strong>Phone:</strong> ${formData.phone}</p>
@@ -115,18 +215,18 @@ async function sendOwnerEmail(formData, ownerEmail, businessName) {
             <h3>📞 Contact Details (Action Required)</h3>
             <p><strong>Name:</strong> ${formData.name}</p>
             <p><strong>Email:</strong> <a href="mailto:${formData.email}">${
-    formData.email
-  }</a></p>
+              formData.email
+            }</a></p>
             <p><strong>Phone:</strong> <a href="tel:${formData.phone}">${
-    formData.phone
-  }</a></p>
+              formData.phone
+            }</a></p>
           </div>
           
           <div class="info-box">
             <h3>Service Request:</h3>
             <p><strong>Services:</strong> ${servicesList}</p>
             <p><strong>Due Date:</strong> ${new Date(
-              formData.dueDate
+              formData.dueDate,
             ).toLocaleDateString()}</p>
             ${
               formData.details
@@ -190,8 +290,8 @@ async function sendAdminEmail(formData, ownerEmail, businessName) {
             <table>
               <tr><td>Name:</td><td>${formData.name}</td></tr>
               <tr><td>Email:</td><td><a href="mailto:${formData.email}">${
-    formData.email
-  }</a></td></tr>
+                formData.email
+              }</a></td></tr>
               <tr><td>Phone:</td><td>${formData.phone}</td></tr>
             </table>
           </div>
@@ -201,7 +301,7 @@ async function sendAdminEmail(formData, ownerEmail, businessName) {
             <table>
               <tr><td>Services:</td><td>${servicesList}</td></tr>
               <tr><td>Due Date:</td><td>${new Date(
-                formData.dueDate
+                formData.dueDate,
               ).toLocaleDateString()}</td></tr>
               <tr><td>Timestamp:</td><td>${new Date().toLocaleString()}</td></tr>
               ${
@@ -485,8 +585,8 @@ async function sendGenericContactEmails(formData, ownerEmail, ownerName) {
               <h3>📞 Contact Details</h3>
               <p><strong>Name:</strong> ${formData.name}</p>
               <p><strong>Email:</strong> <a href="mailto:${formData.email}">${
-      formData.email
-    }</a></p>
+                formData.email
+              }</a></p>
             </div>
             
             <div class="info-box">
@@ -552,8 +652,8 @@ async function sendGenericContactEmails(formData, ownerEmail, ownerName) {
               <table>
                 <tr><td>Name:</td><td>${formData.name}</td></tr>
                 <tr><td>Email:</td><td><a href="mailto:${formData.email}">${
-      formData.email
-    }</a></td></tr>
+                  formData.email
+                }</a></td></tr>
               </table>
             </div>
             
@@ -588,7 +688,11 @@ async function sendGenericContactEmails(formData, ownerEmail, ownerName) {
 }
 
 // Project Manager Contact Emails (Visitor, Owner, Admin)
-async function sendProjectManagerContactEmails(formData, ownerEmail, ownerName) {
+async function sendProjectManagerContactEmails(
+  formData,
+  ownerEmail,
+  ownerName,
+) {
   try {
     console.log("📧 Starting project manager contact email sequence...");
 
@@ -674,8 +778,8 @@ async function sendProjectManagerContactEmails(formData, ownerEmail, ownerName) 
               <h3>📞 Contact Details</h3>
               <p><strong>Name:</strong> ${formData.name}</p>
               <p><strong>Email:</strong> <a href="mailto:${formData.email}">${
-      formData.email
-    }</a></p>
+                formData.email
+              }</a></p>
             </div>
             
             <div class="info-box">
@@ -740,8 +844,8 @@ async function sendProjectManagerContactEmails(formData, ownerEmail, ownerName) 
               <table>
                 <tr><td>Name:</td><td>${formData.name}</td></tr>
                 <tr><td>Email:</td><td><a href="mailto:${formData.email}">${
-      formData.email
-    }</a></td></tr>
+                  formData.email
+                }</a></td></tr>
               </table>
             </div>
             
@@ -862,8 +966,8 @@ async function sendDataScientistContactEmails(formData, ownerEmail, ownerName) {
               <h3>📞 Contact Details</h3>
               <p><strong>Name:</strong> ${formData.name}</p>
               <p><strong>Email:</strong> <a href="mailto:${formData.email}">${
-      formData.email
-    }</a></p>
+                formData.email
+              }</a></p>
             </div>
             
             <div class="info-box">
@@ -928,8 +1032,8 @@ async function sendDataScientistContactEmails(formData, ownerEmail, ownerName) {
               <table>
                 <tr><td>Name:</td><td>${formData.name}</td></tr>
                 <tr><td>Email:</td><td><a href="mailto:${formData.email}">${
-      formData.email
-    }</a></td></tr>
+                  formData.email
+                }</a></td></tr>
               </table>
             </div>
             
@@ -1050,8 +1154,8 @@ async function sendPhotographerContactEmails(formData, ownerEmail, ownerName) {
               <h3>📞 Contact Details</h3>
               <p><strong>Name:</strong> ${formData.name}</p>
               <p><strong>Email:</strong> <a href="mailto:${formData.email}">${
-      formData.email
-    }</a></p>
+                formData.email
+              }</a></p>
             </div>
             
             <div class="info-box">
@@ -1116,8 +1220,8 @@ async function sendPhotographerContactEmails(formData, ownerEmail, ownerName) {
               <table>
                 <tr><td>Name:</td><td>${formData.name}</td></tr>
                 <tr><td>Email:</td><td><a href="mailto:${formData.email}">${
-      formData.email
-    }</a></td></tr>
+                  formData.email
+                }</a></td></tr>
               </table>
             </div>
             
@@ -1151,6 +1255,7 @@ async function sendPhotographerContactEmails(formData, ownerEmail, ownerName) {
   }
 }
 module.exports = {
+  sendPasswordResetEmail,
   sendQuoteEmails,
   sendSupportFormEmails,
   sendGenericContactEmails,

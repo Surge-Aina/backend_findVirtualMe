@@ -61,6 +61,7 @@ const googleLoginRoutes = require("./microservices/googleLogin/googleLogin.route
 const contactMeRoutes = require("./microservices/contactMeForm/contactMeForm.routes.js");
 const domainRouterRoutes = require("./microservices/DomainRouter/DomainRouter.routes.js");
 const s3UploadRoutes = require("./microservices/S3Upload/S3Upload.routes.js");
+const passwordResetRoutes = require("./microservices/passwordReset/passwordReset.routes");
 
 // Import configuration from separate file
 const config = require("./config");
@@ -240,8 +241,15 @@ app.use("/domainRouter", domainRouterRoutes);
 app.use("/s3-upload-url", s3UploadRoutes);
 app.use("/vouchers", require("./microservices/vouchers/voucher.routes.js"));
 app.use("/qrCode", require("./microservices/qrCode/qrCode.routes.js"));
-app.use("/privacy-policy", require("./microservices/privacyPolicy/privacyPolicy.routes"));
-app.use("/terms-of-service", require("./microservices/termsOfService/termsOfService.routes"));
+app.use(
+  "/privacy-policy",
+  require("./microservices/privacyPolicy/privacyPolicy.routes"),
+);
+app.use(
+  "/terms-of-service",
+  require("./microservices/termsOfService/termsOfService.routes"),
+);
+app.use("/user", passwordResetRoutes);
 
 //aiPortfolioCreator
 const contactRouter = require("./microservices/aiPortfolioCreator/contact/aiPortfolioCreator.routes.js");
