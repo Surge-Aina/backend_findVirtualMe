@@ -5,10 +5,12 @@ if (process.env.DNS_FIX === 'true') {
 }
 const connectDB = require("./utils/db");
 const app = require("./index");
+const { startOrphanImageGcCron } = require("./microservices/S3Upload/gcOrphanImages");
 
 const PORT = process.env.PORT;
 connectDB()
   .then(() => {
+    startOrphanImageGcCron();
     app.listen(PORT, () => {
       console.log(`listening on PORT:${PORT}`);
     });

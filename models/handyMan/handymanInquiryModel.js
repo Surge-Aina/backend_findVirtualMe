@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const handymanInquirySchema = new mongoose.Schema(
   {
     templateId: { type: mongoose.Schema.Types.ObjectId, ref: 'HandymanTemplate' },
+    /** Unified v2 portfolio (portfolios_v2) — alternative to legacy HandymanTemplate */
+    portfolioId: { type: mongoose.Schema.Types.ObjectId, ref: 'Portfolio' },
 
     name:   { type: String, required: true },
     email:  { type: String, required: true },

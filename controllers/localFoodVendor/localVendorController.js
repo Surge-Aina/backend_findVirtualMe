@@ -10,7 +10,6 @@ const { generateVendorAboutAndMenuJSON } = require("../../services/openAiService
 const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
 const { PDFDocument } = require("pdf-lib");
-const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
 const User = require("../../models/User");
 
 // Create vendor and add the basic info so website doesn't look blank, view seedVendor
@@ -135,8 +134,8 @@ exports.getFullPortfolio = async (req, res) => {
 // }
 
 async function pdfJsExtract(buffer) {
-  // v5 automatically detects Node environment
-  const loadingTask = pdfjsLib.getDocument({ data: buffer });
+  const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const loadingTask = getDocument({ data: buffer });
   const pdf = await loadingTask.promise;
   let fullText = "";
 

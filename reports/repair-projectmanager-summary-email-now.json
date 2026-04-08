@@ -1,0 +1,77 @@
+{
+  "startedAt": "2026-03-26T20:01:46.547Z",
+  "options": {
+    "dryRun": false,
+    "dnsServers": [
+      "8.8.8.8",
+      "1.1.1.1"
+    ]
+  },
+  "scanned": 236,
+  "eligible": 12,
+  "updated": 12,
+  "skipped": 224,
+  "items": [
+    {
+      "portfolioId": "69c2221bdb6bd8da63d00dc0",
+      "ownerId": "69816c7c4045bd85eaaa3d17",
+      "nextEmail": "cgarcia1196@gmail.com"
+    },
+    {
+      "portfolioId": "68e5bbe474daad2d2858581f",
+      "ownerId": "68e5bbd974daad2d28585814",
+      "nextEmail": "kkk@gmail.com"
+    },
+    {
+      "portfolioId": "68e5f61974daad2d285858d9",
+      "ownerId": "68e5f61274daad2d285858ce",
+      "nextEmail": "annu@gmail.com"
+    },
+    {
+      "portfolioId": "68e5f82374daad2d285859dc",
+      "ownerId": "68e5f81c74daad2d285859d1",
+      "nextEmail": "ananya@gmail.com"
+    },
+    {
+      "portfolioId": "68e5fe9f192d3311900e6111",
+      "ownerId": "68e5fe97192d3311900e6106",
+      "nextEmail": "atiksha@gmail.com"
+    },
+    {
+      "portfolioId": "68e608bdd85d272a10695752",
+      "ownerId": "68e608b5d85d272a10695747",
+      "nextEmail": "ava@gmail.com"
+    },
+    {
+      "portfolioId": "68e6a110f73ef65af027f332",
+      "ownerId": "68e6a100f73ef65af027f327",
+      "nextEmail": "yyy@gmail.com"
+    },
+    {
+      "portfolioId": "68e7ef0a7cc8084bd1270fc3",
+      "ownerId": "68e7ef027cc8084bd1270fb8",
+      "nextEmail": "cleaning@gmail.com"
+    },
+    {
+      "portfolioId": "68e7fd1864e1f1554a22345f",
+      "ownerId": "68e7fcfd64e1f1554a22344d",
+      "nextEmail": "testing@gmail.com"
+    },
+    {
+      "portfolioId": "68e7fe3864e1f1554a2234af",
+      "ownerId": "68e7fe3064e1f1554a2234a4",
+      "nextEmail": "mahi@gmail.com"
+    },
+    {
+      "portfolioId": "68eae16d593ab0be54242eaf",
+      "ownerId": "68eae0c892474be9e59b05a2",
+      "nextEmail": "usercase1@gmail.com"
+    },
+    {
+      "portfolioId": "68ebaef821d38ee5abc23da9",
+      "ownerId": "68ebaef121d38ee5abc23da2",
+      "nextEmail": "cleaning2@gmail.com"
+    }
+  ],
+  "completedAt": "2026-03-26T20:01:49.114Z"
+}
