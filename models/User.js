@@ -44,9 +44,18 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: function () { // Only require password if authProvider is local, not for google or other providers
+    required: function () {
+      // Only require password if authProvider is local, not for google or other providers
       return this.authProvider === "local";
     },
+  },
+
+  resetPasswordToken: {
+    type: String,
+    index: true, // optional but recommended for faster lookup
+  },
+  resetPasswordExpires: {
+    type: Date,
   },
   bio: {
     type: String,
@@ -92,7 +101,14 @@ const userSchema = new mongoose.Schema({
       },
       status: {
         type: String,
-        enum: ["pending", "active", "expired", "suspended", "failed_registration", "manual_intervention_required"],
+        enum: [
+          "pending",
+          "active",
+          "expired",
+          "suspended",
+          "failed_registration",
+          "manual_intervention_required",
+        ],
         default: "pending",
       },
       failureReason: { type: String },
