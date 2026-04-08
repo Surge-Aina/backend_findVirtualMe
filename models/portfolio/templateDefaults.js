@@ -19,6 +19,7 @@ const healthcareDefaults = [
       primaryButtonText: "Get Started",
       secondaryButtonText: "Learn More",
       backgroundImage: "",
+      pageBanner: { enabled: false },
     },
   },
   {
@@ -36,6 +37,10 @@ const healthcareDefaults = [
         successRate: true,
         doctorsCount: true,
       },
+      pageBanner: {
+        enabled: true,
+        subtitle: "Key metrics that reflect our commitment to patient care",
+      },
     },
   },
   {
@@ -45,6 +50,11 @@ const healthcareDefaults = [
       items: [],
       viewAllText: "View All Services",
       bookButtonText: "Book Now",
+      pageBanner: {
+        enabled: true,
+        title: "Our Medical Services",
+        subtitle: "Comprehensive healthcare services delivered by experienced professionals",
+      },
     },
   },
   {
@@ -53,6 +63,11 @@ const healthcareDefaults = [
     data: {
       facilityImages: [],
       beforeAfterCases: [],
+      pageBanner: {
+        enabled: true,
+        title: "Our Facility & Results",
+        subtitle: "Take a look at our state-of-the-art facility and patient success stories",
+      },
     },
   },
   {
@@ -62,6 +77,11 @@ const healthcareDefaults = [
       posts: [],
       readMoreText: "Read More",
       viewAllText: "View All Posts",
+      pageBanner: {
+        enabled: true,
+        title: "Health Blog & Articles",
+        subtitle: "Stay informed with expert medical advice, health tips, and the latest healthcare news",
+      },
     },
   },
   {
@@ -74,6 +94,11 @@ const healthcareDefaults = [
       address: { street: "", city: "", state: "", zip: "" },
       buttonText: "Contact Us",
       submitText: "Send Message",
+      pageBanner: {
+        enabled: true,
+        title: "Contact Us",
+        subtitle: "Get in touch with our team - we're here to help",
+      },
     },
   },
   {
@@ -83,6 +108,10 @@ const healthcareDefaults = [
       weekdays: "Mon-Fri: 9:00 AM - 5:00 PM",
       saturday: "Sat: Closed",
       sunday: "Sun: Closed",
+      pageBanner: {
+        enabled: true,
+        subtitle: "When we're available for appointments and visits",
+      },
     },
   },
   {
@@ -92,6 +121,7 @@ const healthcareDefaults = [
       siteTitle: "",
       metaDescription: "",
       keywords: "",
+      pageBanner: { enabled: false },
     },
   },
 ];

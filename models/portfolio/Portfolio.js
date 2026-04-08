@@ -54,6 +54,15 @@ const portfolioSchema = new Schema(
       default: "auto",
     },
     hideBranding: { type: Boolean, default: false },
+    pageBannerDefaults: { type: Schema.Types.Mixed, default: {} },
+    navBrand: {
+      mode: { type: String, enum: ["none", "icon", "initials"], default: "none" },
+      iconKey: { type: String, default: "" },
+      initialsText: { type: String, default: "", maxlength: 2 },
+      initialsFill: { type: String, enum: ["color", "image"], default: "color" },
+      initialsBgColor: { type: String, default: "#2563eb" },
+      initialsBgImageUrl: { type: String, default: "" },
+    },
     socialLinks: {
       github: { type: String, default: "" },
       linkedin: { type: String, default: "" },

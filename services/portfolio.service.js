@@ -1,4 +1,8 @@
+const mongoose = require("mongoose");
 const Portfolio = require("../models/portfolio/Portfolio");
+const DomainRoute = require("../microservices/DomainRouter/DomainRouter.model");
+const { normalizeDomain } = require("../microservices/DomainRouter/utils/domainHelpers");
+const { deleteManyByPrefix } = require("./s3Service");
 const { getDefaultSections } = require("../models/portfolio/templateDefaults");
 const {
   BLOCK_TYPES,
@@ -132,6 +136,56 @@ function normalizeThemeTokens(themeTokens) {
   return themeTokens;
 }
 
+function normalizePageBannerDefaults(value) {
+  if (value === undefined || value === null) return {};
+  if (!isPlainObject(value)) {
+    throw new PortfolioValidationError("pageBannerDefaults must be an object", {
+      code: "INVALID_PAGE_BANNER_DEFAULTS",
+    });
+  }
+  const out = {};
+  if (typeof value.backgroundImage === "string") out.backgroundImage = value.backgroundImage;
+  if (typeof value.gradientFrom === "string") out.gradientFrom = value.gradientFrom;
+  if (typeof value.gradientTo === "string") out.gradientTo = value.gradientTo;
+  return out;
+}
+
+function normalizeNavBrand(value) {
+  if (value === undefined || value === null) {
+    return {
+      mode: "none",
+      iconKey: "",
+      initialsText: "",
+      initialsFill: "color",
+      initialsBgColor: "#2563eb",
+      initialsBgImageUrl: "",
+    };
+  }
+  if (!isPlainObject(value)) {
+    throw new PortfolioValidationError("navBrand must be an object", {
+      code: "INVALID_NAV_BRAND",
+    });
+  }
+  const mode = ["none", "icon", "initials"].includes(value.mode) ? value.mode : "none";
+  const iconKey =
+    typeof value.iconKey === "string" ? value.iconKey.trim().slice(0, 64) : "";
+  const initialsText =
+    typeof value.initialsText === "string" ? value.initialsText.trim().slice(0, 2) : "";
+  const initialsFill = value.initialsFill === "image" ? "image" : "color";
+  const initialsBgColor =
+    typeof value.initialsBgColor === "string" ? value.initialsBgColor.trim().slice(0, 64) : "#2563eb";
+  const initialsBgImageUrl =
+    typeof value.initialsBgImageUrl === "string" ? value.initialsBgImageUrl.trim().slice(0, 2048) : "";
+  return {
+    mode,
+    iconKey,
+    initialsText,
+    initialsFill,
+    initialsBgColor: initialsBgColor || "#2563eb",
+    initialsBgImageUrl,
+  };
+}
+
 function normalizeLayoutMode(layoutMode, template) {
   if (layoutMode === undefined || layoutMode === null || layoutMode === "") {
     return template === "agent" ? "stacked" : "auto";
@@ -262,6 +316,8 @@ async function createPortfolio(ownerId, template, overrides = {}) {
     themeId: normalizeThemeId(overrides.themeId, template),
     themeTokens: normalizeThemeTokens(overrides.themeTokens),
     layoutMode: normalizeLayoutMode(overrides.layoutMode, template),
+    pageBannerDefaults: normalizePageBannerDefaults(overrides.pageBannerDefaults),
+    navBrand: normalizeNavBrand(overrides.navBrand),
   });
 
   return doc.save();
@@ -304,14 +360,49 @@ function canViewerAccessPortfolio(portfolio, viewerUserId) {
   return portfolio.owner?.toString?.() === viewerUserId.toString();
 }
 
-async function getPortfolioForViewer(id, viewerUserId) {
-  const portfolio = await getPortfolio(id);
-  return canViewerAccessPortfolio(portfolio, viewerUserId) ? portfolio : null;
+async function isActiveDomainMappingForPortfolio(domainHost, portfolioId) {
+  const domain = normalizeDomain(domainHost);
+  if (!domain || !portfolioId) return false;
+  if (!mongoose.Types.ObjectId.isValid(portfolioId)) return false;
+  const route = await DomainRoute.findOne({
+    domain,
+    portfolioId,
+    isActive: true,
+  })
+    .select("_id")
+    .lean();
+  return !!route;
 }
 
-async function getPortfolioBySlugForViewer(slug, viewerUserId) {
+/**
+ * @param {string} id portfolio ObjectId
+ * @param {string|null|undefined} viewerUserId
+ * @param {{ domainHost?: string }} [options] When the SPA runs on a custom domain, the browser calls the API
+ *   on a different host (e.g. localhost:5000), so the backend cannot infer the site hostname from `Host`.
+ *   The client sends `X-Portfolio-Domain-Host`; if it matches an active DomainRoute for this portfolio, allow read
+ *   (same as serving that site on the mapped domain).
+ */
+async function getPortfolioForViewer(id, viewerUserId, options = {}) {
+  const { domainHost } = options;
+  const portfolio = await getPortfolio(id);
+  if (!portfolio) return null;
+  if (canViewerAccessPortfolio(portfolio, viewerUserId)) return portfolio;
+  if (domainHost && (await isActiveDomainMappingForPortfolio(domainHost, id))) {
+    return portfolio;
+  }
+  return null;
+}
+
+async function getPortfolioBySlugForViewer(slug, viewerUserId, options = {}) {
+  const { domainHost } = options;
   const portfolio = await getPortfolioBySlug(slug);
-  return canViewerAccessPortfolio(portfolio, viewerUserId) ? portfolio : null;
+  if (!portfolio) return null;
+  if (canViewerAccessPortfolio(portfolio, viewerUserId)) return portfolio;
+  const id = portfolio._id?.toString?.();
+  if (domainHost && id && (await isActiveDomainMappingForPortfolio(domainHost, id))) {
+    return portfolio;
+  }
+  return null;
 }
 
 async function getUserPortfolios(ownerId) {
@@ -357,6 +448,8 @@ async function updatePortfolio(id, updates) {
     "themeId",
     "themeTokens",
     "layoutMode",
+    "pageBannerDefaults",
+    "navBrand",
   ];
   const sanitized = {};
   for (const key of allowed) {
@@ -380,10 +473,14 @@ async function updatePortfolio(id, updates) {
     if (sanitized.layoutMode !== undefined) {
       sanitized.layoutMode = normalizeLayoutMode(sanitized.layoutMode, current.template);
     }
+    if (sanitized.pageBannerDefaults !== undefined) {
+      sanitized.pageBannerDefaults = normalizePageBannerDefaults(sanitized.pageBannerDefaults);
+    }
   } else if (
     sanitized.themeId !== undefined ||
     sanitized.themeTokens !== undefined ||
-    sanitized.layoutMode !== undefined
+    sanitized.layoutMode !== undefined ||
+    sanitized.pageBannerDefaults !== undefined
   ) {
     const current = await Portfolio.findById(id).select("template");
     if (!current) return null;
@@ -396,6 +493,13 @@ async function updatePortfolio(id, updates) {
     if (sanitized.layoutMode !== undefined) {
       sanitized.layoutMode = normalizeLayoutMode(sanitized.layoutMode, current.template);
     }
+    if (sanitized.pageBannerDefaults !== undefined) {
+      sanitized.pageBannerDefaults = normalizePageBannerDefaults(sanitized.pageBannerDefaults);
+    }
+  }
+
+  if (sanitized.navBrand !== undefined) {
+    sanitized.navBrand = normalizeNavBrand(sanitized.navBrand);
   }
 
   return Portfolio.findByIdAndUpdate(id, { $set: sanitized }, { new: true });
@@ -490,7 +594,15 @@ async function toggleBranding(id) {
 
 async function deletePortfolio(id) {
   const doc = await Portfolio.findByIdAndDelete(id);
-  return doc ? { _id: doc._id } : null;
+  if (!doc) return null;
+
+  try {
+    await deleteManyByPrefix(`portfolios/${id}/`);
+  } catch (err) {
+    console.error("[deletePortfolio] S3 prefix cleanup failed:", err?.message || err);
+  }
+
+  return { _id: doc._id };
 }
 
 module.exports = {

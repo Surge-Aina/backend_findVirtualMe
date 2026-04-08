@@ -51,6 +51,8 @@ exports.create = async (req, res) => {
       themeId,
       themeTokens,
       layoutMode,
+      pageBannerDefaults,
+      navBrand,
       requestedCapability,
     } = req.body;
 
@@ -68,6 +70,8 @@ exports.create = async (req, res) => {
       themeId,
       themeTokens,
       layoutMode,
+      pageBannerDefaults,
+      navBrand,
       requestedCapability,
     });
 
@@ -96,6 +100,7 @@ exports.createAgent = async (req, res) => {
       generationModel,
       generationVersion,
       generationPromptHash,
+      navBrand,
     } = req.body;
 
     const portfolio = await portfolioService.createAgentPortfolio(ownerId, {
@@ -113,6 +118,7 @@ exports.createAgent = async (req, res) => {
       generationModel,
       generationVersion,
       generationPromptHash,
+      navBrand,
     });
 
     res.status(201).json({ success: true, portfolio });
@@ -199,7 +205,10 @@ exports.proposeAgentEdit = async (req, res) => {
 exports.getById = async (req, res) => {
   try {
     const viewerId = req.user?._id || req.user?.id;
-    const portfolio = await portfolioService.getPortfolioForViewer(req.params.id, viewerId);
+    const domainHost = req.get("X-Portfolio-Domain-Host");
+    const portfolio = await portfolioService.getPortfolioForViewer(req.params.id, viewerId, {
+      domainHost,
+    });
     if (!portfolio) return res.status(404).json({ error: "Portfolio not found" });
     res.json(portfolio);
   } catch (err) {
@@ -211,7 +220,10 @@ exports.getById = async (req, res) => {
 exports.getBySlug = async (req, res) => {
   try {
     const viewerId = req.user?._id || req.user?.id;
-    const portfolio = await portfolioService.getPortfolioBySlugForViewer(req.params.slug, viewerId);
+    const domainHost = req.get("X-Portfolio-Domain-Host");
+    const portfolio = await portfolioService.getPortfolioBySlugForViewer(req.params.slug, viewerId, {
+      domainHost,
+    });
     if (!portfolio) return res.status(404).json({ error: "Portfolio not found" });
     res.json(portfolio);
   } catch (err) {

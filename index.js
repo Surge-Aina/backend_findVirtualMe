@@ -115,6 +115,11 @@ for (const origin of seededOrigins) {
 }
 
 const corsOptions = {
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Portfolio-Domain-Host",
+  ],
   origin: async (origin, callback) => {
     if (!origin) return callback(null, true);
 

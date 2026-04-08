@@ -1,6 +1,7 @@
 const express = require("express");
 const request = require("supertest");
 const Portfolio = require("../../models/portfolio/Portfolio");
+const DomainRoute = require("../../microservices/DomainRouter/DomainRouter.model");
 
 const TEST_USER_ID = "507f1f77bcf86cd799439011";
 const mockCreate = jest.fn();
@@ -343,6 +344,34 @@ describe("Unified portfolio routes", () => {
     expect(res.body._id.toString()).toBe(portfolio._id.toString());
   });
 
+  it("allows unauthenticated getById when X-Portfolio-Domain-Host matches an active domain mapping", async () => {
+    const portfolio = await Portfolio.create({
+      owner: TEST_USER_ID,
+      template: "agent",
+      title: "Mapped private site",
+      visibility: "private",
+      sections: [{ type: "summary", order: 0, data: { name: "Site Owner" } }],
+    });
+
+    await DomainRoute.create({
+      userId: TEST_USER_ID,
+      domain: "client-site.example",
+      portfolioId: portfolio._id,
+      isActive: true,
+    });
+
+    const anon = await request(app).get(`/api/portfolios/${portfolio._id}`);
+    expect(anon.status).toBe(404);
+
+    const viaHeader = await request(app)
+      .get(`/api/portfolios/${portfolio._id}`)
+      .set("X-Portfolio-Domain-Host", "client-site.example");
+
+    expect(viaHeader.status).toBe(200);
+    expect(viaHeader.body._id.toString()).toBe(portfolio._id.toString());
+    expect(Array.isArray(viaHeader.body.sections)).toBe(true);
+  });
+
   it("returns public portfolios without auth", async () => {
     const portfolio = await Portfolio.create({
       owner: TEST_USER_ID,
@@ -350,16 +379,26 @@ describe("Unified portfolio routes", () => {
       title: "Public Portfolio",
       visibility: "public",
       slug: "public-portfolio-for-anon",
-      sections: [{ type: "summary", order: 0, data: { name: "Public Owner" } }],
+      sections: [
+        { type: "summary", order: 0, data: { name: "Public Owner" } },
+        { type: "contact", order: 1, data: { email: "hello@example.com" } },
+      ],
     });
 
     const byId = await request(app).get(`/api/portfolios/${portfolio._id}`);
     expect(byId.status).toBe(200);
     expect(byId.body._id.toString()).toBe(portfolio._id.toString());
+    expect(Array.isArray(byId.body.sections)).toBe(true);
+    expect(byId.body.sections).toHaveLength(2);
+    expect(byId.body.sections.map((s) => s.type)).toEqual(
+      expect.arrayContaining(["summary", "contact"])
+    );
 
     const bySlug = await request(app).get(`/api/portfolios/slug/${portfolio.slug}`);
     expect(bySlug.status).toBe(200);
     expect(bySlug.body.slug).toBe(portfolio.slug);
+    expect(Array.isArray(bySlug.body.sections)).toBe(true);
+    expect(bySlug.body.sections).toHaveLength(2);
   });
 
   it("adds a known section and normalizes the resulting section order", async () => {
