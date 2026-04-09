@@ -17,10 +17,10 @@ const path = require("path");
 const dns = require("dns");
 const mongoose = require("mongoose");
 
-const HealthcarePortfolio = require("../models/healthcare/userData");
-const ProjectManagerPortfolio = require("../models/projectManager/portfolioModel");
-const HandymanMainPortfolio = require("../models/handyMan/HandymanTemplate");
-const HandymanGalleryItem = require("../models/handyMan/handymanPortfolioModel");
+const HealthcarePortfolio = require("../src/legacy/healthcare/models/userData");
+const ProjectManagerPortfolio = require("../src/legacy/project-manager/models/portfolioModel");
+const HandymanMainPortfolio = require("../src/legacy/handyman/models/HandymanTemplate");
+const HandymanGalleryItem = require("../src/legacy/handyman/models/handymanPortfolioModel");
 const Portfolio = require("../src/shared/models/portfolio/Portfolio");
 const User = require("../src/shared/models/User");
 

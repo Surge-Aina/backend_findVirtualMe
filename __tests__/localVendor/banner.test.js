@@ -2,12 +2,12 @@ const express = require("express");
 const request = require("supertest");
 const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
-const bannerRoutes = require("../../routes/localFoodVendor/bannerRoutes");
+const bannerRoutes = require("../../src/legacy/local-vendor/routes/bannerRoutes");
 const app = express();
 app.use(express.json());
 app.use("/banner", bannerRoutes);
 
-const Banner = require("../../models/localFoodVendor/Banner");
+const Banner = require("../../src/legacy/local-vendor/models/Banner");
 jest.mock("../../src/shared/services/s3Service", () => ({
   uploadToS3: jest.fn(async () => ({
     url: "mocked-s3-url",

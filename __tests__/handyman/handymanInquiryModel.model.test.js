@@ -4,7 +4,7 @@
 
     let HandymanInquiry;
     try {
-    HandymanInquiry = require('../../models/handyMan/handymanInquiryModel');
+    HandymanInquiry = require('../../src/legacy/handyman/models/handymanInquiryModel');
     } catch (e) {
     console.warn('handymanInquiryModel not found; skipping this suite');
     }

@@ -2,7 +2,7 @@
 
     let HandymanTemplate;
     try {
-    HandymanTemplate = require('../../models/handyMan/HandymanTemplate');
+    HandymanTemplate = require('../../src/legacy/handyman/models/HandymanTemplate');
     } catch (e) {
     console.warn('HandymanTemplate model not found; skipping this suite');
     }

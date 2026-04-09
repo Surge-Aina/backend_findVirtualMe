@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
-const Portfolio = require("../../models/projectManager/portfolioModel");
+const Portfolio = require("../../src/legacy/project-manager/models/portfolioModel");
 
 let mongoServer;
 beforeAll(async () => {

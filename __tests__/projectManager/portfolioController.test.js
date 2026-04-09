@@ -7,7 +7,7 @@ jest.mock('pdf-parse', () => {
 
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
-const Portfolio = require('../../models/projectManager/portfolioModel');
+const Portfolio = require('../../src/legacy/project-manager/models/portfolioModel');
 const pdfParse = require('pdf-parse');
 const {
   generatePortfolioJSON,
@@ -23,7 +23,7 @@ const {
   editPortfolioByEmail,
   deletePortfolioByEmail,
   aiSummary,
-} = require('../../controllers/projectManager/portfolioController');
+} = require('../../src/legacy/project-manager/controllers/portfolioController');
 
 let mongoServer;
 // ... rest of file stays the same

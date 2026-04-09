@@ -1,7 +1,7 @@
 const express = require('express');
 const request = require('supertest');
 const { generateMatchSummary } = require('../../src/shared/services/openAiService');
-const router = require('../../routes/projectManager/openAiRoute.js'); // Adjust path to your route file
+const router = require('../../src/legacy/project-manager/routes/openAiRoute.js'); // Adjust path to your route file
 
 // Mock the OpenAI service
 jest.mock('../../src/shared/services/openAiService');

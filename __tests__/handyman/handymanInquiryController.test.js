@@ -2,13 +2,13 @@
 
     let controller;
     try {
-    controller = require('../../controllers/handyman/handymanInquiryController');
+    controller = require('../../src/legacy/handyman/controllers/handymanInquiryController');
     } catch (e) {
     console.warn('handymanInquiryController not found; skipping suite');
     }
 
-    const HandymanTemplate = require('../../models/handyMan/HandymanTemplate');
-    const HandymanInquiry = require('../../models/handyMan/handymanInquiryModel');
+    const HandymanTemplate = require('../../src/legacy/handyman/models/HandymanTemplate');
+    const HandymanInquiry = require('../../src/legacy/handyman/models/handymanInquiryModel');
 
     // mock nodemailer
     jest.mock('nodemailer', () => {

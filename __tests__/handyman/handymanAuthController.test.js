@@ -9,7 +9,7 @@
     let authController;
     beforeAll(() => {
     try {
-        authController = require('../../controllers/handyman/handymanAuthController');
+        authController = require('../../src/legacy/handyman/controllers/handymanAuthController');
     } catch {
         authController = null;
     }

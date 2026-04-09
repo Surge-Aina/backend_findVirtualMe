@@ -26,12 +26,12 @@
     }));
 
     // 3) Mock ALL three controllers so routes never hit DB/files
-    jest.mock('../../controllers/handyman/handymanInquiryController', () => ({
+    jest.mock('../../src/legacy/handyman/controllers/handymanInquiryController', () => ({
     createInquiry: (req, res) =>
         res.status(201).json({ ok: true, got: req.body || {} }),
     }));
 
-    jest.mock('../../controllers/handyman/handymanPortfolioController', () => ({
+    jest.mock('../../src/legacy/handyman/controllers/handymanPortfolioController', () => ({
     getPortfolioItems: (req, res) => res.json([]),
     createPortfolioItem: (req, res) => res.status(201).json({ id: 'p1' }),
     updatePortfolioItem: (req, res) =>
@@ -39,7 +39,7 @@
     deletePortfolioItem: (req, res) => res.json({ ok: true }),
     }));
 
-    jest.mock('../../controllers/handyman/handymanTemplateController', () => ({
+    jest.mock('../../src/legacy/handyman/controllers/handymanTemplateController', () => ({
     listPortfolios: (req, res) => res.json([]),
     getPortfolioById: (req, res) => res.json({ id: req.params.id }),
     createPortfolio: (req, res) =>
@@ -61,9 +61,9 @@
     const request = require('supertest');
     const jwt = require('jsonwebtoken');
 
-    const inquiryRoutes = require('../../routes/handyMan/handymanInquiryRoutes');
-    const portfolioRoutes = require('../../routes/handyMan/handymanPortfolioRoutes');
-    const templateRoutes = require('../../routes/handyMan/handymanTemplateRoutes');
+    const inquiryRoutes = require('../../src/legacy/handyman/routes/handymanInquiryRoutes');
+    const portfolioRoutes = require('../../src/legacy/handyman/routes/handymanPortfolioRoutes');
+    const templateRoutes = require('../../src/legacy/handyman/routes/handymanTemplateRoutes');
 
     function makeApp() {
     const app = express();

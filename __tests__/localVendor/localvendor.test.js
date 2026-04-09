@@ -7,7 +7,7 @@ jest.spyOn(console, "warn").mockImplementation(() => {});
 jest.spyOn(console, "error").mockImplementation(() => {});
 
 // Mock LocalVendorPortfolio with in-memory store
-jest.mock("../../models/localFoodVendor/LocalVendorPortfolio", () => {
+jest.mock("../../src/legacy/local-vendor/models/LocalVendorPortfolio", () => {
   const dataStore = [];
 
   function MockLocalVendorPortfolio(data) {
@@ -68,32 +68,32 @@ jest.mock("../../models/localFoodVendor/LocalVendorPortfolio", () => {
 });
 
 // Dependent models
-jest.mock("../../models/localFoodVendor/About", () => ({
+jest.mock("../../src/legacy/local-vendor/models/About", () => ({
   create: jest.fn(async (data) => ({ _id: "mockAboutId", ...data })),
   findOne: jest.fn(async () => null),
 }));
 
-jest.mock("../../models/localFoodVendor/Banner", () => ({
+jest.mock("../../src/legacy/local-vendor/models/Banner", () => ({
   create: jest.fn(async (data) => ({ _id: "mockBannerId", ...data })),
   find: jest.fn(async () => [{ _id: "banner1" }]),
 }));
 
-jest.mock("../../models/localFoodVendor/MenuItems", () => ({
+jest.mock("../../src/legacy/local-vendor/models/MenuItems", () => ({
   insertMany: jest.fn(async (data) =>
     data.map((d, i) => ({ _id: `menu${i}`, ...d }))
   ),
   find: jest.fn(async () => [{ _id: "menu1" }]),
 }));
 
-jest.mock("../../models/localFoodVendor/GalleryImage", () => ({
+jest.mock("../../src/legacy/local-vendor/models/GalleryImage", () => ({
   find: jest.fn(async () => [{ _id: "gallery1" }]),
 }));
 
-jest.mock("../../models/localFoodVendor/Review", () => ({
+jest.mock("../../src/legacy/local-vendor/models/Review", () => ({
   find: jest.fn(async () => [{ _id: "review1" }]),
 }));
 
-jest.mock("../../models/localFoodVendor/TaggedImage", () => ({
+jest.mock("../../src/legacy/local-vendor/models/TaggedImage", () => ({
   find: jest.fn(() => ({
     populate: jest
       .fn()
@@ -106,7 +106,7 @@ jest.mock("../../src/shared/models/User", () => ({
   findByIdAndUpdate: jest.fn(async () => ({})),
 }));
 
-jest.mock("../../models/localFoodVendor/seedVendor", () =>
+jest.mock("../../src/legacy/local-vendor/models/seedVendor", () =>
   jest.fn(async () => true)
 );
 
@@ -156,19 +156,19 @@ jest.mock("../../src/shared/middleware/auth", () => (req, res, next) => {
 // Imports
 const express = require("express");
 const request = require("supertest");
-const LocalVendorPortfolio = require("../../models/localFoodVendor/LocalVendorPortfolio");
-const About = require("../../models/localFoodVendor/About");
-const Banner = require("../../models/localFoodVendor/Banner");
-const MenuItem = require("../../models/localFoodVendor/MenuItems");
-const GalleryImage = require("../../models/localFoodVendor/GalleryImage");
-const Review = require("../../models/localFoodVendor/Review");
-const TaggedImage = require("../../models/localFoodVendor/TaggedImage");
+const LocalVendorPortfolio = require("../../src/legacy/local-vendor/models/LocalVendorPortfolio");
+const About = require("../../src/legacy/local-vendor/models/About");
+const Banner = require("../../src/legacy/local-vendor/models/Banner");
+const MenuItem = require("../../src/legacy/local-vendor/models/MenuItems");
+const GalleryImage = require("../../src/legacy/local-vendor/models/GalleryImage");
+const Review = require("../../src/legacy/local-vendor/models/Review");
+const TaggedImage = require("../../src/legacy/local-vendor/models/TaggedImage");
 const User = require("../../src/shared/models/User");
-const seedVendor = require("../../models/localFoodVendor/seedVendor");
+const seedVendor = require("../../src/legacy/local-vendor/models/seedVendor");
 const {
   generateVendorAboutAndMenuJSON,
 } = require("../../src/shared/services/openAiService");
-const vendorRoutes = require("../../routes/localFoodVendor/localVendorRoutes");
+const vendorRoutes = require("../../src/legacy/local-vendor/routes/localVendorRoutes");
 
 // Express app
 const app = express();

@@ -16,8 +16,8 @@
     const s3 = require('../../src/shared/services/s3Service');
 
     // 2) Now safely require controller & model
-    const controller = require('../../controllers/handyman/handymanPortfolioController');
-    const HandymanPortfolio = require('../../models/handyMan/handymanPortfolioModel');
+    const controller = require('../../src/legacy/handyman/controllers/handymanPortfolioController');
+    const HandymanPortfolio = require('../../src/legacy/handyman/models/handymanPortfolioModel');
 
     // ---- Mongoose static method mocks (no real DB) ----
     beforeEach(() => {
@@ -376,7 +376,7 @@
             { virtual: true },
         );
 
-        const ctrl = require('../../controllers/handyman/handymanPortfolioController');
+        const ctrl = require('../../src/legacy/handyman/controllers/handymanPortfolioController');
         const req = {
             body: { title: 'X', category: 'Y', templateId: 't1' },
             files: {

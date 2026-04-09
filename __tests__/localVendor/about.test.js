@@ -2,8 +2,8 @@ const express = require("express");
 const request = require("supertest");
 const mongoose = require("mongoose");
 
-const aboutRouter = require("../../routes/localFoodVendor/aboutRoutes");
-const About = require("../../models/localFoodVendor/About");
+const aboutRouter = require("../../src/legacy/local-vendor/routes/aboutRoutes");
+const About = require("../../src/legacy/local-vendor/models/About");
 const { uploadToS3 } = require("../../src/shared/services/s3Service");
 const { deleteFromS3 } = require("../../src/shared/services/s3Service");
 

@@ -1,38 +1,8 @@
 const express = require("express");
 require("dotenv").config(); // Load environment variables from .env file
 const path = require("path");
-const fs = require("fs");
-const http = require("http");
-const socketIo = require("socket.io");
-const { google } = require("googleapis");
-const {
-  oauth2Client,
-  getAuthUrl,
-  getTokensFromCode,
-  setCredentialsFromEnv,
-  listFilesInFolder,
-} = require("../oauthHandler");
-const healthcareRoutes = require("../routes/healthcare/healthcare_routes");
-const settingsRoutes = require("../routes/photographer/settingsRoute");
-const driveRoutes = require("../routes/photographer/driveRoute");
-const photoRoutes = require("../routes/photographer/photoRoute");
 const userRoutes = require("../routes/userRoute");
-const projectManagerPortfolioRoutes = require("../routes/projectManager/portfolioRoute");
-const testimonialRoutes = require("../routes/dataScientist/testimonialRoute");
-const dashboardRoutes = require("../routes/dataScientist/dashboardRoute");
-const bannerRoutes = require("../routes/localFoodVendor/bannerRoutes");
-const aboutRoutes = require("../routes/localFoodVendor/aboutRoutes");
-const menuRoutes = require("../routes/localFoodVendor/menuRoutes");
-const galleryRoutes = require("../routes/localFoodVendor/galleryRoutes");
-const reviewRoutes = require("../routes/localFoodVendor/reviewRoutes");
-const taggedImageRoutes = require("../routes/localFoodVendor/taggedImageRoutes");
-const handymanPortfolioRoutes = require("../routes/handyMan/handymanPortfolioRoutes");
-const dataScientistRoutes = require("../routes/dataScientist/dataScientistRoutes");
 const checkoutRoutes = require("../routes/stripePayment/checkoutRoutes");
-const domainResolver = require("./shared/middleware/domainResolver"); // Import domain resolver
-const handymanTemplateRoutes = require("../routes/handyMan/handymanTemplateRoutes");
-const handymanInquiryRoutes = require("../routes/handyMan/handymanInquiryRoutes");
-const localVendorRoutes = require("../routes/localFoodVendor/localVendorRoutes");
 const subscriptionRoutes = require("../routes/subscriptionRoutes");
 const stripeWebhookRoutes = require("../routes/stripeWebhookRoutes");
 const supportFormRoutes = require("../routes/supportFormRoutes");
@@ -40,7 +10,6 @@ const roleCheck = require("./shared/middleware/roleCheck");
 const auth = require("./shared/middleware/auth");
 const domainRoutes = require("../routes/domainRoutes");
 const telemetryRoutes = require("../routes/telemetry");
-// const settingRoutes2 = require('./routes/settingRoutes');
 const guestUserRoutes = require("../microservices/guestLogin/guestUser.routes");
 const portfolioEditLogRoutes = require("../routes/portfolioEditLogRoutes");
 const guestAdminPanelRoutes = require("../microservices/guestAdminPanel/guestAdminPanel.routes");
@@ -49,16 +18,38 @@ const userPortfoliosArrayRoutes = require("../microservices/userPortfoliosArray/
 const publicPortfoliosRoutes = require("../microservices/publicPortfolios/publicPortfolios.routes");
 const domainPaymentRouter = require("../microservices/domainPayment/stripe/stripe.route");
 const emailMvpRoutes = require("../microservices/emailmvp/emailmvp.routes");
-// const domainRouting = require("./shared/middleware/domainRouting");
 const googleLoginRoutes = require("../microservices/googleLogin/googleLogin.routes.js");
 const contactMeRoutes = require("../microservices/contactMeForm/contactMeForm.routes.js");
 const domainRouterRoutes = require("../microservices/DomainRouter/DomainRouter.routes.js");
 const s3UploadRoutes = require("../microservices/S3Upload/S3Upload.routes.js");
 const passwordResetRoutes = require("../microservices/passwordReset/passwordReset.routes");
 
-// Import configuration from separate file
 const config = require("./shared/config/app.config.js");
 const corsMiddleware = require("./shared/middleware/cors.middleware");
+const legacy = require("./legacy/routes");
+
+const {
+  runOAuthEnvSetup,
+  registerPhotographerOAuthRoutes,
+  projectManagerPortfolioRoutes,
+  settingsRoutes,
+  driveRoutes,
+  photoRoutes,
+  testimonialRoutes,
+  dashboardRoutes,
+  bannerRoutes,
+  aboutRoutes,
+  menuRoutes,
+  galleryRoutes,
+  reviewRoutes,
+  taggedImageRoutes,
+  handymanPortfolioRoutes,
+  dataScientistRoutes,
+  handymanTemplateRoutes,
+  handymanInquiryRoutes,
+  localVendorRoutes,
+  healthcareRoutes,
+} = legacy;
 
 const app = express();
 
@@ -83,7 +74,7 @@ app.get("/api/domain-context", (req, res) => {
   });
 });
 
-setCredentialsFromEnv();
+runOAuthEnvSetup();
 
 // Mount the main portfolio API routes at /portfolio
 app.use("/portfolio", projectManagerPortfolioRoutes);
@@ -175,26 +166,6 @@ app.get("/", (req, res) => {
   });
 });
 
-app.get("/auth-url", (req, res) => {
-  // Call manually in browser
-  res.send(getAuthUrl());
-});
-
-// OAuth callback (Google will redirect here after consent)
-app.get("/oauth2callback", async (req, res) => {
-  const code = req.query.code;
-  try {
-    const tokens = await getTokensFromCode(code);
-
-    if (tokens.refresh_token) {
-      fs.appendFileSync(".env", `\nREFRESH_TOKEN=${tokens.refresh_token}`);
-    }
-
-    res.send("Authorization successful! You can close this tab.");
-  } catch (err) {
-    console.error("Error exchanging code:", err);
-    res.status(500).send("Auth failed");
-  }
-});
+registerPhotographerOAuthRoutes(app);
 
 module.exports = app;

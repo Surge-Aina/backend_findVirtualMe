@@ -43,8 +43,8 @@ const request = require("supertest");
 const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 
-const galleryRoutes = require("../../routes/localFoodVendor/galleryRoutes");
-const GalleryImage = require("../../models/localFoodVendor/GalleryImage");
+const galleryRoutes = require("../../src/legacy/local-vendor/routes/galleryRoutes");
+const GalleryImage = require("../../src/legacy/local-vendor/models/GalleryImage");
 
 const app = express();
 app.use(express.json());
@@ -56,7 +56,7 @@ app.post(
     req.file = undefined;
     next();
   },
-  require("../../controllers/localFoodVendor/galleryController")
+  require("../../src/legacy/local-vendor/controllers/galleryController")
     .createGalleryImage
 );
 
@@ -66,7 +66,7 @@ app.post(
     req.files = undefined;
     next();
   },
-  require("../../controllers/localFoodVendor/galleryController")
+  require("../../src/legacy/local-vendor/controllers/galleryController")
     .insertMultipleGalleryImage
 );
 
@@ -242,7 +242,7 @@ describe("Gallery API (integration-style)", () => {
   it("should handle DB save failure during createGalleryImage", async () => {
     const saveMock = jest
       .spyOn(
-        require("../../models/localFoodVendor/GalleryImage").prototype,
+        require("../../src/legacy/local-vendor/models/GalleryImage").prototype,
         "save"
       )
       .mockRejectedValueOnce(new Error("DB save error"));

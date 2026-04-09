@@ -19,20 +19,20 @@ jest.mock("pdfjs-dist/legacy/build/pdf.js", () => ({
 }));
 
 // Mock DB models
-jest.mock("../../models/localFoodVendor/LocalVendorPortfolio", () => ({
+jest.mock("../../src/legacy/local-vendor/models/LocalVendorPortfolio", () => ({
   create: jest.fn(async (d) => ({ _id: "1", ...d })),
   findOne: jest.fn(async () => null),
 }));
 
-jest.mock("../../models/localFoodVendor/About", () => ({
+jest.mock("../../src/legacy/local-vendor/models/About", () => ({
   create: jest.fn(),
 }));
 
-jest.mock("../../models/localFoodVendor/Banner", () => ({
+jest.mock("../../src/legacy/local-vendor/models/Banner", () => ({
   create: jest.fn(),
 }));
 
-jest.mock("../../models/localFoodVendor/MenuItems", () => ({
+jest.mock("../../src/legacy/local-vendor/models/MenuItems", () => ({
   insertMany: jest.fn(),
 }));
 
@@ -71,7 +71,7 @@ describe("PDF extraction fallback branches", () => {
     pdfLib = require("pdf-lib");
 
     injectVendorPortfolio =
-      require("../../controllers/localFoodVendor/localVendorController").injectVendorPortfolio;
+      require("../../src/legacy/local-vendor/controllers/localVendorController").injectVendorPortfolio;
 
     req = {
       file: null,

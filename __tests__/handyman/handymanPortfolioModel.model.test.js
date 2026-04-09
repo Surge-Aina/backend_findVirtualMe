@@ -4,7 +4,7 @@
 
     let HandymanPortfolio;
     try {
-    HandymanPortfolio = require('../../models/handyMan/handymanPortfolioModel');
+    HandymanPortfolio = require('../../src/legacy/handyman/models/handymanPortfolioModel');
     } catch (e) {
     console.warn('handymanPortfolioModel not found; skipping this suite');
     }

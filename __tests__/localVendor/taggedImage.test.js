@@ -15,7 +15,7 @@ jest.mock("../../src/shared/services/s3Service", () => ({
 
 const { uploadToS3 } = require("../../src/shared/services/s3Service");
 
-jest.mock("../../models/localFoodVendor/TaggedImage", () => {
+jest.mock("../../src/legacy/local-vendor/models/TaggedImage", () => {
   const dataStore = [];
 
   class MockTaggedImage {
@@ -73,9 +73,9 @@ jest.mock("../../models/localFoodVendor/TaggedImage", () => {
   return MockTaggedImage;
 });
 
-const TaggedImage = require("../../models/localFoodVendor/TaggedImage");
+const TaggedImage = require("../../src/legacy/local-vendor/models/TaggedImage");
 
-const taggedImageRoutes = require("../../routes/localFoodVendor/taggedImageRoutes");
+const taggedImageRoutes = require("../../src/legacy/local-vendor/routes/taggedImageRoutes");
 const app = express();
 app.use(express.json());
 app.use("/tagged", taggedImageRoutes);

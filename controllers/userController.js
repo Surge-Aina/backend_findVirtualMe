@@ -5,7 +5,7 @@ const bcrypt = require("bcrypt");
 const req = require("express/lib/request");
 const jwt = require("jsonwebtoken");
 const Stripe = require("stripe");
-const Portfolio = require("../models/projectManager/portfolioModel");
+const Portfolio = require("../src/legacy/project-manager/models/portfolioModel");
 const subscriptionAccess = require("../src/shared/services/subscriptionAccess.service");
 
 const stripeSecretkey =

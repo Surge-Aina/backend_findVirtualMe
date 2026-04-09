@@ -12,8 +12,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const User = require('../../src/shared/models/User');
-const UserData = require('../../models/healthcare/userData');
-const healthcareRoutes = require('../../routes/healthcare/healthcare_routes');
+const UserData = require('../../src/legacy/healthcare/models/userData');
+const healthcareRoutes = require('../../src/legacy/healthcare/routes/healthcare_routes');
 
 // Create Express app for testing
 const app = express();

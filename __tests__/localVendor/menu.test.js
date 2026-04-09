@@ -20,7 +20,7 @@ jest.mock("../../src/shared/utils/multer", () => ({
 }));
 
 // Mock MenuItems model (in-memory mock)
-jest.mock("../../models/localFoodVendor/MenuItems", () => {
+jest.mock("../../src/legacy/local-vendor/models/MenuItems", () => {
   const dataStore = [];
 
   class MockMenuItem {
@@ -73,8 +73,8 @@ jest.mock("../../models/localFoodVendor/MenuItems", () => {
 const express = require("express");
 const request = require("supertest");
 const mongoose = require("mongoose");
-const menuRoutes = require("../../routes/localFoodVendor/menuRoutes");
-const MenuItem = require("../../models/localFoodVendor/MenuItems");
+const menuRoutes = require("../../src/legacy/local-vendor/routes/menuRoutes");
+const MenuItem = require("../../src/legacy/local-vendor/models/MenuItems");
 const s3Service = require("../../src/shared/services/s3Service");
 
 // Express test app

@@ -18,7 +18,7 @@ jest.mock('cors', () => {
 });
 
 jest.mock('../../src/shared/utils/db', () => jest.fn(() => Promise.resolve()));
-jest.mock('../../oauthHandler', () => {
+jest.mock('../../src/legacy/photographer/oauth-handler', () => {
   const getTokensFromCode = jest.fn();
   return {
     oauth2Client: {},
@@ -34,28 +34,28 @@ jest.mock('../../src/shared/middleware/domainResolver', () => mockPassThrough);
 jest.mock('../../src/shared/middleware/auth', () => mockPassThrough);
 jest.mock('../../src/shared/middleware/roleCheck', () => () => mockPassThrough);
 
-jest.mock('../../routes/healthcare/healthcare_routes', () => mockPassThrough);
-jest.mock('../../routes/photographer/settingsRoute', () => mockPassThrough);
-jest.mock('../../routes/photographer/driveRoute', () => mockPassThrough);
-jest.mock('../../routes/photographer/photoRoute', () => mockPassThrough);
-jest.mock('../../routes/photographer/uploadRoute', () => mockPassThrough);
+jest.mock('../../src/legacy/healthcare/routes/healthcare_routes', () => mockPassThrough);
+jest.mock('../../src/legacy/photographer/routes/settingsRoute', () => mockPassThrough);
+jest.mock('../../src/legacy/photographer/routes/driveRoute', () => mockPassThrough);
+jest.mock('../../src/legacy/photographer/routes/photoRoute', () => mockPassThrough);
+jest.mock('../../src/legacy/photographer/routes/uploadRoute', () => mockPassThrough);
 jest.mock('../../routes/userRoute', () => mockPassThrough);
 jest.mock('../../routes/portfolio.routes', () => mockPassThrough);
-jest.mock('../../routes/projectManager/portfolioRoute', () => mockPassThrough);
-jest.mock('../../routes/dataScientist/testimonialRoute', () => mockPassThrough);
-jest.mock('../../routes/dataScientist/dashboardRoute', () => mockPassThrough);
-jest.mock('../../routes/localFoodVendor/bannerRoutes', () => mockPassThrough);
-jest.mock('../../routes/localFoodVendor/aboutRoutes', () => mockPassThrough);
-jest.mock('../../routes/localFoodVendor/menuRoutes', () => mockPassThrough);
-jest.mock('../../routes/localFoodVendor/galleryRoutes', () => mockPassThrough);
-jest.mock('../../routes/localFoodVendor/reviewRoutes', () => mockPassThrough);
-jest.mock('../../routes/localFoodVendor/taggedImageRoutes', () => mockPassThrough);
-jest.mock('../../routes/handyMan/handymanPortfolioRoutes', () => mockPassThrough);
-jest.mock('../../routes/dataScientist/dataScientistRoutes', () => mockPassThrough);
+jest.mock('../../src/legacy/project-manager/routes/portfolioRoute', () => mockPassThrough);
+jest.mock('../../src/legacy/data-scientist/routes/testimonialRoute', () => mockPassThrough);
+jest.mock('../../src/legacy/data-scientist/routes/dashboardRoute', () => mockPassThrough);
+jest.mock('../../src/legacy/local-vendor/routes/bannerRoutes', () => mockPassThrough);
+jest.mock('../../src/legacy/local-vendor/routes/aboutRoutes', () => mockPassThrough);
+jest.mock('../../src/legacy/local-vendor/routes/menuRoutes', () => mockPassThrough);
+jest.mock('../../src/legacy/local-vendor/routes/galleryRoutes', () => mockPassThrough);
+jest.mock('../../src/legacy/local-vendor/routes/reviewRoutes', () => mockPassThrough);
+jest.mock('../../src/legacy/local-vendor/routes/taggedImageRoutes', () => mockPassThrough);
+jest.mock('../../src/legacy/handyman/routes/handymanPortfolioRoutes', () => mockPassThrough);
+jest.mock('../../src/legacy/data-scientist/routes/dataScientistRoutes', () => mockPassThrough);
 jest.mock('../../routes/stripePayment/checkoutRoutes', () => mockPassThrough);
-jest.mock('../../routes/handyMan/handymanTemplateRoutes', () => mockPassThrough);
-jest.mock('../../routes/handyMan/handymanInquiryRoutes', () => mockPassThrough);
-jest.mock('../../routes/localFoodVendor/localVendorRoutes', () => mockPassThrough);
+jest.mock('../../src/legacy/handyman/routes/handymanTemplateRoutes', () => mockPassThrough);
+jest.mock('../../src/legacy/handyman/routes/handymanInquiryRoutes', () => mockPassThrough);
+jest.mock('../../src/legacy/local-vendor/routes/localVendorRoutes', () => mockPassThrough);
 jest.mock('../../routes/subscriptionRoutes', () => mockPassThrough);
 jest.mock('../../routes/stripeWebhookRoutes', () => mockPassThrough);
 jest.mock('../../routes/supportFormRoutes', () => mockPassThrough);
@@ -113,7 +113,7 @@ const createServerSpy = jest.spyOn(http, 'createServer');
 const fs = require('fs');
 const appendFileSyncMock = fs.__mockAppendFileSync || fs.appendFileSync;
 
-const oauthHandler = require('../../oauthHandler');
+const oauthHandler = require('../../src/legacy/photographer/oauth-handler');
 const mockGetTokensFromCode = oauthHandler.__mockGetTokensFromCode;
 
 const User = require('../../src/shared/models/User');

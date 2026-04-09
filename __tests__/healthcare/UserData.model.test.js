@@ -6,7 +6,7 @@
  */
 
 const mongoose = require('mongoose');
-const UserData = require('../../models/healthcare/userData');
+const UserData = require('../../src/legacy/healthcare/models/userData');
 
 // Helper functions
 const uniquePracticeId = () => `practice_${Date.now()}_${Math.random()}`;

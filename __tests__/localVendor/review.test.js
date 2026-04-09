@@ -6,7 +6,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 
 //model mock
-jest.mock("../../models/localFoodVendor/Review", () => {
+jest.mock("../../src/legacy/local-vendor/models/Review", () => {
   const dataStore = [];
 
   class MockReview {
@@ -52,10 +52,10 @@ jest.mock("../../models/localFoodVendor/Review", () => {
   return MockReview;
 });
 
-const Review = require("../../models/localFoodVendor/Review");
+const Review = require("../../src/legacy/local-vendor/models/Review");
 
 //express setup
-const reviewRoutes = require("../../routes/localFoodVendor/reviewRoutes");
+const reviewRoutes = require("../../src/legacy/local-vendor/routes/reviewRoutes");
 const app = express();
 app.use(express.json());
 app.use("/review", reviewRoutes);

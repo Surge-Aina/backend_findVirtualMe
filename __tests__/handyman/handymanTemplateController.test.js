@@ -6,8 +6,8 @@
     }));
 
     const UserModel = require("../../src/shared/models/User");
-    const controller = require('../../controllers/handyman/handymanTemplateController');
-    const HandymanTemplate = require('../../models/handyMan/HandymanTemplate');
+    const controller = require('../../src/legacy/handyman/controllers/handymanTemplateController');
+    const HandymanTemplate = require('../../src/legacy/handyman/models/HandymanTemplate');
 
     // ---- Mongoose static method mocks (no real DB) ----
     beforeEach(() => {

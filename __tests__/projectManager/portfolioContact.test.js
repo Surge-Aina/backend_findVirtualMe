@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
-const ProjectManagerContact = require("../../models/projectManager/ProjectManagerContact");
+const ProjectManagerContact = require("../../src/legacy/project-manager/models/ProjectManagerContact");
 
 let mongoServer;
 
