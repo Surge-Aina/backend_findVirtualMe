@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const OpenAI = require("openai");
 
-const { getBlockTypesForTemplate } = require("../models/portfolio/blockTypes");
+const { getBlockTypesForTemplate } = require("./models/blockTypes");
 const {
   createAgentPortfolio,
   PortfolioValidationError,

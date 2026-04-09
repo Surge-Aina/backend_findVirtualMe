@@ -3,7 +3,7 @@ const {
   getPortfolioList,
   updateAllUsersPortfolioArrays,
 } = require("./userPortfoliosArray.service");
-const User = require("../../src/shared/models/User");
+const User = require("../../../shared/models/User");
 
 exports.updateUserPortfolios = async (req, res) => {
   try {

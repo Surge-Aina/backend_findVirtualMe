@@ -1,15 +1,15 @@
 const mongoose = require("mongoose");
-const Portfolio = require("../models/portfolio/Portfolio");
+const Portfolio = require("./models/Portfolio");
 const DomainRoute = require("../../../microservices/DomainRouter/DomainRouter.model");
 const { normalizeDomain } = require("../../../microservices/DomainRouter/utils/domainHelpers");
-const { deleteManyByPrefix } = require("./s3Service");
-const { getDefaultSections } = require("../models/portfolio/templateDefaults");
+const { deleteManyByPrefix } = require("../../shared/services/s3Service");
+const { getDefaultSections } = require("./models/templateDefaults");
 const {
   BLOCK_TYPES,
   KNOWN_BLOCK_TYPES,
   getBlockTypesForTemplate,
   isKnownBlockType,
-} = require("../models/portfolio/blockTypes");
+} = require("./models/blockTypes");
 
 const MAX_PORTFOLIO_SECTIONS = 24;
 const MAX_SECTION_DATA_BYTES = 50 * 1024;

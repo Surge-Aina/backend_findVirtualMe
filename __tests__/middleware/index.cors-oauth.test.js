@@ -40,7 +40,7 @@ jest.mock('../../src/legacy/photographer/routes/driveRoute', () => mockPassThrou
 jest.mock('../../src/legacy/photographer/routes/photoRoute', () => mockPassThrough);
 jest.mock('../../src/legacy/photographer/routes/uploadRoute', () => mockPassThrough);
 jest.mock('../../routes/userRoute', () => mockPassThrough);
-jest.mock('../../routes/portfolio.routes', () => mockPassThrough);
+jest.mock('../../src/modules/portfolios/portfolio.routes', () => mockPassThrough);
 jest.mock('../../src/legacy/project-manager/routes/portfolioRoute', () => mockPassThrough);
 jest.mock('../../src/legacy/data-scientist/routes/testimonialRoute', () => mockPassThrough);
 jest.mock('../../src/legacy/data-scientist/routes/dashboardRoute', () => mockPassThrough);
@@ -62,8 +62,8 @@ jest.mock('../../routes/supportFormRoutes', () => mockPassThrough);
 jest.mock('../../routes/domainRoutes', () => mockPassThrough);
 jest.mock('../../routes/telemetry', () => mockPassThrough);
 
-jest.mock('../../microservices/publicPortfolios/publicPortfolios.routes', () => mockPassThrough);
-jest.mock('../../microservices/userPortfoliosArray/userPortfoliosArray.routes.js', () => mockPassThrough);
+jest.mock('../../src/modules/portfolios/publicPortfolios/publicPortfolios.routes', () => mockPassThrough);
+jest.mock('../../src/modules/portfolios/userPortfoliosArray/userPortfoliosArray.routes.js', () => mockPassThrough);
 jest.mock('../../microservices/S3Upload/S3Upload.routes.js', () => mockPassThrough);
 jest.mock('../../microservices/domainPayment/stripe/stripe.route', () => mockPassThrough);
 

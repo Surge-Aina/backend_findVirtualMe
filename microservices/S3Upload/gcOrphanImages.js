@@ -3,7 +3,7 @@
  * by any v2 portfolio document. Skips objects newer than GRACE_MS (24h).
  */
 const cron = require("node-cron");
-const Portfolio = require("../../src/shared/models/portfolio/Portfolio");
+const Portfolio = require("../../src/modules/portfolios/models/Portfolio");
 const {
   listByPrefix,
   deleteFromS3,

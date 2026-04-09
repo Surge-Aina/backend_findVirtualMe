@@ -1,6 +1,6 @@
 const ProjectManagerContact = require('../models/ProjectManagerContact');
 const Portfolio = require('../models/portfolioModel');
-const UnifiedPortfolio = require('../../../shared/models/portfolio/Portfolio');
+const UnifiedPortfolio = require("../../../modules/portfolios/models/Portfolio");
 const { sendProjectManagerContactEmails } = require('../../../shared/services/emailService');
 
 exports.submitContact = async (req, res) => {

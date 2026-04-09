@@ -5,7 +5,7 @@ const {
   getMyPortfolio,
   deletePortfolio,
 } = require("./publicPortfolios.service");
-const User = require("../../src/shared/models/User");
+const User = require("../../../shared/models/User");
 
 // GET all public portfolios
 exports.getPublicPortfolios = async (req, res) => {

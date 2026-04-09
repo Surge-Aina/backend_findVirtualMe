@@ -1,6 +1,6 @@
-const portfolioService = require("../src/shared/services/portfolio.service");
-const agentPortfolioGenerator = require("../src/shared/services/agentPortfolioGenerator.service");
-const subscriptionAccess = require("../src/shared/services/subscriptionAccess.service");
+const portfolioService = require("./portfolio.service");
+const agentPortfolioGenerator = require("./agentPortfolioGenerator.service");
+const subscriptionAccess = require("../../shared/services/subscriptionAccess.service");
 
 function sendPortfolioError(res, err, fallbackMessage) {
   if (err.code === 11000) {
@@ -369,7 +369,7 @@ exports.remove = async (req, res) => {
 
 exports.getBlockTypes = async (req, res) => {
   try {
-    const { BLOCK_TYPES, getBlockTypesForTemplate } = require("../src/shared/models/portfolio/blockTypes");
+    const { BLOCK_TYPES, getBlockTypesForTemplate } = require("./models/blockTypes");
     const { template, mode } = req.query;
 
     const isAgentMode = mode === "agent";

@@ -1,4 +1,4 @@
-const PortfolioEditLog = require('../../src/shared/models/portfolioLogs/PortfolioEditLog');
+const PortfolioEditLog = require("../../../shared/models/portfolioLogs/PortfolioEditLog");
 
 /**
  * Create a new portfolio edit log entry

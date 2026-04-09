@@ -1,6 +1,6 @@
 const HandymanInquiry = require('../models/handymanInquiryModel');
 const HandymanTemplate = require('../models/HandymanTemplate');
-const UnifiedPortfolio = require('../../../shared/models/portfolio/Portfolio');
+const UnifiedPortfolio = require("../../../modules/portfolios/models/Portfolio");
 const UserModel = require("../../../shared/models/User");
 const nodemailer = require('nodemailer');
 

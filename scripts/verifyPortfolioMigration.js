@@ -16,7 +16,7 @@ const mongoose = require("mongoose");
 const HealthcarePortfolio = require("../src/legacy/healthcare/models/userData");
 const ProjectManagerPortfolio = require("../src/legacy/project-manager/models/portfolioModel");
 const HandymanMainPortfolio = require("../src/legacy/handyman/models/HandymanTemplate");
-const Portfolio = require("../src/shared/models/portfolio/Portfolio");
+const Portfolio = require("../src/modules/portfolios/models/Portfolio");
 const User = require("../src/shared/models/User");
 
 const SUPPORTED_TEMPLATES = ["healthcare", "projectManager", "handyman"];

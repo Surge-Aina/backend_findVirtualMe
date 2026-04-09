@@ -7,8 +7,8 @@ const {
   togglePublicPortfolio,
   deletePortfolio,
 } = require("./publicPortfolios.controller");
-const auth = require("../../src/shared/middleware/auth");
-const optionalAuth = require("../../src/shared/middleware/optionalAuth");
+const auth = require("../../../shared/middleware/auth");
+const optionalAuth = require("../../../shared/middleware/optionalAuth");
 
 // Routes
 router.get("/public", getPublicPortfolios);

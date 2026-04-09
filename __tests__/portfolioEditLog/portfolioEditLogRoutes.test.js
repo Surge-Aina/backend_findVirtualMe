@@ -1,6 +1,6 @@
 const express = require("express");
 const request = require("supertest");
-const portfolioEditLogRoutes = require("../../routes/portfolioEditLogRoutes");
+const portfolioEditLogRoutes = require("../../src/modules/portfolios/portfolio-edit-log.routes");
 const PortfolioEditLog = require("../../src/shared/models/portfolioLogs/PortfolioEditLog");
 
 // Note: Database connection is handled by setup.js

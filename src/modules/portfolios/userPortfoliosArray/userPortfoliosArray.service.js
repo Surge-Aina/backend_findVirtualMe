@@ -1,5 +1,5 @@
-const User = require("../../src/shared/models/User");
-const Portfolio = require("../../src/shared/models/portfolio/Portfolio");
+const User = require("../../../shared/models/User");
+const Portfolio = require("../models/Portfolio");
 
 exports.getUserPortfoliosArrayByUserId = async (userId) => {
   return Portfolio.find({ owner: userId }).lean();

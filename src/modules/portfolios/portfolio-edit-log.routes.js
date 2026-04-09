@@ -6,7 +6,7 @@ const {
   getLogsByPortfolioId,
   getLogsBySessionId,
   getAllLogs
-} = require("../controllers/portfolioEditLog/portfolioEditLogController");
+} = require("./portfolio-edit-log/portfolioEditLog.controller");
 // Optional: Add auth middleware if needed
 // const auth = require('../src/shared/middleware/auth');
 

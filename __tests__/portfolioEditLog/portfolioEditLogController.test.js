@@ -1,5 +1,5 @@
 const PortfolioEditLog = require("../../src/shared/models/portfolioLogs/PortfolioEditLog");
-const controller = require("../../controllers/portfolioEditLog/portfolioEditLogController");
+const controller = require("../../src/modules/portfolios/portfolio-edit-log/portfolioEditLog.controller");
 
 // Mock console.error to suppress error output in tests
 let consoleErrorSpy;

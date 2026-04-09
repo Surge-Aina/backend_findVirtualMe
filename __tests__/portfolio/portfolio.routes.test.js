@@ -1,6 +1,6 @@
 const express = require("express");
 const request = require("supertest");
-const Portfolio = require("../../src/shared/models/portfolio/Portfolio");
+const Portfolio = require("../../src/modules/portfolios/models/Portfolio");
 const DomainRoute = require("../../microservices/DomainRouter/DomainRouter.model");
 
 const TEST_USER_ID = "507f1f77bcf86cd799439011";
@@ -37,7 +37,11 @@ jest.mock("../../src/shared/middleware/optionalAuth", () => (req, _res, next) =>
   next();
 });
 
-const portfolioRoutes = require("../../routes/portfolio.routes");
+jest.mock("../../src/shared/services/s3Service", () => ({
+  deleteManyByPrefix: jest.fn().mockResolvedValue(undefined),
+}));
+
+const portfolioRoutes = require("../../src/modules/portfolios/portfolio.routes");
 
 const app = express();
 app.use(express.json());
