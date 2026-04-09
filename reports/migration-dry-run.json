@@ -1,0 +1,136 @@
+{
+  "startedAt": "2026-03-26T19:49:33.551Z",
+  "options": {
+    "dryRun": true,
+    "templates": [
+      "healthcare",
+      "projectManager",
+      "handyman"
+    ],
+    "limit": null,
+    "dnsServers": [
+      "8.8.8.8",
+      "1.1.1.1"
+    ],
+    "skipUnresolvedOwners": true
+  },
+  "preflight": {
+    "templates": {
+      "healthcare": {
+        "legacyCount": 91,
+        "existingV2Count": 3,
+        "expectedToInsert": 91,
+        "processed": 0,
+        "inserted": 0,
+        "skipped": 0,
+        "failed": 0,
+        "skipReasons": {
+          "alreadyExists": 0,
+          "unresolvedOwner": 0
+        },
+        "failures": []
+      },
+      "projectManager": {
+        "legacyCount": 285,
+        "existingV2Count": 1,
+        "expectedToInsert": 285,
+        "processed": 0,
+        "inserted": 0,
+        "skipped": 0,
+        "failed": 0,
+        "skipReasons": {
+          "alreadyExists": 0,
+          "unresolvedOwner": 0
+        },
+        "failures": []
+      },
+      "handyman": {
+        "legacyCount": 121,
+        "existingV2Count": 1,
+        "expectedToInsert": 121,
+        "processed": 0,
+        "inserted": 0,
+        "skipped": 0,
+        "failed": 0,
+        "skipReasons": {
+          "alreadyExists": 0,
+          "unresolvedOwner": 0
+        },
+        "failures": []
+      }
+    },
+    "selectedTemplates": [
+      "healthcare",
+      "projectManager",
+      "handyman"
+    ],
+    "selectedExistingV2Total": 5,
+    "selectedLegacyTotal": 497,
+    "selectedExpectedInserts": 497
+  },
+  "migration": {
+    "ownerResolution": {
+      "fromUserId": 11,
+      "fromEmail": 224,
+      "unresolved": 50,
+      "skippedByPolicy": 50
+    },
+    "templates": {
+      "healthcare": {
+        "legacyCount": 0,
+        "existingV2Count": 0,
+        "expectedToInsert": 0,
+        "processed": 91,
+        "inserted": 91,
+        "skipped": 0,
+        "failed": 0,
+        "skipReasons": {
+          "alreadyExists": 0,
+          "unresolvedOwner": 0
+        },
+        "failures": []
+      },
+      "projectManager": {
+        "legacyCount": 0,
+        "existingV2Count": 0,
+        "expectedToInsert": 0,
+        "processed": 285,
+        "inserted": 235,
+        "skipped": 50,
+        "failed": 0,
+        "skipReasons": {
+          "alreadyExists": 0,
+          "unresolvedOwner": 50
+        },
+        "failures": []
+      },
+      "handyman": {
+        "legacyCount": 0,
+        "existingV2Count": 0,
+        "expectedToInsert": 0,
+        "processed": 121,
+        "inserted": 121,
+        "skipped": 0,
+        "failed": 0,
+        "skipReasons": {
+          "alreadyExists": 0,
+          "unresolvedOwner": 0
+        },
+        "failures": []
+      }
+    },
+    "totals": {
+      "processed": 497,
+      "inserted": 447,
+      "skipped": 50,
+      "failed": 0
+    },
+    "userSync": {
+      "attempted": false,
+      "usersUpdated": 0,
+      "failed": 0,
+      "errors": []
+    }
+  },
+  "completedAt": "2026-03-26T19:49:54.681Z"
+}

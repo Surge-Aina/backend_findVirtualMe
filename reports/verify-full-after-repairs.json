@@ -1,0 +1,365 @@
+{
+  "startedAt": "2026-03-26T20:02:09.285Z",
+  "options": {
+    "templates": [
+      "healthcare",
+      "projectManager",
+      "handyman"
+    ],
+    "limit": null,
+    "dnsServers": [
+      "8.8.8.8",
+      "1.1.1.1"
+    ],
+    "allowMissingV2": true,
+    "allowOrphanedOwners": true,
+    "allowHandymanMissingContact": true
+  },
+  "templates": {
+    "healthcare": {
+      "checked": 91,
+      "missingV2": 0,
+      "templateMismatches": 0,
+      "ownerMissing": 0,
+      "sectionIssues": 0,
+      "criticalFieldIssues": 0,
+      "userReferenceIssues": 1,
+      "failures": [
+        {
+          "template": "healthcare",
+          "legacyId": "696837ae104dc90e37d47f3b",
+          "reason": "Owner user not found for v2 document"
+        }
+      ]
+    },
+    "projectManager": {
+      "checked": 285,
+      "missingV2": 50,
+      "templateMismatches": 0,
+      "ownerMissing": 0,
+      "sectionIssues": 0,
+      "criticalFieldIssues": 0,
+      "userReferenceIssues": 0,
+      "failures": [
+        {
+          "template": "projectManager",
+          "legacyId": "689e23cb113dd7d63df44695",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "689e7989b52ae9a4467ba366",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "689eab9f2df408065aa5e37e",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "689eacb302fabb85f4e586f1",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "689eb74ad18f65f4d57322e5",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "689eca1ab21b537a7bfd7cf4",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "689f6920b21b537a7bfd7e50",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "689f7a72b21b537a7bfd7ec9",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68a0ce72b21b537a7bfd7f49",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ab3c2d820c275b0648a892",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ad1ed7093eb9e210a77121",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68b1268f57d3609501ca1f98",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68c1f0bbdac2943d7e804dc9",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68c1f2d5182f551cd21ac8ee",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68d030b268f9773a3c337bfd",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68d052ac3921a6ed5def1cfb",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68d08f2c68f9773a3c337c65",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68d096dd10f2988eb9a4dbcb",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68d097eb10f2988eb9a4dbd9",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68e5577c995560d187eed8c2",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68e55e3ea81bb142d95e4509",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68e593c16013ec5c80fe6a75",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68e5a34fe4e8c95829bf4be1",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68e5abf8e12f0c1b8ba925eb",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68e5aed4161da6f19cd17e73",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68e5b000183b9fc932899328",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68e5b08a8a79aa3ea9c2b87e",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68e5b22fc6092bce33af592c",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68e5b43dcf131620dfbdc5eb",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68e5b625306e53c580668bb5",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68e5b7154952e2e7de19dcd8",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68e5ba3ea1837e9636edb26b",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68e5bb272c57e003cddf6f9a",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ebef096ff748c1027f502f",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ebf6ae0202b0b0a0598e3b",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ec112e0fd6915be282dfd3",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ec11350fd6915be282dfd5",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ec11c10fd6915be282dfe0",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ec15dd0fd6915be282dfed",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ec1e4d212de88fab68c032",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ec216f212de88fab68c051",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ec23c5f89d5f0c5972748b",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ec24c3f89d5f0c597274b5",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ec25e1dc9f9b0d13ee689f",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ec29cfdc9f9b0d13ee68af",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ec33f58099683aa77bf668",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ec365d8099683aa77bf678",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ec38558099683aa77bf688",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "6907fdfcabd257e76fb9b5b4",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "6983ea48f9f37e2462ea6c79",
+          "reason": "Missing portfolios_v2 document by _id"
+        }
+      ]
+    },
+    "handyman": {
+      "checked": 121,
+      "missingV2": 0,
+      "templateMismatches": 0,
+      "ownerMissing": 0,
+      "sectionIssues": 0,
+      "criticalFieldIssues": 0,
+      "userReferenceIssues": 9,
+      "failures": [
+        {
+          "template": "handyman",
+          "legacyId": "68cb36e35ab7b3cf57e0db0c",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68cb38cf5ab7b3cf57e0db1a",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68cb3cc919735126cb27355d",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68d031d5f058cbd34d48749b",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68d034bbf058cbd34d487505",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68d03fbaf058cbd34d487611",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68d06d7519e5fd278fa2db36",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68d076729501bc7d1f2e5405",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68d07b55255feb998cf03cb1",
+          "reason": "Owner user not found for v2 document"
+        }
+      ]
+    }
+  },
+  "totals": {
+    "checked": 497,
+    "missingV2": 50,
+    "templateMismatches": 0,
+    "ownerMissing": 0,
+    "sectionIssues": 0,
+    "criticalFieldIssues": 0,
+    "handymanMissingContactIssues": 0,
+    "userReferenceIssues": 10,
+    "failures": 60
+  },
+  "completedAt": "2026-03-26T20:03:28.732Z"
+}

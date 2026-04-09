@@ -7,10 +7,9 @@ const User = require("../../models/User");
 
 exports.updateUserPortfolios = async (req, res) => {
   try {
-    const userId = req.user._id; //  auth middleware
-    const email = req.user.email;
+    const userId = req.user._id;
 
-    const updatedUser = await updatePortfolioArray(userId, email);
+    const updatedUser = await updatePortfolioArray(userId);
 
     res.status(200).json({
       message: "User portfolios updated",

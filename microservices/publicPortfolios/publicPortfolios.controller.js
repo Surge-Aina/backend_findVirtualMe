@@ -22,7 +22,8 @@ exports.getPublicPortfolios = async (req, res) => {
 exports.getPortfolio = async (req, res) => {
   try {
     const { type, id } = req.params;
-    const result = await getMyPortfolio(type, id);
+    const viewerId = req.user?._id || req.user?.id;
+    const result = await getMyPortfolio(type, id, viewerId);
 
     if (!result) return res.status(404).json({ error: "Portfolio not found" });
 

@@ -116,6 +116,11 @@ for (const origin of seededOrigins) {
 }
 
 const corsOptions = {
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Portfolio-Domain-Host",
+  ],
   origin: async (origin, callback) => {
     if (!origin) return callback(null, true);
 
@@ -239,6 +244,7 @@ app.use("/google-login/", googleLoginRoutes);
 app.use("/contactMe", contactMeRoutes);
 app.use("/domainRouter", domainRouterRoutes);
 app.use("/s3-upload-url", s3UploadRoutes);
+app.use("/api/portfolios", require("./routes/portfolio.routes"));
 app.use("/vouchers", require("./microservices/vouchers/voucher.routes.js"));
 app.use("/qrCode", require("./microservices/qrCode/qrCode.routes.js"));
 app.use(
@@ -251,23 +257,6 @@ app.use(
 );
 app.use("/user", passwordResetRoutes);
 
-//aiPortfolioCreator
-const contactRouter = require("./microservices/aiPortfolioCreator/contact/aiPortfolioCreator.routes.js");
-app.use("/api/contact", contactRouter);
-const execRouter = require("./microservices/aiPortfolioCreator/exec/exec.routes.js");
-app.use("/api/exec", execRouter);
-const userAiPortfolioCreatorRouter = require("./microservices/aiPortfolioCreator/user/user.routes.js");
-app.use("/api/user", userAiPortfolioCreatorRouter);
-const projectsRouter = require("./microservices/aiPortfolioCreator/projects/projects.routes");
-app.use("/api/projects", projectsRouter);
-const userAciveRouter = require("./microservices/aiPortfolioCreator/setActiveProject/setActiveProject.route.js");
-app.use("/api/active", userAciveRouter);
-const promoRouter = require("./microservices/aiPortfolioCreator/promo/promo.routes.js");
-app.use("/api/promo", promoRouter);
-const userRouter = require("./microservices/aiPortfolioCreator/name/name.routes.js");
-app.use("/name", userRouter);
-const publicProjectsRouter = require("./microservices/aiPortfolioCreator/publicProjectsAccess/publicProjectsAccess.routes.js");
-app.use("/api/publicProjects", publicProjectsRouter);
 app.use("/api/mvp", emailMvpRoutes);
 const mongoose = require("mongoose");
 const nowIso = () => new Date().toISOString();
