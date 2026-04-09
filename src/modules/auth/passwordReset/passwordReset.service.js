@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
-const User = require("../../src/shared/models/User");
-const { sendPasswordResetEmail } = require("../../src/shared/services/emailService");
+const User = require("../../../shared/models/User");
+const { sendPasswordResetEmail } = require("../../../shared/services/emailService");
 
 // FORGOT PASSWORD
 exports.forgotPassword = async (email) => {

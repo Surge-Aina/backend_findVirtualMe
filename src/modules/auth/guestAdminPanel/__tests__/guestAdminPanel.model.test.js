@@ -7,6 +7,9 @@ const GuestAdminPanel = require("../guestAdminPanel.model").default || require("
 let mongoServer;
 
 beforeAll(async () => {
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.disconnect();
+  }
   mongoServer = await MongoMemoryServer.create();
   const uri = mongoServer.getUri();
   await mongoose.connect(uri);

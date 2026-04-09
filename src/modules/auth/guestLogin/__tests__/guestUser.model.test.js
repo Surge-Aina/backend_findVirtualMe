@@ -5,6 +5,9 @@ const GuestUser = require("../guestUser.model");
 let mongoServer;
 
 beforeAll(async () => {
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.disconnect();
+  }
   mongoServer = await MongoMemoryServer.create();
   const uri = mongoServer.getUri();
 

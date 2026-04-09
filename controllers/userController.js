@@ -2,7 +2,6 @@ const User = require("../src/shared/models/User");
 const { normalizeUserAppTheme } = require("../src/shared/utils/userSerialize");
 const Subscriptions = require("../src/shared/models/Subscriptions");
 const bcrypt = require("bcrypt");
-const req = require("express/lib/request");
 const jwt = require("jsonwebtoken");
 const Stripe = require("stripe");
 const Portfolio = require("../src/legacy/project-manager/models/portfolioModel");
@@ -13,76 +12,6 @@ const stripeSecretkey =
     ? process.env.STRIPE_SECRET_KEY_LIVE
     : process.env.STRIPE_SECRET_KEY_TEST;
 const stripe = new Stripe(stripeSecretkey);
-
-// Not using the signup feature for now
-exports.signupUser = async (req, res) => {
-  try {
-    const { name, username, email, password } = req.body;
-    if (!name || !username || !email || !password) {
-      return res
-        .status(500)
-        .json({ error: "name, username, email or password missing" });
-    }
-
-    // Can add checks with validator later to ensure email valid / password strong
-    const userExists = await User.findOne({ email });
-    if (userExists)
-      return res.status(400).json({ message: "User already exists" });
-
-    // Hash password
-    const hashed = await bcrypt.hash(password, 10);
-
-    // Create and save new user
-    const newUser = new User({ name, username, email, password: hashed });
-    await newUser.save();
-
-    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
-    res.status(201).json({ name, username, email, token });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-exports.loginUser = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password)
-      return res.status(400).json({ message: "Email and Password needed" });
-
-    const user = await User.findOne({ email });
-    if (!user)
-      return res
-        .status(400)
-        .json({ message: "User not found for this portfolio" });
-
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(400).json({ message: "Invalid credentials" });
-    // console.log("🔍 User found:", user._id);
-    // console.log("🔍 Creating token with id:", user._id);
-
-    const token = jwt.sign(
-      //{ id: user._id, isAdmin: user.isAdmin },// removed this so users are not signed in as admin. ADD BACK ONLY IF NECESSARY -CarlosG
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" },
-    );
-    const portfolioIds = user.portfolios || [];
-    // console.log("📁 User's portfolio IDs:", portfolioIds);
-
-    //res.status(201).json({ token, isAdmin: user.isAdmin, }); //this one removed as well -CarlosG
-    res.status(201).json({
-      message: "logged in successfully",
-      token,
-      user: normalizeUserAppTheme(user),
-      portfolioIds,
-    });
-  } catch (err) {
-    console.log("error loggin in: ", err);
-    res.status(500).json({ message: "error loggin in", error: err.message });
-  }
-};
 
 exports.addUser = async (req, res) => {
   const { data } = req.body;

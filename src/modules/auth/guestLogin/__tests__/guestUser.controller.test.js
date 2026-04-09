@@ -13,6 +13,9 @@ app.use(bodyParser.json());
 app.use("/api/users", router);
 
 beforeAll(async () => {
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.disconnect();
+  }
   mongoServer = await MongoMemoryServer.create();
   const uri = mongoServer.getUri();
 
