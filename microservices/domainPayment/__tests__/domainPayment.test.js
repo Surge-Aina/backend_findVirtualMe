@@ -1,7 +1,7 @@
 // Mock all external services before imports
-jest.mock("../services/namecheapProxy.service");
-jest.mock("../../../services/vercelService");
-jest.mock("../../../models/User");
+jest.mock("../../../src/shared/services/namecheapProxy.service");
+jest.mock("../../../src/shared/services/vercelService");
+jest.mock("../../../src/shared/models/User");
 jest.mock("../../DomainRouter/DomainRouter.service");
 jest.mock("../../DomainRouter/DomainRouter.model");
 jest.mock("stripe",() => {
@@ -19,7 +19,7 @@ jest.mock("stripe",() => {
 
 const request = require("supertest");
 // Mock auth middleware to skip JWT verification
-jest.mock("../../../middleware/auth", () => (req, res, next) => {
+jest.mock("../../../src/shared/middleware/auth", () => (req, res, next) => {
   req.user = { id: "user123", email: "test@test.com" };
   next();
 });
@@ -30,9 +30,9 @@ app.use(express.json());
 app.use("/api/domainPayment", require("../stripe/stripe.route"));
 
 
-const namecheap = require("../services/namecheapProxy.service");
-const vercelService = require("../../../services/vercelService");
-const User = require("../../../models/User");
+const namecheap = require("../../../src/shared/services/namecheapProxy.service");
+const vercelService = require("../../../src/shared/services/vercelService");
+const User = require("../../../src/shared/models/User");
 
 // --- Reusable mock data ---
 const mockPricingResponse = {

@@ -1,12 +1,12 @@
-const User = require("../models/User");
-const { normalizeUserAppTheme } = require("../utils/userSerialize");
-const Subscriptions = require("../models/Subscriptions");
+const User = require("../src/shared/models/User");
+const { normalizeUserAppTheme } = require("../src/shared/utils/userSerialize");
+const Subscriptions = require("../src/shared/models/Subscriptions");
 const bcrypt = require("bcrypt");
 const req = require("express/lib/request");
 const jwt = require("jsonwebtoken");
 const Stripe = require("stripe");
 const Portfolio = require("../models/projectManager/portfolioModel");
-const subscriptionAccess = require("../services/subscriptionAccess.service");
+const subscriptionAccess = require("../src/shared/services/subscriptionAccess.service");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"

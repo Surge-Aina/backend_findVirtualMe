@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
 
 // Model + router under test
-const LocationPing = require("../../models/LocationPing");
+const LocationPing = require("../../src/shared/models/LocationPing");
 const telemetryRouter = require("../../routes/telemetry");
 
 // Mock geoip-lite so we can control lookup() return values

@@ -13,11 +13,11 @@
  */
 
 const jwt = require('jsonwebtoken');
-const auth = require('../../middleware/auth');
-const User = require('../../models/User');
+const auth = require('../../src/shared/middleware/auth');
+const User = require('../../src/shared/models/User');
 
 // Mock User model
-jest.mock('../../models/User');
+jest.mock('../../src/shared/models/User');
 
 describe('auth middleware', () => {
   let mockReq, mockRes, mockNext;

@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
-const User = require("../../models/User");
-const { normalizeUserAppTheme } = require("../../utils/userSerialize");
+const User = require("../../src/shared/models/User");
+const { normalizeUserAppTheme } = require("../../src/shared/utils/userSerialize");
 const { verifyGoogleToken } = require("./googleLogin.service");
 
 exports.googleLogin = async (req, res) => {

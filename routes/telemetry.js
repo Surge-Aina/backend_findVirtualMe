@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const geoip = require("geoip-lite");
-const LocationPing = require("../models/LocationPing");
+const LocationPing = require("../src/shared/models/LocationPing");
 
 // In Node.js 18+, fetch is available globally; if not, dynamically import node-fetch on demand.
 const fetch =

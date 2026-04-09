@@ -6,11 +6,11 @@ const MenuItem = require("../../models/localFoodVendor/MenuItems");
 const Review = require("../../models/localFoodVendor/Review");
 const TaggedImage = require("../../models/localFoodVendor/TaggedImage");
 const seedVendor = require("../../models/localFoodVendor/seedVendor");
-const { generateVendorAboutAndMenuJSON } = require("../../services/openAiService");
+const { generateVendorAboutAndMenuJSON } = require("../../src/shared/services/openAiService");
 const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
 const { PDFDocument } = require("pdf-lib");
-const User = require("../../models/User");
+const User = require("../../src/shared/models/User");
 
 // Create vendor and add the basic info so website doesn't look blank, view seedVendor
 exports.createVendor = async (req, res) => {

@@ -13,7 +13,7 @@ describe("signupUser", () => {
 // const jwt = require("jsonwebtoken");
 // const { setupTestDB, teardownTestDB, clearTestDB } = require("../../../setup/setup.js");
 // const { loginUser } = require("../../../../controllers/userController.js");
-// const User = require("../../../../models/userModel.js");
+// const User = require("../../../../src/shared/models/userModel.js");
 // const Stripe = require("stripe");
 
 // const app = express();

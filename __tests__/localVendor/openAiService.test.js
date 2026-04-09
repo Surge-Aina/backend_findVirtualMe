@@ -41,7 +41,7 @@ describe("generateVendorAboutAndMenuJSON", () => {
       };
     });
 
-    ({ generateVendorAboutAndMenuJSON } = require("../../../../services/openAiService"));
+    ({ generateVendorAboutAndMenuJSON } = require("../../../../src/shared/services/openAiService"));
   });
 
   it("should return parsed vendor JSON from mocked OpenAI", async () => {

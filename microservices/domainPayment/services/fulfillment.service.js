@@ -1,5 +1,5 @@
-const User = require("../../../models/User");
-const vercelService = require("../../../services/vercelService");
+const User = require("../../../src/shared/models/User");
+const vercelService = require("../../../src/shared/services/vercelService");
 const namecheap = require("./namecheapProxy.service");
 const { createDomainMapping } = require("../../DomainRouter/DomainRouter.service");
 

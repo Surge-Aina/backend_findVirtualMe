@@ -1,5 +1,5 @@
 
-jest.mock('../../services/openAiService');
+jest.mock('../../src/shared/services/openAiService');
 
 jest.mock('pdf-parse', () => {
   return jest.fn();
@@ -12,7 +12,7 @@ const pdfParse = require('pdf-parse');
 const {
   generatePortfolioJSON,
   generateMatchSummary,
-} = require('../../services/openAiService');
+} = require('../../src/shared/services/openAiService');
 const {
   getPortfolioByEmail,
   getAllPortfoliosByEmail,

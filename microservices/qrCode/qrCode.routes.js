@@ -1,7 +1,7 @@
 // qrCode.routes.js
 const express = require("express");
 const controller = require("./qrCode.controller");
-const auth = require("../../middleware/auth");
+const auth = require("../../src/shared/middleware/auth");
 
 const router = express.Router();
 

@@ -10,7 +10,7 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 
-const User = require('../../../models/User');
+const User = require('../../../src/shared/models/User');
 const userRoutes = require('../../../routes/userRoute');
 
 const app = express();

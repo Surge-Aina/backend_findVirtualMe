@@ -1,11 +1,11 @@
     // __tests__/handyman/handymanTemplateController.test.js
 
     // Virtual mock for user lookup
-    jest.mock('../../models/userModel', () => ({
+    jest.mock("../../src/shared/models/User", () => ({
     findById: jest.fn().mockResolvedValue(null),
     }));
 
-    const UserModel = require('../../models/userModel');
+    const UserModel = require("../../src/shared/models/User");
     const controller = require('../../controllers/handyman/handymanTemplateController');
     const HandymanTemplate = require('../../models/handyMan/HandymanTemplate');
 

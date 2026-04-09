@@ -1,5 +1,5 @@
-const Portfolio = require("../../models/portfolio/Portfolio");
-const portfolioService = require("../../services/portfolio.service");
+const Portfolio = require("../../src/shared/models/portfolio/Portfolio");
+const portfolioService = require("../../src/shared/services/portfolio.service");
 
 exports.getPublicPortfolios = async () => {
   try {

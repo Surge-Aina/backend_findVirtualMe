@@ -12,12 +12,12 @@ const {
   getActiveSubscriptionForUser,
   getAiEditingAccess,
   consumeAiEditCredit,
-} = require("../../services/subscriptionAccess.service");
-const Subscriptions = require("../../models/Subscriptions");
-const User = require("../../models/User");
+} = require("../../src/shared/services/subscriptionAccess.service");
+const Subscriptions = require("../../src/shared/models/Subscriptions");
+const User = require("../../src/shared/models/User");
 
-jest.mock("../../models/Subscriptions");
-jest.mock("../../models/User");
+jest.mock("../../src/shared/models/Subscriptions");
+jest.mock("../../src/shared/models/User");
 
 function createMockQuery(result) {
   return {

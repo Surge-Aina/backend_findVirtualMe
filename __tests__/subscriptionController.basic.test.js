@@ -6,8 +6,8 @@ const {
   getPaymentHistory,
 } = require("../controllers/subscriptionsController");
 
-const Subscriptions = require("../models/Subscriptions");
-jest.mock("../models/Subscriptions");
+const Subscriptions = require("../src/shared/models/Subscriptions");
+jest.mock("../src/shared/models/Subscriptions");
 
 // import stripe mock exports
 const {

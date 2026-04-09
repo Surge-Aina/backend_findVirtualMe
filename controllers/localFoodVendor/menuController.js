@@ -1,5 +1,5 @@
 const MenuItem = require("../../models/localFoodVendor/MenuItems");
-const { uploadToS3, deleteFromS3 } = require("../../services/s3Service");
+const { uploadToS3, deleteFromS3 } = require("../../src/shared/services/s3Service");
 
 const S3_PREFIX = "Ports/HandyMan";
 

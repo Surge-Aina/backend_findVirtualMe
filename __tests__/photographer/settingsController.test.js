@@ -12,7 +12,7 @@ describe("signupUser", () => {
 //   updateSetting,
 //   getAllSettings,
 // } = require("../../../controllers/settingsController.js");
-// const Settings = require("../../../models/settingsModel.js");
+// const Settings = require("../../../src/shared/models/settingsModel.js");
 
 // const app = express();
 // app.use(express.json());

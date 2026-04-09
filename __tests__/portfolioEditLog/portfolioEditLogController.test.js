@@ -1,4 +1,4 @@
-const PortfolioEditLog = require("../../models/portfolioLogs/PortfolioEditLog");
+const PortfolioEditLog = require("../../src/shared/models/portfolioLogs/PortfolioEditLog");
 const controller = require("../../controllers/portfolioEditLog/portfolioEditLogController");
 
 // Mock console.error to suppress error output in tests

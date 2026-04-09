@@ -2,8 +2,8 @@ const express = require("express");
 const request = require("supertest");
 
 const supportFormRoutes = require("../../../../routes/supportFormRoutes");
-const SupportForm = require("../../../../models/supportForm/SupportForm");
-const Counter = require("../../../../models/supportForm/Counter");
+const SupportForm = require("../../../../src/shared/models/supportForm/SupportForm");
+const Counter = require("../../../../src/shared/models/supportForm/Counter");
 
 const app = express();
 app.use(express.json());

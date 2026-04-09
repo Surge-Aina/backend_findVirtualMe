@@ -4,10 +4,10 @@
 
     try {
     // Prefer the actual Mongoose model file name used in repo
-    User = require('../../models/User');
+    User = require('../../src/shared/models/User');
     } catch (e1) {
     try {
-        User = require('../../models/userModel');
+        User = require("../../src/shared/models/User");
     } catch (e2) {
         // neither path loaded, will skip
     }

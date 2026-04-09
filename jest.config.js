@@ -7,8 +7,7 @@ module.exports = {
     "**/test/**/*.test.js",
   ],
   transformIgnorePatterns: [
-    "node_modules/(?!(@vercel/sdk)/)",
-    "node_modules/(?!(@vercel/sdk|uuid)/)",
+    "/node_modules/(?!(@vercel/sdk|uuid)/)",
   ],
   collectCoverageFrom: [
     "routes/**/*.js",

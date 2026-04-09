@@ -6,8 +6,8 @@
 
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
-const SupportForm = require('../../../models/supportForm/SupportForm'); // Adjust path
-const Counter = require('../../../models/supportForm/Counter'); // Adjust path
+const SupportForm = require('../../../src/shared/models/supportForm/SupportForm'); // Adjust path
+const Counter = require('../../../src/shared/models/supportForm/Counter'); // Adjust path
 
 describe('Support Form Model Validation Tests', () => {
   let mongoServer;

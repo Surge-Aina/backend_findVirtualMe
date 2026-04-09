@@ -4,7 +4,7 @@
  * Tests custom domain request handling and portfolio info return
  */
 
-const customDomainHandler = require('../../middleware/customDomainHandler');
+const customDomainHandler = require('../../src/shared/middleware/customDomainHandler');
 
 describe('customDomainHandler middleware', () => {
   let mockReq, mockRes, mockNext;

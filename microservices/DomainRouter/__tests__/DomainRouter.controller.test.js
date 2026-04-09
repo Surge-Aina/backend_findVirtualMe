@@ -1,8 +1,8 @@
 jest.mock("../DomainRouter.model");
 jest.mock("../DomainRouter.service");
 jest.mock("../utils/domainHelpers");
-jest.mock("../../../services/domainService");
-jest.mock("../../../middleware/auth", () => (req, res, next) => {
+jest.mock("../../../src/shared/services/domainService");
+jest.mock("../../../src/shared/middleware/auth", () => (req, res, next) => {
   req.user = {
     _id: "user123",
     portfolios: [{ portfolioId: "port1", portfolioType: "photographer" }],
@@ -16,7 +16,7 @@ const mongoose = require("mongoose");
 const DomainRoute = require("../DomainRouter.model");
 const { createDomainMapping } = require("../DomainRouter.service");
 const { normalizeDomain } = require("../utils/domainHelpers");
-const { addDomainToUser } = require("../../../services/domainService");
+const { addDomainToUser } = require("../../../src/shared/services/domainService");
 
 const app = express();
 app.use(express.json());

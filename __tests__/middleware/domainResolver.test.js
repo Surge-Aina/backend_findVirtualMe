@@ -4,11 +4,11 @@
  * Tests custom domain detection and request enrichment
  */
 
-const domainResolver = require('../../middleware/domainResolver');
-const User = require('../../models/User');
+const domainResolver = require('../../src/shared/middleware/domainResolver');
+const User = require('../../src/shared/models/User');
 
 // Mock User model
-jest.mock('../../models/User');
+jest.mock('../../src/shared/models/User');
 
 describe('domainResolver middleware', () => {
   let mockReq, mockRes, mockNext;

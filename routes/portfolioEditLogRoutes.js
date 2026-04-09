@@ -8,7 +8,7 @@ const {
   getAllLogs
 } = require("../controllers/portfolioEditLog/portfolioEditLogController");
 // Optional: Add auth middleware if needed
-// const auth = require('../middleware/auth');
+// const auth = require('../src/shared/middleware/auth');
 
 // POST /api/portfolio-edit-log - Create a new log entry
 router.post('/', createLog);

@@ -2,14 +2,14 @@ const request = require('supertest');
 const express = require('express');
 const ProjectManagerContact = require('../../models/projectManager/ProjectManagerContact');
 const Portfolio = require('../../models/projectManager/portfolioModel');
-const { sendProjectManagerContactEmails } = require('../../services/emailService');
+const { sendProjectManagerContactEmails } = require('../../src/shared/services/emailService');
 const { submitContact } = require('../../controllers/projectManager/projectManagerContactController');
 const router = require("../../routes/projectManager/portfolioRoute");
 
 jest.mock('../../models/projectManager/ProjectManagerContact');
 jest.mock('../../models/projectManager/portfolioModel');
-jest.mock('../../services/emailService');
-jest.mock('../../middleware/auth');
+jest.mock('../../src/shared/services/emailService');
+jest.mock('../../src/shared/middleware/auth');
 
 describe('Project Manager Contact System Tests', () => {
   let app;

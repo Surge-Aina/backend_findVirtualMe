@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const controller = require("./voucher.controller");
-const auth = require("../../middleware/auth");
+const auth = require("../../src/shared/middleware/auth");
 
 /* user routes */
 router.get("/my", auth, controller.getMyVouchers);

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { generateMatchSummary } = require('../../services/openAiService');
+const { generateMatchSummary } = require('../../src/shared/services/openAiService');
 
 router.post('/summary', async (req, res) => {
   const { resumeJSON, jobText } = req.body;

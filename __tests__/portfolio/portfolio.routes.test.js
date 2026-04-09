@@ -1,6 +1,6 @@
 const express = require("express");
 const request = require("supertest");
-const Portfolio = require("../../models/portfolio/Portfolio");
+const Portfolio = require("../../src/shared/models/portfolio/Portfolio");
 const DomainRoute = require("../../microservices/DomainRouter/DomainRouter.model");
 
 const TEST_USER_ID = "507f1f77bcf86cd799439011";
@@ -16,7 +16,7 @@ jest.mock("openai", () =>
   }))
 );
 
-jest.mock("../../middleware/auth", () => (req, _res, next) => {
+jest.mock("../../src/shared/middleware/auth", () => (req, _res, next) => {
   req.user = {
     _id: TEST_USER_ID,
     id: TEST_USER_ID,
@@ -25,7 +25,7 @@ jest.mock("../../middleware/auth", () => (req, _res, next) => {
   next();
 });
 
-jest.mock("../../middleware/optionalAuth", () => (req, _res, next) => {
+jest.mock("../../src/shared/middleware/optionalAuth", () => (req, _res, next) => {
   const token = req.headers.authorization?.replace("Bearer ", "");
   if (token === "owner-token") {
     req.user = {

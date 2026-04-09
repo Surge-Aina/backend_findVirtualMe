@@ -5,7 +5,7 @@ describe("signupUser", () => {
 });
 
 // const { setupTestDB, teardownTestDB, clearTestDB } = require("../../setup.js");
-// const Settings = require("../../../models/settingsModel.js");
+// const Settings = require("../../../src/shared/models/settingsModel.js");
 
 // describe("Settings Model", () => {
 //   beforeAll(async () => {

@@ -16,7 +16,7 @@
     });
 
     // 2) Mock user model used by auth (so Bearer auth passes when needed)
-    jest.mock('../../models/userModel', () => ({
+    jest.mock("../../src/shared/models/User", () => ({
     findById: jest
         .fn()
         .mockResolvedValue({

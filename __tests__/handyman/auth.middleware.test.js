@@ -8,7 +8,7 @@
         if (!process.env.JWT_SECRET) process.env.JWT_SECRET = 'unit-test-secret';
         jest.resetModules();
         try {
-        auth = require('../../middleware/auth'); // may not exist in repo
+        auth = require('../../src/shared/middleware/auth'); // may not exist in repo
         } catch {
         console.warn('auth middleware not found; skipping this suite');
         }

@@ -16,7 +16,7 @@
     v4: jest.fn(() => "mock-uuid"),
     }));
 
-    const { uploadToS3, deleteFromS3 } = require("../../../services/s3Service");
+    const { uploadToS3, deleteFromS3 } = require("../../../src/shared/services/s3Service");
     const { PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
 
     describe("S3Service", () => {

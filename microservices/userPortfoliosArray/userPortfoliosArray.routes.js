@@ -6,7 +6,7 @@ const {
   updateAllUsersPortfolios,
 } = require("./userPortfoliosArray.controller");
 
-const auth = require("../../middleware/auth");
+const auth = require("../../src/shared/middleware/auth");
 
 // Update the user's portfolios array
 router.patch("/updateUserPortfolios", auth, updateUserPortfolios);

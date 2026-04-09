@@ -36,11 +36,11 @@ jest.mock("../../models/localFoodVendor/MenuItems", () => ({
   insertMany: jest.fn(),
 }));
 
-jest.mock("../../models/User", () => ({
+jest.mock("../../src/shared/models/User", () => ({
   findByIdAndUpdate: jest.fn(),
 }));
 
-jest.mock("../../services/openAiService", () => ({
+jest.mock("../../src/shared/services/openAiService", () => ({
   generateVendorAboutAndMenuJSON: jest.fn(async () => ({
     vendor: {
       name: "FallbackVendor",

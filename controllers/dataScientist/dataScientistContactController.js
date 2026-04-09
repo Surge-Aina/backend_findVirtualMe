@@ -1,6 +1,6 @@
 const DataScientistContact = require('../../models/dataScientist/DataScientistContact');
 const DataScientistPortfolio = require('../../models/dataScientist/DataScientistPortfolio');
-const { sendDataScientistContactEmails } = require('../../services/emailService');
+const { sendDataScientistContactEmails } = require('../../src/shared/services/emailService');
 
 exports.submitContact = async (req, res) => {
   try {

@@ -17,7 +17,7 @@ const {
 const {
   submitContact,
 } = require("../../microservices/contactMeForm/contactMeForm.controller");
-const auth = require("../../middleware/auth");
+const auth = require("../../src/shared/middleware/auth");
 
 const upload = multer({ storage: multer.memoryStorage() });
 router.get("/email/:email", getPortfolioByEmail);

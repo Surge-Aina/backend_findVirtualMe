@@ -1,8 +1,8 @@
 const req = require("express/lib/request");
 const Portfolio = require("../../models/projectManager/portfolioModel");
 const pdfParse = require("pdf-parse");
-const { generatePortfolioJSON, generateMatchSummary } = require("../../services/openAiService");
-const { uploadToS3, deleteFromS3 } = require("../../services/s3Service");
+const { generatePortfolioJSON, generateMatchSummary } = require("../../src/shared/services/openAiService");
+const { uploadToS3, deleteFromS3 } = require("../../src/shared/services/s3Service");
 
 exports.getPortfolioByEmail = async(req, res) => {
     const email = req.params.email;

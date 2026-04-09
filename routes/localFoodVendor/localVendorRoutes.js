@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const upload = multer();
-const auth = require("../../middleware/auth");
+const auth = require("../../src/shared/middleware/auth");
 const {
   createVendor,
   getAllVendors,

@@ -102,7 +102,7 @@ jest.mock("../../models/localFoodVendor/TaggedImage", () => ({
 }));
 
 // User and seedVendor
-jest.mock("../../models/User", () => ({
+jest.mock("../../src/shared/models/User", () => ({
   findByIdAndUpdate: jest.fn(async () => ({})),
 }));
 
@@ -111,7 +111,7 @@ jest.mock("../../models/localFoodVendor/seedVendor", () =>
 );
 
 // OpenAI service
-jest.mock("../../services/openAiService", () => ({
+jest.mock("../../src/shared/services/openAiService", () => ({
   generateVendorAboutAndMenuJSON: jest.fn(),
 }));
 
@@ -148,7 +148,7 @@ jest.mock("pdfjs-dist/legacy/build/pdf.js", () => ({
 }));
 
 // Auth middleware
-jest.mock("../../middleware/auth", () => (req, res, next) => {
+jest.mock("../../src/shared/middleware/auth", () => (req, res, next) => {
   req.user = { _id: "mockUserId" };
   next();
 });
@@ -163,11 +163,11 @@ const MenuItem = require("../../models/localFoodVendor/MenuItems");
 const GalleryImage = require("../../models/localFoodVendor/GalleryImage");
 const Review = require("../../models/localFoodVendor/Review");
 const TaggedImage = require("../../models/localFoodVendor/TaggedImage");
-const User = require("../../models/User");
+const User = require("../../src/shared/models/User");
 const seedVendor = require("../../models/localFoodVendor/seedVendor");
 const {
   generateVendorAboutAndMenuJSON,
-} = require("../../services/openAiService");
+} = require("../../src/shared/services/openAiService");
 const vendorRoutes = require("../../routes/localFoodVendor/localVendorRoutes");
 
 // Express app

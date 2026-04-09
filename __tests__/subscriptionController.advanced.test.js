@@ -12,8 +12,8 @@ const {
   mockRefundsCreate,
 } = require("stripe");
 
-const Subscriptions = require("../models/Subscriptions");
-jest.mock("../models/Subscriptions");
+const Subscriptions = require("../src/shared/models/Subscriptions");
+jest.mock("../src/shared/models/Subscriptions");
 
 const {
   updateSubsFromStripe,

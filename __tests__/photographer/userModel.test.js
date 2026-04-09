@@ -5,7 +5,7 @@ describe("signupUser", () => {
 });
 
 // const { setupTestDB, teardownTestDB, clearTestDB } = require("../../../setup/setup.js");
-// const User = require("../../../../models/userModel.js");
+// const User = require("../../../../src/shared/models/userModel.js");
 // const bcrypt = require("bcrypt");
 
 // describe("User Model", () => {

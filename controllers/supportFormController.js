@@ -1,5 +1,5 @@
-const SupportForm = require("../models/supportForm/SupportForm");
-const { sendSupportFormEmails } = require('../services/emailService');
+const SupportForm = require("../src/shared/models/supportForm/SupportForm");
+const { sendSupportFormEmails } = require('../src/shared/services/emailService');
 // Create support form
 exports.createSupportForm = async (req, res) => {
   try {

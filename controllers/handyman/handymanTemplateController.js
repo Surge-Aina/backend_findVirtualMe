@@ -1,5 +1,5 @@
     const HandymanTemplate = require('../../models/handyMan/HandymanTemplate');
-    const UserModel = require('../../models/userModel');
+    const UserModel = require("../../src/shared/models/User");
 
     // Get a portfolio by its unique ID
     exports.getPortfolioById = async (req, res) => {

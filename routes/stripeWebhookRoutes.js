@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const Stripe = require("stripe");
-const Subscription = require("../models/Subscriptions");
-const User = require("../models/User");
+const Subscription = require("../src/shared/models/Subscriptions");
+const User = require("../src/shared/models/User");
 const stripeController = require("../microservices/domainPayment/stripe/stripe.controller");
 const voucherService = require("../microservices/vouchers/voucher.service");
 

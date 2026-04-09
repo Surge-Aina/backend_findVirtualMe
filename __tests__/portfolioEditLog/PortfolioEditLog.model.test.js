@@ -1,4 +1,4 @@
-const PortfolioEditLog = require("../../models/portfolioLogs/PortfolioEditLog");
+const PortfolioEditLog = require("../../src/shared/models/portfolioLogs/PortfolioEditLog");
 
 // Note: Database connection is handled by setup.js
 // We only need to clean up data after each test

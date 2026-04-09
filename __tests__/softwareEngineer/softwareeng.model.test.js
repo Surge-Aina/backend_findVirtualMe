@@ -5,7 +5,7 @@ describe("signupUser", () => {
 });
 
 // const mongoose = require('mongoose');
-// const SoftwareEng = require('../models/softwareeng');
+// const SoftwareEng = require('../src/shared/models/softwareeng');
 
 // describe('SoftwareEng Model', () => {
 //   beforeAll(async () => {

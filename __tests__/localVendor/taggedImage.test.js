@@ -5,7 +5,7 @@ const request = require("supertest");
 const express = require("express");
 const mongoose = require("mongoose");
 
-jest.mock("../../services/s3Service", () => ({
+jest.mock("../../src/shared/services/s3Service", () => ({
   uploadToS3: jest.fn().mockResolvedValue({
     url: "https://mock-bucket.s3.amazonaws.com/test.jpg",
     key: "mock-key",
@@ -13,7 +13,7 @@ jest.mock("../../services/s3Service", () => ({
   deleteFromS3: jest.fn().mockResolvedValue(true),
 }));
 
-const { uploadToS3 } = require("../../services/s3Service");
+const { uploadToS3 } = require("../../src/shared/services/s3Service");
 
 jest.mock("../../models/localFoodVendor/TaggedImage", () => {
   const dataStore = [];
@@ -317,7 +317,7 @@ describe("DELETE /tagged/:vendorId/:imageId (deleteTaggedImage)", () => {
     });
     await image.save();
 
-    const { deleteFromS3 } = require("../../services/s3Service");
+    const { deleteFromS3 } = require("../../src/shared/services/s3Service");
     deleteFromS3.mockRejectedValueOnce(new Error("S3 delete failed"));
 
     const res = await request(app).delete(`/tagged/${vendorId}/${image._id}`);

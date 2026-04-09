@@ -1,5 +1,5 @@
 const { setupTestDB, teardownTestDB, clearTestDB } = require('../setup.js');
-const User = require('../../../models/User.js');
+const User = require('../../../src/shared/models/User.js');
 const mongoose = require('mongoose');
 
 describe('Domain Service - Database Operations', () => {

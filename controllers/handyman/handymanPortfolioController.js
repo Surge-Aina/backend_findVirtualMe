@@ -1,6 +1,6 @@
 // controllers/handyman/handymanPortfolioController.js
 const HandymanPortfolio = require('../../models/handyMan/handymanPortfolioModel');
-const { uploadToS3, deleteFromS3 } = require('../../services/s3Service');
+const { uploadToS3, deleteFromS3 } = require('../../src/shared/services/s3Service');
 
 const S3_PREFIX = 'Ports/HandyMan';
 

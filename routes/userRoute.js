@@ -15,7 +15,7 @@ const {
   changePassword,
   updateAppTheme,
 } = require("../controllers/userController");
-const auth = require("../middleware/auth");
+const auth = require("../src/shared/middleware/auth");
 const router = express.Router();
 //auth routes
 router.post("/login", loginUser);

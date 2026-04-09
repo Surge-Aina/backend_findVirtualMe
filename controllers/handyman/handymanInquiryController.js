@@ -1,7 +1,7 @@
 const HandymanInquiry = require('../../models/handyMan/handymanInquiryModel');
 const HandymanTemplate = require('../../models/handyMan/HandymanTemplate');
-const UnifiedPortfolio = require('../../models/portfolio/Portfolio');
-const UserModel = require('../../models/userModel');
+const UnifiedPortfolio = require('../../src/shared/models/portfolio/Portfolio');
+const UserModel = require("../../src/shared/models/User");
 const nodemailer = require('nodemailer');
 
 function buildTransporter() {

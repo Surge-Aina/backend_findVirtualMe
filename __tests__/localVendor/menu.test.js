@@ -7,13 +7,13 @@ jest.spyOn(console, "warn").mockImplementation(() => {});
 jest.spyOn(console, "error").mockImplementation(() => {});
 
 // Mock S3 service (shared reference)
-jest.mock("../../services/s3Service", () => ({
+jest.mock("../../src/shared/services/s3Service", () => ({
   uploadToS3: jest.fn(),
   deleteFromS3: jest.fn(),
 }));
 
 // Mock multer middleware
-jest.mock("../../utils/multer", () => ({
+jest.mock("../../src/shared/utils/multer", () => ({
   single: () => (req, res, next) => next(),
   fields: () => (req, res, next) => next(),
   array: () => (req, res, next) => next(),
@@ -75,7 +75,7 @@ const request = require("supertest");
 const mongoose = require("mongoose");
 const menuRoutes = require("../../routes/localFoodVendor/menuRoutes");
 const MenuItem = require("../../models/localFoodVendor/MenuItems");
-const s3Service = require("../../services/s3Service");
+const s3Service = require("../../src/shared/services/s3Service");
 
 // Express test app
 const app = express();

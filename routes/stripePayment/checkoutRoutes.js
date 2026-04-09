@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Stripe = require("stripe");
-const User = require("../../models/User");
+const User = require("../../src/shared/models/User");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"

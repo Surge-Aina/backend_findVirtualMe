@@ -11,7 +11,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-const User = require('../../models/User');
+const User = require('../../src/shared/models/User');
 const UserData = require('../../models/healthcare/userData');
 const healthcareRoutes = require('../../routes/healthcare/healthcare_routes');
 

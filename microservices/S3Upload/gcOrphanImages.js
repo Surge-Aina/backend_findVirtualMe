@@ -3,12 +3,12 @@
  * by any v2 portfolio document. Skips objects newer than GRACE_MS (24h).
  */
 const cron = require("node-cron");
-const Portfolio = require("../../models/portfolio/Portfolio");
+const Portfolio = require("../../src/shared/models/portfolio/Portfolio");
 const {
   listByPrefix,
   deleteFromS3,
   keyFromPublicUrl,
-} = require("../../services/s3Service");
+} = require("../../src/shared/services/s3Service");
 
 const PREFIX = "portfolios/";
 const GRACE_MS = 24 * 60 * 60 * 1000;//24 hours before deleting orphan images

@@ -1,6 +1,6 @@
 require("../setup");
 const mongoose = require("mongoose");
-const Subscription = require("../models/Subscriptions");
+const Subscription = require("../src/shared/models/Subscriptions");
 
 beforeAll(async () => {
   await Subscription.ensureIndexes(); // or .syncIndexes()

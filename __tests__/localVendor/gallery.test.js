@@ -30,7 +30,7 @@ jest.mock("multer", () => {
   return multer;
 });
 
-jest.mock("../../services/s3Service", () => ({
+jest.mock("../../src/shared/services/s3Service", () => ({
   uploadToS3: jest.fn(async () => ({
     url: "/uploads/test.jpg",
     key: "mock-key",
@@ -195,7 +195,7 @@ describe("Gallery API (integration-style)", () => {
       key: "old-key",
     });
 
-    const { deleteFromS3 } = require("../../services/s3Service");
+    const { deleteFromS3 } = require("../../src/shared/services/s3Service");
     deleteFromS3.mockRejectedValueOnce(new Error("S3 delete failed"));
 
     const res = await request(app)
@@ -214,7 +214,7 @@ describe("Gallery API (integration-style)", () => {
       imageUrl: "https://bucket.s3.amazonaws.com/uploads/test.jpg",
     });
 
-    const { deleteFromS3 } = require("../../services/s3Service");
+    const { deleteFromS3 } = require("../../src/shared/services/s3Service");
     deleteFromS3.mockRejectedValueOnce(new Error("S3 deletion failed"));
 
     const res = await request(app).delete(`/gallery/${vendorId}/${img._id}`);

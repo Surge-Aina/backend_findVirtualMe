@@ -6,7 +6,7 @@ describe("signupUser", () => {
 
 // const mongoose = require('mongoose');
 // const { MongoMemoryServer } = require('mongodb-memory-server');
-// const Dashboard = require('../../../models/dashboardModel');
+// const Dashboard = require('../../../src/shared/models/dashboardModel');
 
 // let mongoServer;
 

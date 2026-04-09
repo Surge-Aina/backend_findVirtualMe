@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const ctrl = require("../controllers/portfolio.controller");
-const auth = require("../middleware/auth");
-const optionalAuth = require("../middleware/optionalAuth");
+const auth = require("../src/shared/middleware/auth");
+const optionalAuth = require("../src/shared/middleware/optionalAuth");
 
 // Public (static paths before param routes)
 router.get("/public", ctrl.listPublic);

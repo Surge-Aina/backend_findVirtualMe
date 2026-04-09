@@ -7,7 +7,7 @@ describe("signupUser", () => {
 // const request = require("supertest");
 // const mongoose = require("mongoose");
 // const { app } = require("../../../../index");
-// const SoftwareEng = require("../models/softwareeng");
+// const SoftwareEng = require("../src/shared/models/softwareeng");
 
 // // Test data
 // const testPortfolio = {

@@ -4,8 +4,8 @@ const mongoose = require("mongoose");
 
 const aboutRouter = require("../../routes/localFoodVendor/aboutRoutes");
 const About = require("../../models/localFoodVendor/About");
-const { uploadToS3 } = require("../../services/s3Service");
-const { deleteFromS3 } = require("../../services/s3Service");
+const { uploadToS3 } = require("../../src/shared/services/s3Service");
+const { deleteFromS3 } = require("../../src/shared/services/s3Service");
 
 // Build isolated app
 const app = express();
@@ -13,13 +13,13 @@ app.use(express.json());
 app.use("/about", aboutRouter);
 
 // Mock auth middleware only (keep logic real)
-jest.mock("../../middleware/auth", () => (req, _res, next) => {
+jest.mock("../../src/shared/middleware/auth", () => (req, _res, next) => {
   req.user = { email: "test@example.com" };
   next();
 });
 
 // mock s3Service BEFORE importing any controller or route
-jest.mock("../../services/s3Service", () => ({
+jest.mock("../../src/shared/services/s3Service", () => ({
   uploadToS3: jest.fn(async () => "mocked-s3-url"),
   deleteFromS3: jest.fn(async () => true),
 }));

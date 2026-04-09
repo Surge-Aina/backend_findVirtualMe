@@ -21,8 +21,8 @@ const HealthcarePortfolio = require("../models/healthcare/userData");
 const ProjectManagerPortfolio = require("../models/projectManager/portfolioModel");
 const HandymanMainPortfolio = require("../models/handyMan/HandymanTemplate");
 const HandymanGalleryItem = require("../models/handyMan/handymanPortfolioModel");
-const Portfolio = require("../models/portfolio/Portfolio");
-const User = require("../models/User");
+const Portfolio = require("../src/shared/models/portfolio/Portfolio");
+const User = require("../src/shared/models/User");
 
 const SUPPORTED_TEMPLATES = ["healthcare", "projectManager", "handyman"];
 

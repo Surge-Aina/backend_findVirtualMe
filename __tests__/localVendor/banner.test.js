@@ -8,7 +8,7 @@ app.use(express.json());
 app.use("/banner", bannerRoutes);
 
 const Banner = require("../../models/localFoodVendor/Banner");
-jest.mock("../../services/s3Service", () => ({
+jest.mock("../../src/shared/services/s3Service", () => ({
   uploadToS3: jest.fn(async () => ({
     url: "mocked-s3-url",
     key: "mocked-key",
@@ -302,7 +302,7 @@ describe("Banner API (mocked)", () => {
   it("should return 400 if S3 upload fails", async () => {
     const vendorId = new mongoose.Types.ObjectId();
 
-    const { uploadToS3 } = require("../../services/s3Service");
+    const { uploadToS3 } = require("../../src/shared/services/s3Service");
     uploadToS3.mockRejectedValueOnce(new Error("S3 fail"));
 
     const res = await request(app)
@@ -342,7 +342,7 @@ describe("Banner API (mocked)", () => {
       key: "old-key",
     });
 
-    const { deleteFromS3 } = require("../../services/s3Service");
+    const { deleteFromS3 } = require("../../src/shared/services/s3Service");
     deleteFromS3.mockRejectedValueOnce(new Error("Delete fail"));
 
     const res = await request(app)

@@ -1,4 +1,4 @@
-const Subscriptions = require("../models/Subscriptions");
+const Subscriptions = require("../src/shared/models/Subscriptions");
 const Stripe = require("stripe");
 
 const stripeSecretkey =

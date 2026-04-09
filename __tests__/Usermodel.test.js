@@ -2,7 +2,7 @@ const uniqueKey = () => `key_${Date.now()}_${Math.random()}`;
 const uniquePracticeId = () => `practice_${Date.now()}_${Math.random()}`;
 
 const mongoose = require('mongoose');
-const User = require('../../../models/User');
+const User = require('../../../src/shared/models/User');
 
 describe('User Model Validation Tests', () => {
   describe('Required Fields Validation', () => {

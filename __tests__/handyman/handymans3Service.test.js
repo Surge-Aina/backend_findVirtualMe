@@ -33,7 +33,7 @@
     jest.resetModules();
     mockSend.mockReset();
     // load after mocks are set
-    s3Service = require('../../services/s3Service'); // keep your working relative path
+    s3Service = require('../../src/shared/services/s3Service'); // keep your working relative path
     });
 
     // Helpers

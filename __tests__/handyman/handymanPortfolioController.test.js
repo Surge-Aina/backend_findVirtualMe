@@ -2,7 +2,7 @@
 
     // 1) Mock S3 BEFORE requiring the controller
     jest.mock(
-    '../../services/s3Service',
+    '../../src/shared/services/s3Service',
     () => ({
         uploadToS3: jest.fn(async (_buf, name, _mime, prefix) => ({
         url: `https://s3.test/${prefix}/fake-${name}`,
@@ -13,7 +13,7 @@
     { virtual: true },
     );
 
-    const s3 = require('../../services/s3Service');
+    const s3 = require('../../src/shared/services/s3Service');
 
     // 2) Now safely require controller & model
     const controller = require('../../controllers/handyman/handymanPortfolioController');
@@ -356,7 +356,7 @@
 
         it('responds 500 when second upload fails', async () => {
         jest.doMock(
-            '../../services/s3Service',
+            '../../src/shared/services/s3Service',
             () => {
             let call = 0;
             return {

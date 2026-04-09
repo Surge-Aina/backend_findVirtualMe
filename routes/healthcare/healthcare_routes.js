@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const UserData = require("../../models/healthcare/userData");
-const User = require("../../models/User");
-const verifyToken = require("../../middleware/auth");
+const User = require("../../src/shared/models/User");
+const verifyToken = require("../../src/shared/middleware/auth");
 
 // ==========================================
 // PUBLIC ROUTES (No Auth Required)

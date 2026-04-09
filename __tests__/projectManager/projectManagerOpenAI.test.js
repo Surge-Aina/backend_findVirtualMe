@@ -15,7 +15,7 @@ const {
   generateMatchSummary,
   generatePortfolioJSON,
   generateVendorAboutAndMenuJSON,
-} = require('../../services/openAiService');
+} = require('../../src/shared/services/openAiService');
 
 describe('Project Manager - OpenAI Service Tests', () => {
   beforeEach(() => {

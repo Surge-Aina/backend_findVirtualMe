@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const { MongoMemoryServer } = require("mongodb-memory-server");
-const LocationPing = require("../../models/LocationPing");
+const LocationPing = require("../../src/shared/models/LocationPing");
 
 let mongoServer;
 

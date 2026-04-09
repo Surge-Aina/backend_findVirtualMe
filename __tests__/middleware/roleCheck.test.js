@@ -1,4 +1,4 @@
-const roleCheck = require("../../middleware/roleCheck");
+const roleCheck = require("../../src/shared/middleware/roleCheck");
 
 describe("roleCheck middleware", () => {
   let req, res, next;
