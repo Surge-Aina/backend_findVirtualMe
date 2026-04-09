@@ -41,7 +41,6 @@
     "mongoose": "^8.17.1",
     "node-cron": "^3.0.3",
     "multer": "^2.0.2",
-    "multer-storage-cloudinary": "^4.0.0",
     "nodemailer": "^8.0.4",
     "openai": "^5.19.1",
     "pdf-lib": "^1.17.1",
