@@ -1,11 +1,10 @@
-const User = require("../src/shared/models/User");
-const { normalizeUserAppTheme } = require("../src/shared/utils/userSerialize");
-const Subscriptions = require("../src/shared/models/Subscriptions");
+const User = require("../../shared/models/User");
+const { normalizeUserAppTheme } = require("../../shared/utils/userSerialize");
+const Subscriptions = require("../../shared/models/Subscriptions");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 const Stripe = require("stripe");
-const Portfolio = require("../src/legacy/project-manager/models/portfolioModel");
-const subscriptionAccess = require("../src/shared/services/subscriptionAccess.service");
+const Portfolio = require("../../legacy/project-manager/models/portfolioModel");
+const subscriptionAccess = require("../../shared/services/subscriptionAccess.service");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
@@ -23,7 +22,6 @@ exports.addUser = async (req, res) => {
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
     }
-    //const username = (data.userInfo.username && data.userInfo.username.trim()) || email.split('@')[0];
     const username = data.userInfo.username;
     if (!username) {
       return res.status(400).json({ message: "Username is required" });
@@ -51,7 +49,6 @@ exports.addUser = async (req, res) => {
       onboardingUser = new User(userObj);
       await onboardingUser.save();
 
-      // attach portfolios by sessionId
       const sessionId = data.sessionId;
       if (sessionId) {
         await Portfolio.updateMany(
@@ -59,7 +56,6 @@ exports.addUser = async (req, res) => {
           { $set: { email: onboardingUser.email, sessionId: null } },
         );
       }
-      // end sessionId linking
     } catch (error) {
       if (error.code === 11000) {
         return res
@@ -96,13 +92,12 @@ exports.getUserById = async (req, res) => {
 
 exports.getSubInfo = async (req, res) => {
   try {
-    const { stripeCustomerId } = req.user; // obtained from auth middleware
+    const { stripeCustomerId } = req.user;
 
     if (!stripeCustomerId) {
       return res.status(200).json({ subscriptionList: [] });
     }
 
-    //get subscription info from stripe
     const subscriptions = await stripe.subscriptions.list({
       status: "active",
       limit: 1,
@@ -122,9 +117,8 @@ exports.getSubInfo = async (req, res) => {
 
 exports.getHasSubscription = async (req, res) => {
   try {
-    const { email } = req.user; // comes from auth middleware
+    const { email } = req.user;
 
-    // Find subscription
     const sub = await Subscriptions.findOne({ email });
     if (!sub) {
       return res
@@ -132,7 +126,6 @@ exports.getHasSubscription = async (req, res) => {
         .json({ message: "No subscription found", hasSubscription: false });
     }
 
-    // Find user
     const user = await User.findOne({ email });
     if (!user) {
       return res
@@ -140,7 +133,6 @@ exports.getHasSubscription = async (req, res) => {
         .json({ message: "No User found", hasSubscription: false });
     }
 
-    // Update user's subscription details if needed
     user.stripeSubscriptionId = sub.subscriptionId;
     user.stripeCustomerId = sub.customerId;
     await user.save();
@@ -164,9 +156,13 @@ exports.getHasSubscription = async (req, res) => {
 exports.getAiEditAccess = async (req, res) => {
   try {
     const user = req.user || {};
-    console.log(`[AI-ACCESS] checking for email=${user.email}, stripeCustomerId=${user.stripeCustomerId}`);
+    console.log(
+      `[AI-ACCESS] checking for email=${user.email}, stripeCustomerId=${user.stripeCustomerId}`,
+    );
     const access = await subscriptionAccess.getAiEditingAccess(user);
-    console.log(`[AI-ACCESS] result: hasAccess=${access.hasAccess}, subscription=${JSON.stringify(access.subscription?._id || null)}, usage=${JSON.stringify(access.usage)}`);
+    console.log(
+      `[AI-ACCESS] result: hasAccess=${access.hasAccess}, subscription=${JSON.stringify(access.subscription?._id || null)}, usage=${JSON.stringify(access.usage)}`,
+    );
     const planName = access.subscription?.subscriptionType || null;
 
     res.status(200).json({
@@ -190,7 +186,7 @@ exports.updateUser = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
     res.status(200).json({ user });
   } catch (error) {
-    console.error("Update user error in userController.js:", error);
+    console.error("Update user error in users.controller.js:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -218,7 +214,7 @@ exports.updateAppTheme = async (req, res) => {
 
 exports.changePassword = async (req, res) => {
   try {
-    const userId = req.user._id; // from middleware
+    const userId = req.user._id;
 
     const { currentPassword, newPassword } = req.body;
     const passwordRegex =
@@ -234,14 +230,12 @@ exports.changePassword = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Check current password
     const isMatch = await bcrypt.compare(currentPassword, user.password);
 
     if (!isMatch) {
       return res.status(401).json({ message: "Current password is incorrect" });
     }
 
-    // Prevent same password reuse
     const isSame = await bcrypt.compare(newPassword, user.password);
 
     if (isSame) {
@@ -250,7 +244,6 @@ exports.changePassword = async (req, res) => {
         .json({ message: "New password must be different" });
     }
 
-    // regex check for password strength
     if (!passwordRegex.test(newPassword)) {
       return res.status(400).json({
         message:
@@ -258,7 +251,6 @@ exports.changePassword = async (req, res) => {
       });
     }
 
-    // Hash new password
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
 
@@ -277,30 +269,26 @@ exports.deleteUser = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
     res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
-    console.error("deleteUser error in userController.js:", error);
+    console.error("deleteUser error in users.controller.js:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
 exports.getMe = async (req, res) => {
   try {
-    // console.log("🔍 getMe called, req.user:", req.user);
-
     const user = await User.findById(req.user.id).select("-password");
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // console.log("✅ User found:", user.email);
     const portfolioIds = user.portfolios || [];
-    // console.log("📁 User's portfolio IDs (from getMe):", portfolioIds);
     res.status(200).json({
       user: normalizeUserAppTheme(user),
       portfolioIds,
     });
   } catch (error) {
-    console.error("❌ Error in getMe:", error);
+    console.error("Error in getMe:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -322,7 +310,7 @@ exports.addPortfolioID = async (req, res) => {
 
     res.status(200).json({ user });
   } catch (error) {
-    console.error("addPortfolioID error in userController.js:", error);
+    console.error("addPortfolioID error in users.controller.js:", error);
     res.status(500).json({ message: error.message });
   }
 };

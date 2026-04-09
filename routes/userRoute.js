@@ -13,7 +13,7 @@ const {
   addPortfolioID,
   changePassword,
   updateAppTheme,
-} = require("../controllers/userController");
+} = require("../src/modules/users/users.controller");
 const auth = require("../src/shared/middleware/auth");
 const router = express.Router();
 //auth routes
@@ -33,28 +33,5 @@ router.patch("/app-theme", auth, updateAppTheme);
 router.patch("/addPortfolioId", auth, addPortfolioID);
 
 router.delete("/deleteUser/:id", deleteUser);
-
-router.get("/me", auth, (req, res) => {
-  // // Return all safe profile fields
-  // const {
-  //     _id,
-  //     username,
-  //     email,
-  //     firstName,
-  //     lastName,
-  //     phone,
-  //     location,
-  // } = req.user;
-  // res.json({
-  //     id: _id,
-  //     username,
-  //     email,
-  //     firstName,
-  //     lastName,
-  //     phone,
-  //     location,
-  // });
-  res.json({ ...req.user._doc }); //send all data from user back
-});
 
 module.exports = router;
