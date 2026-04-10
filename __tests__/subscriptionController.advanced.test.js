@@ -23,7 +23,7 @@ const {
   cancelSubscriptionImmediately,
   reactivateSubscription,
   issueRefund,
-} = require("../controllers/subscriptionsController");
+} = require("../src/modules/payments/subscriptions.controller");
 
 // Silence noisy logs
 jest.spyOn(console, "log").mockImplementation(() => {});

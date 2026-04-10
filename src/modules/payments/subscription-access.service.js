@@ -1,5 +1,5 @@
-const Subscriptions = require("../models/Subscriptions");
-const User = require("../models/User");
+const Subscriptions = require("../../shared/models/Subscriptions");
+const User = require("../../shared/models/User");
 const Stripe = require("stripe");
 
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);

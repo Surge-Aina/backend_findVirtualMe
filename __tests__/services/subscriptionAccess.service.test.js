@@ -12,7 +12,7 @@ const {
   getActiveSubscriptionForUser,
   getAiEditingAccess,
   consumeAiEditCredit,
-} = require("../../src/shared/services/subscriptionAccess.service");
+} = require("../../src/modules/payments/subscription-access.service");
 const Subscriptions = require("../../src/shared/models/Subscriptions");
 const User = require("../../src/shared/models/User");
 

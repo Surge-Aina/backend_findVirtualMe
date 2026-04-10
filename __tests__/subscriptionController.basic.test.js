@@ -4,7 +4,7 @@ const {
   getAllSubscriptions,
   getSubscriptionDetails,
   getPaymentHistory,
-} = require("../controllers/subscriptionsController");
+} = require("../src/modules/payments/subscriptions.controller");
 
 const Subscriptions = require("../src/shared/models/Subscriptions");
 jest.mock("../src/shared/models/Subscriptions");

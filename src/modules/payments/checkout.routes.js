@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Stripe = require("stripe");
-const User = require("../../src/shared/models/User");
+const User = require("../../shared/models/User");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
@@ -150,7 +150,7 @@ router.post("/create-customer", async (req, res) => {
 });
 
 router.post("/billing-session", async (req, res) => {
-  frontEndUrl = process.env.FRONTEND_URL;
+  const frontEndUrl = process.env.FRONTEND_URL;
 
   try {
     const user = req.user; // middleware auth populates this

@@ -1,9 +1,9 @@
 // Mock all external services before imports
-jest.mock("../../../src/shared/services/namecheapProxy.service");
-jest.mock("../../../src/shared/services/vercelService");
-jest.mock("../../../src/shared/models/User");
-jest.mock("../../DomainRouter/DomainRouter.service");
-jest.mock("../../DomainRouter/DomainRouter.model");
+jest.mock("../services/namecheapProxy.service");
+jest.mock("../../../../shared/services/vercelService");
+jest.mock("../../../../shared/models/User");
+jest.mock("../../../../../microservices/DomainRouter/DomainRouter.service");
+jest.mock("../../../../../microservices/DomainRouter/DomainRouter.model");
 jest.mock("stripe",() => {
   return jest.fn(() => ({
     checkout: {
@@ -19,7 +19,7 @@ jest.mock("stripe",() => {
 
 const request = require("supertest");
 // Mock auth middleware to skip JWT verification
-jest.mock("../../../src/shared/middleware/auth", () => (req, res, next) => {
+jest.mock("../../../../shared/middleware/auth", () => (req, res, next) => {
   req.user = { id: "user123", email: "test@test.com" };
   next();
 });
@@ -30,9 +30,9 @@ app.use(express.json());
 app.use("/api/domainPayment", require("../stripe/stripe.route"));
 
 
-const namecheap = require("../../../src/shared/services/namecheapProxy.service");
-const vercelService = require("../../../src/shared/services/vercelService");
-const User = require("../../../src/shared/models/User");
+const namecheap = require("../services/namecheapProxy.service");
+const vercelService = require("../../../../shared/services/vercelService");
+const User = require("../../../../shared/models/User");
 
 // --- Reusable mock data ---
 const mockPricingResponse = {
@@ -130,9 +130,18 @@ describe("GET /api/domainPayment/pricecheck/:domain", () => {
 // -------------------------------------------------------
 describe("handleFulfillment", () => {
   const { handleFulfillment } = require("../services/fulfillment.service");
-  const { createDomainMapping } = require("../../DomainRouter/DomainRouter.service");
+  const { createDomainMapping } = require("../../../../../microservices/DomainRouter/DomainRouter.service");
 
-  beforeEach(() => jest.clearAllMocks());
+  const prevStripeMode = process.env.STRIPE_MODE;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.STRIPE_MODE = "live";
+  });
+
+  afterEach(() => {
+    process.env.STRIPE_MODE = prevStripeMode;
+  });
 
   test("skips if payment already processed", async () => {
     User.findOne.mockResolvedValue({ _id: "existingUser" });

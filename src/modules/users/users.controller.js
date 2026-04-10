@@ -4,7 +4,7 @@ const Subscriptions = require("../../shared/models/Subscriptions");
 const bcrypt = require("bcrypt");
 const Stripe = require("stripe");
 const Portfolio = require("../../legacy/project-manager/models/portfolioModel");
-const subscriptionAccess = require("../../shared/services/subscriptionAccess.service");
+const subscriptionAccess = require("../payments/subscription-access.service");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"

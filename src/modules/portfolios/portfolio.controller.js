@@ -1,6 +1,6 @@
 const portfolioService = require("./portfolio.service");
 const agentPortfolioGenerator = require("./agentPortfolioGenerator.service");
-const subscriptionAccess = require("../../shared/services/subscriptionAccess.service");
+const subscriptionAccess = require("../payments/subscription-access.service");
 
 function sendPortfolioError(res, err, fallbackMessage) {
   if (err.code === 11000) {

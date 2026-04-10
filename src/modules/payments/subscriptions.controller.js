@@ -1,4 +1,4 @@
-const Subscriptions = require("../src/shared/models/Subscriptions");
+const Subscriptions = require("../../shared/models/Subscriptions");
 const Stripe = require("stripe");
 
 const stripeSecretkey =
@@ -103,12 +103,12 @@ exports.reconcileSubscriptions = async (req, res) => {
       };
       if (lastId) params.starting_after = lastId;
 
-      const res = await stripe.subscriptions.list(params);
-      stripeSubs = stripeSubs.concat(res.data);
+      const listRes = await stripe.subscriptions.list(params);
+      stripeSubs = stripeSubs.concat(listRes.data);
 
-      hasMore = res.has_more;
-      if (res.data.length > 0) {
-        lastId = res.data[res.data.length - 1].id;
+      hasMore = listRes.has_more;
+      if (listRes.data.length > 0) {
+        lastId = listRes.data[listRes.data.length - 1].id;
       }
     }
 

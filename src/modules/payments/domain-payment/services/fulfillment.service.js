@@ -1,7 +1,7 @@
-const User = require("../../../src/shared/models/User");
-const vercelService = require("../../../src/shared/services/vercelService");
+const User = require("../../../../shared/models/User");
+const vercelService = require("../../../../shared/services/vercelService");
 const namecheap = require("./namecheapProxy.service");
-const { createDomainMapping } = require("../../DomainRouter/DomainRouter.service");
+const { createDomainMapping } = require("../../../../../microservices/DomainRouter/DomainRouter.service");
 
 exports.handleFulfillment = async (domain, userId, paymentIntentId) => {
   console.log(`Starting fulfillment for ${domain} (User: ${userId})`);
@@ -10,7 +10,7 @@ exports.handleFulfillment = async (domain, userId, paymentIntentId) => {
     //Don't process if this payment was already handled
     const existingUser = await User.findOne(
       { "domains.paymentIntentId": paymentIntentId },
-      { _id: 1 }    
+      { _id: 1 }
     );
     if (existingUser) {
       console.log(`Payment ${paymentIntentId} already processed. Skipping.`);
@@ -49,7 +49,7 @@ exports.handleFulfillment = async (domain, userId, paymentIntentId) => {
       return; //don't proceed to mapping if Vercel failed
     }
 
-    //Update User & Create Mapping 
+    //Update User & Create Mapping
     await User.findOneAndUpdate(
       { _id: userId },
       {
@@ -68,7 +68,7 @@ exports.handleFulfillment = async (domain, userId, paymentIntentId) => {
       { new: true }
     );
     console.log(`User ${userId} updated with domain ${domain}. Creating domain mapping...`);
-    
+
     await createDomainMapping({
       domain,
       user: { _id: userId },

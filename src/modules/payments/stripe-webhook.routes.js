@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const Stripe = require("stripe");
-const Subscription = require("../src/shared/models/Subscriptions");
-const User = require("../src/shared/models/User");
-const stripeController = require("../microservices/domainPayment/stripe/stripe.controller");
-const voucherService = require("../microservices/vouchers/voucher.service");
+const Subscription = require("../../shared/models/Subscriptions");
+const User = require("../../shared/models/User");
+const stripeController = require("./domain-payment/stripe/stripe.controller");
+const voucherService = require("../../../microservices/vouchers/voucher.service");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
@@ -44,7 +44,7 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
   //verify that the call came from stripe
   let event;
   const stripeWHSEC = process.env.STRIPE_WEBHOOK_SECRET_PURCHASE_SUBSCRIPTION;
- 
+
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, stripeWHSEC);
   } catch (err) {
@@ -434,7 +434,7 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
         const charge = event.data.object;
         const latestRefund = charge.refunds.data[0]; // Most recent refund
         //TODO: fix above line error Error handling webhook: TypeError: Cannot read properties of undefined (reading 'data')
-        //at /opt/render/project/src/routes/stripeWebhookRoutes.js:395:45
+        //at src/modules/payments/stripe-webhook.routes.js (charge.refunded handler)
         //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
         // Check if we already logged this refund
