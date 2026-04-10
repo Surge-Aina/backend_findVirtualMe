@@ -1,9 +1,9 @@
 // Mock all external services before imports
 jest.mock("../services/namecheapProxy.service");
-jest.mock("../../../../shared/services/vercelService");
+jest.mock("../../../domains/vercel.service");
 jest.mock("../../../../shared/models/User");
-jest.mock("../../../../../microservices/DomainRouter/DomainRouter.service");
-jest.mock("../../../../../microservices/DomainRouter/DomainRouter.model");
+jest.mock("../../../domains/DomainRouter/DomainRouter.service");
+jest.mock("../../../domains/DomainRouter/DomainRouter.model");
 jest.mock("stripe",() => {
   return jest.fn(() => ({
     checkout: {
@@ -31,7 +31,7 @@ app.use("/api/domainPayment", require("../stripe/stripe.route"));
 
 
 const namecheap = require("../services/namecheapProxy.service");
-const vercelService = require("../../../../shared/services/vercelService");
+const vercelService = require("../../../domains/vercel.service");
 const User = require("../../../../shared/models/User");
 
 // --- Reusable mock data ---
@@ -130,7 +130,7 @@ describe("GET /api/domainPayment/pricecheck/:domain", () => {
 // -------------------------------------------------------
 describe("handleFulfillment", () => {
   const { handleFulfillment } = require("../services/fulfillment.service");
-  const { createDomainMapping } = require("../../../../../microservices/DomainRouter/DomainRouter.service");
+  const { createDomainMapping } = require("../../../domains/DomainRouter/DomainRouter.service");
 
   const prevStripeMode = process.env.STRIPE_MODE;
 

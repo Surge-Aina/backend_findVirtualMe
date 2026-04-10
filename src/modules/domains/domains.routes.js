@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const domainService = require("../src/shared/services/domainService");
-const auth = require("../src/shared/middleware/auth");
+const domainService = require("./domain.service");
+const auth = require("../../shared/middleware/auth");
 
 // GET /api/domains/check/:domain - Check domain availability
 router.get("/check/:domain", auth, (req, res, next) => {

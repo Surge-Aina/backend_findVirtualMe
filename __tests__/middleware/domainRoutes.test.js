@@ -1,4 +1,4 @@
-jest.mock('../../../src/shared/middleware/auth', () =>
+jest.mock('../../src/shared/middleware/auth', () =>
   jest.fn((req, _res, next) => {
     req.user = {
       id: 'user123',
@@ -8,17 +8,18 @@ jest.mock('../../../src/shared/middleware/auth', () =>
   })
 );
 
-jest.mock('../../../src/shared/services/domainService.js', () => ({
+jest.mock('../../src/modules/domains/domain.service.js', () => ({
   getDomain: jest.fn(),
   registerDomain: jest.fn(),
   configureCustomDomain: jest.fn(),
   getMyDomains: jest.fn(),
   verifyDNS: jest.fn(),
   lookupPortfolioByDomain: jest.fn(),
+  deleteDomain: jest.fn(),
 }));
 
-const domainService = require('../../src/shared/services/domainService.js');
-const domainRoutes = require('../../routes/domainRoutes.js');
+const domainService = require('../../src/modules/domains/domain.service.js');
+const domainRoutes = require('../../src/modules/domains/domains.routes.js');
 
 const findRoute = (path, method) =>
   domainRoutes.stack.find(

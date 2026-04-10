@@ -1,7 +1,7 @@
 const express = require("express");
 const request = require("supertest");
 const Portfolio = require("../../src/modules/portfolios/models/Portfolio");
-const DomainRoute = require("../../microservices/DomainRouter/DomainRouter.model");
+const DomainRoute = require("../../src/modules/domains/DomainRouter/DomainRouter.model");
 
 const TEST_USER_ID = "507f1f77bcf86cd799439011";
 const mockCreate = jest.fn();

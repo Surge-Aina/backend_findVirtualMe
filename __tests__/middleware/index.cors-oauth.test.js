@@ -59,7 +59,7 @@ jest.mock('../../src/legacy/local-vendor/routes/localVendorRoutes', () => mockPa
 jest.mock('../../src/modules/payments/subscriptions.routes', () => mockPassThrough);
 jest.mock('../../src/modules/payments/stripe-webhook.routes', () => mockPassThrough);
 jest.mock('../../routes/supportFormRoutes', () => mockPassThrough);
-jest.mock('../../routes/domainRoutes', () => mockPassThrough);
+jest.mock('../../src/modules/domains/domains.routes', () => mockPassThrough);
 jest.mock('../../routes/telemetry', () => mockPassThrough);
 
 jest.mock('../../src/modules/portfolios/publicPortfolios/publicPortfolios.routes', () => mockPassThrough);

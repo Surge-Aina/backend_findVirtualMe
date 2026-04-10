@@ -8,7 +8,7 @@ const stripeWebhookRoutes = require("./modules/payments/stripe-webhook.routes");
 const supportFormRoutes = require("../routes/supportFormRoutes");
 const roleCheck = require("./shared/middleware/roleCheck");
 const auth = require("./shared/middleware/auth");
-const domainRoutes = require("../routes/domainRoutes");
+const domainRoutes = require("./modules/domains/domains.routes");
 const telemetryRoutes = require("../routes/telemetry");
 const guestUserRoutes = require("./modules/auth/guestLogin/guestUser.routes");
 const portfolioEditLogRoutes = require("./modules/portfolios/portfolio-edit-log.routes");
@@ -20,7 +20,7 @@ const domainPaymentRouter = require("./modules/payments/domain-payment/stripe/st
 const emailMvpRoutes = require("../microservices/emailmvp/emailmvp.routes");
 const googleLoginRoutes = require("./modules/auth/googleLogin/googleLogin.routes.js");
 const contactMeRoutes = require("../microservices/contactMeForm/contactMeForm.routes.js");
-const domainRouterRoutes = require("../microservices/DomainRouter/DomainRouter.routes.js");
+const domainRouterRoutes = require("./modules/domains/DomainRouter/DomainRouter.routes.js");
 const s3UploadRoutes = require("../microservices/S3Upload/S3Upload.routes.js");
 const passwordResetRoutes = require("./modules/auth/passwordReset/passwordReset.routes");
 

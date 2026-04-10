@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const auth = require("../../src/shared/middleware/auth");
+const auth = require("../../../shared/middleware/auth");
 const domainCtrl = require("./DomainRouter.controller");
 const DomainRoute = require("./DomainRouter.model");
 

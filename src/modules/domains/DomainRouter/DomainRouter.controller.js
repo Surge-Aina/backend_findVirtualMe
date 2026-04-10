@@ -2,7 +2,7 @@ const DomainRoute = require("./DomainRouter.model");
 const axios = require("axios");
 const { createDomainMapping } = require("./DomainRouter.service");
 const { normalizeDomain, getPortfolioMeta } = require("./utils/domainHelpers");
-const  {addDomainToUser}  = require("../../src/shared/services/domainService")
+const { addDomainToUser } = require("../domain.service");
 // ----------------- CREATE -----------------
 
 // POST /api/domains

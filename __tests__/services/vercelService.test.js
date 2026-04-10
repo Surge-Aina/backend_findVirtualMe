@@ -57,7 +57,7 @@
         process.env.VERCEL_PROJECT_ID || "frontend-find-virtual-me";
       process.env.VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID || "test-team";
 
-      vercelService = require("../../src/shared/services/vercelService");
+      vercelService = require("../../src/modules/domains/vercel.service");
     });
 
     beforeEach(() => {
@@ -440,7 +440,7 @@
         process.env.VERCEL_PROJECT_ID || "frontend-find-virtual-me";
       process.env.VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID || "test-team";
 
-      const svc = require("../../src/shared/services/vercelService");
+      const svc = require("../../src/modules/domains/vercel.service");
 
       await expect(svc.addDomain("example.com")).rejects.toThrow(
         "Vercel API error: VERCEL_TOKEN environment variable is required"
@@ -454,7 +454,7 @@
       delete process.env.VERCEL_PROJECT_ID;
       process.env.VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID || "test-team";
 
-      const svc = require("../../src/shared/services/vercelService");
+      const svc = require("../../src/modules/domains/vercel.service");
 
       await expect(svc.addDomain("example.com")).rejects.toThrow(
         "Vercel API error: VERCEL_PROJECT_ID environment variable is required"
@@ -469,7 +469,7 @@
         process.env.VERCEL_PROJECT_ID || "frontend-find-virtual-me";
       delete process.env.VERCEL_TEAM_ID;
 
-      const svc = require("../../src/shared/services/vercelService");
+      const svc = require("../../src/modules/domains/vercel.service");
 
       await expect(svc.addDomain("example.com")).rejects.toThrow(
         "Vercel API error: VERCEL_TEAM_ID environment variable is required"

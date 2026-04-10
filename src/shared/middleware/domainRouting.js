@@ -1,5 +1,5 @@
 // middleware/domainRouting.js
-const DomainRouter = require("../../../microservices/DomainRouter/DomainRouter.model");
+const DomainRouter = require("../../modules/domains/DomainRouter/DomainRouter.model");
 
 module.exports = async function domainRouting(req, res, next) {
   try {

@@ -1,7 +1,7 @@
 const User = require("../../../../shared/models/User");
-const vercelService = require("../../../../shared/services/vercelService");
+const vercelService = require("../../../domains/vercel.service");
 const namecheap = require("./namecheapProxy.service");
-const { createDomainMapping } = require("../../../../../microservices/DomainRouter/DomainRouter.service");
+const { createDomainMapping } = require("../../../domains/DomainRouter/DomainRouter.service");
 
 exports.handleFulfillment = async (domain, userId, paymentIntentId) => {
   console.log(`Starting fulfillment for ${domain} (User: ${userId})`);

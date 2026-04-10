@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const Portfolio = require("./models/Portfolio");
-const DomainRoute = require("../../../microservices/DomainRouter/DomainRouter.model");
-const { normalizeDomain } = require("../../../microservices/DomainRouter/utils/domainHelpers");
+const DomainRoute = require("../domains/DomainRouter/DomainRouter.model");
+const { normalizeDomain } = require("../domains/DomainRouter/utils/domainHelpers");
 const { deleteManyByPrefix } = require("../../shared/services/s3Service");
 const { getDefaultSections } = require("./models/templateDefaults");
 const {
