@@ -22,11 +22,10 @@ const userPortfoliosArrayRoutes = require("./portfolios/userPortfoliosArray/user
 const publicPortfoliosRoutes = require("./portfolios/publicPortfolios/publicPortfolios.routes");
 const domainPaymentRouter = require("./payments/domain-payment/stripe/stripe.route");
 const emailMvpRoutes = require("./emailmvp/emailmvp.routes");
-const googleLoginRoutes = require("./auth/googleLogin/googleLogin.routes.js");
+const authHttpRoutes = require("./auth/auth.http.routes");
 const contactMeRoutes = require("./contact/contactMeForm.routes.js");
 const domainRouterRoutes = require("./domains/DomainRouter/DomainRouter.routes.js");
 const s3UploadRoutes = require("./media/S3Upload.routes.js");
-const passwordResetRoutes = require("./auth/passwordReset/passwordReset.routes");
 const portfolioRoutes = require("./portfolios/portfolio.routes");
 const voucherRoutes = require("./vouchers/voucher.routes.js");
 const qrCodeRoutes = require("./qr-code/qrCode.routes.js");
@@ -55,12 +54,12 @@ function mountModules(app) {
     });
   });
 
-  app.use("/checkout", auth, checkoutRoutes);
-  app.use("/subscriptions", auth, roleCheck(["admin"]), subscriptionRoutes);
-  app.use("/user", userRoutes);
-  app.use("/support-form", supportFormRoutes);
+  app.use("/api/payments/checkout", auth, checkoutRoutes);
+  app.use("/api/payments/subscriptions", auth, roleCheck(["admin"]), subscriptionRoutes);
+  app.use("/api/users", userRoutes);
+  app.use("/api/support", supportFormRoutes);
   app.use("/api/domains", domainRoutes);
-  app.use("/api/portfolio-edit-log", portfolioEditLogRoutes);
+  app.use("/api/portfolios/edit-log", portfolioEditLogRoutes);
 
   const uploadsRoot = path.join(__dirname, "..", "..", config.uploads.directory);
   app.use("/uploads", express.static(uploadsRoot));
@@ -70,22 +69,21 @@ function mountModules(app) {
   );
 
   app.use("/api/telemetry", telemetryRoutes);
-  app.use("/guestUser", guestUserRoutes);
-  app.use("/guestAdminPanel", guestAdminPanelRoutes);
-  app.use("/social-links", socialLinksRoutes);
-  app.use("/userPortfoliosArray", userPortfoliosArrayRoutes);
-  app.use("/publicPortfolios", publicPortfoliosRoutes);
-  app.use("/api/domainPayment", domainPaymentRouter);
-  app.use("/google-login/", googleLoginRoutes);
-  app.use("/contactMe", contactMeRoutes);
-  app.use("/domainRouter", domainRouterRoutes);
-  app.use("/s3-upload-url", s3UploadRoutes);
+  app.use("/api/auth/guest", guestUserRoutes);
+  app.use("/api/auth/guest-admin", guestAdminPanelRoutes);
+  app.use("/api/social-links", socialLinksRoutes);
+  app.use("/api/portfolios/user-array", userPortfoliosArrayRoutes);
+  app.use("/api/portfolios/public", publicPortfoliosRoutes);
+  app.use("/api/payments", domainPaymentRouter);
+  app.use("/api/auth", authHttpRoutes);
+  app.use("/api/contact", contactMeRoutes);
+  app.use("/api/domains/router", domainRouterRoutes);
+  app.use("/api/media/s3-upload-url", s3UploadRoutes);
   app.use("/api/portfolios", portfolioRoutes);
-  app.use("/vouchers", voucherRoutes);
-  app.use("/qrCode", qrCodeRoutes);
-  app.use("/privacy-policy", privacyPolicyRoutes);
-  app.use("/terms-of-service", termsOfServiceRoutes);
-  app.use("/user", passwordResetRoutes);
+  app.use("/api/vouchers", voucherRoutes);
+  app.use("/api/qr-codes", qrCodeRoutes);
+  app.use("/api/legal/privacy-policy", privacyPolicyRoutes);
+  app.use("/api/legal/terms-of-service", termsOfServiceRoutes);
 
   app.use("/api/mvp", emailMvpRoutes);
 

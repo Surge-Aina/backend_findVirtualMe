@@ -45,7 +45,7 @@ const PRICE_MAP = {
       : process.env.PRICE_PRO_TEST, // $29/month
 };
 
-router.post("/checkout-session", async (req, res) => {
+router.post("/session", async (req, res) => {
   try {
     const user = req.user; // middleware auth populates this
     const { plan } = req.body; //"basic" or "pro"

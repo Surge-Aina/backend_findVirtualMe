@@ -6,8 +6,8 @@ const auth = require("./auth");
 router.post("/login", controller.loginUser);
 router.post("/signup", controller.signupUser);
 
-router.patch("/editProfile", auth, controller.editUser);
+router.patch("/profile", auth, controller.editUser);
 
-router.delete("/deleteProfile", auth, controller.deleteUser);
+router.delete("/profile", auth, controller.deleteUser);
 
 module.exports = router;

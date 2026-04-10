@@ -7,10 +7,10 @@ const Counter = require("../../models/supportForm/Counter");
 
 const app = express();
 app.use(express.json());
-app.use("/support-form", supportFormRoutes);
+app.use("/api/support", supportFormRoutes);
 
 describe("SupportForm API", () => {
-  describe("POST /support-form - Create support form", () => {
+  describe("POST /api/support - Create support form", () => {
     test("should successfully create a support form", async () => {
       const payload = {
         name: "John Doe",
@@ -22,7 +22,7 @@ describe("SupportForm API", () => {
       };
       
       const res = await request(app)
-        .post("/support-form")
+        .post("/api/support")
         .send(payload);
 
       expect(res.status).toBe(201);
@@ -39,7 +39,7 @@ describe("SupportForm API", () => {
       };
 
       const res = await request(app)
-        .post("/support-form")
+        .post("/api/support")
         .send(payload);
 
       expect(res.status).toBe(201);
@@ -48,7 +48,7 @@ describe("SupportForm API", () => {
 
     test("should generate incremental ticketIDs for multiple forms", async () => {
       const res1 = await request(app)
-        .post("/support-form")
+        .post("/api/support")
         .send({
           name: "User 1",
           email: "user1@example.com",
@@ -56,7 +56,7 @@ describe("SupportForm API", () => {
         });
 
       const res2 = await request(app)
-        .post("/support-form")
+        .post("/api/support")
         .send({
           name: "User 2",
           email: "user2@example.com",
@@ -69,14 +69,14 @@ describe("SupportForm API", () => {
 
     test("should reject requests with missing required fields", async () => {
       const res = await request(app)
-        .post("/support-form")
+        .post("/api/support")
         .send({ name: "John Doe" });
 
       expect(res.status).toBe(400);
     });
   });
 
-  describe("GET /support-form - Get all tickets", () => {
+  describe("GET /api/support - Get all tickets", () => {
     test("should return all tickets", async () => {
       await SupportForm.create({
         name: "User 1",
@@ -85,20 +85,20 @@ describe("SupportForm API", () => {
         ticketID: "T00001"
       });
 
-      const res = await request(app).get("/support-form");
+      const res = await request(app).get("/api/support");
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveLength(1);
     });
 
     test("should return empty array when no tickets exist", async () => {
-      const res = await request(app).get("/support-form");
+      const res = await request(app).get("/api/support");
       expect(res.status).toBe(200);
       expect(res.body).toEqual([]);
     });
   });
 
-  describe("PUT /support-form/:ticketID - Update ticket status", () => {
+  describe("PUT /api/support/:ticketID - Update ticket status", () => {
     beforeEach(async () => {
       await SupportForm.create({
         name: "Test User",
@@ -110,7 +110,7 @@ describe("SupportForm API", () => {
 
     test("should successfully update status to 'In Progress'", async () => {
       const res = await request(app)
-        .put("/support-form/T00001")
+        .put("/api/support/T00001")
         .send({ status: "In Progress" });
 
       expect(res.status).toBe(200);
@@ -120,7 +120,7 @@ describe("SupportForm API", () => {
 
     test("should successfully update status to 'Completed'", async () => {
       const res = await request(app)
-        .put("/support-form/T00001")
+        .put("/api/support/T00001")
         .send({ status: "Completed" });
 
       expect(res.status).toBe(200);
@@ -130,14 +130,14 @@ describe("SupportForm API", () => {
 
     test("should reject invalid status values", async () => {
       const res = await request(app)
-        .put("/support-form/T00001")
+        .put("/api/support/T00001")
         .send({ status: "InvalidStatus" });
 
       expect(res.status).toBe(400);
     });
   });
 
-  describe("DELETE /support-form/:ticketID - Delete ticket", () => {
+  describe("DELETE /api/support/:ticketID - Delete ticket", () => {
     beforeEach(async () => {
       await SupportForm.create({
         name: "Test User",
@@ -148,14 +148,14 @@ describe("SupportForm API", () => {
     });
 
     test("should successfully delete existing ticket", async () => {
-      const res = await request(app).delete("/support-form/T00001");
+      const res = await request(app).delete("/api/support/T00001");
 
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);
     });
   });
 
-  describe("POST /support-form/:ticketID/replies - Add reply", () => {
+  describe("POST /api/support/:ticketID/replies - Add reply", () => {
     beforeEach(async () => {
       await SupportForm.create({
         name: "Test User",
@@ -167,7 +167,7 @@ describe("SupportForm API", () => {
 
     test("should successfully add a reply", async () => {
       const res = await request(app)
-        .post("/support-form/T00001/replies")
+        .post("/api/support/T00001/replies")
         .send({ message: "Admin reply" });
 
       expect(res.status).toBe(200);
@@ -176,14 +176,14 @@ describe("SupportForm API", () => {
 
     test("should reject empty replies", async () => {
       const res = await request(app)
-        .post("/support-form/T00001/replies")
+        .post("/api/support/T00001/replies")
         .send({ message: "" });
 
       expect(res.status).toBe(400);
     });
   });
 
-  describe("POST /support-form/with-email - Submit with email", () => {
+  describe("POST /api/support/with-email - Submit with email", () => {
     test("should create form and handle email notifications", async () => {
       const payload = {
         name: "Test User",
@@ -194,7 +194,7 @@ describe("SupportForm API", () => {
       };
 
       const res = await request(app)
-        .post("/support-form/with-email")
+        .post("/api/support/with-email")
         .send(payload);
 
       expect(res.status).toBe(201);
@@ -203,7 +203,7 @@ describe("SupportForm API", () => {
 
     test('should require all required fields', async () => {
       const res = await request(app)
-        .post("/support-form/with-email")
+        .post("/api/support/with-email")
         .send({ name: "Test User" });
 
       expect(res.status).toBe(400);

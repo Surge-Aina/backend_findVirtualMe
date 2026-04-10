@@ -7,7 +7,7 @@ const PortfolioEditLog = require("../../../../shared/models/portfolioLogs/Portfo
 // Setup Express app with routes
 const app = express();
 app.use(express.json());
-app.use("/api/portfolio-edit-log", portfolioEditLogRoutes);
+app.use("/api/portfolios/edit-log", portfolioEditLogRoutes);
 app.use((req, res) => res.status(404).json({ message: "not found" }));
 
 // We only need to clean up data after each test
@@ -17,7 +17,7 @@ afterEach(async () => {
 });
 
 describe("PortfolioEditLog Routes", () => {
-  describe("POST /api/portfolio-edit-log", () => {
+  describe("POST /api/portfolios/edit-log", () => {
     it("should create a new log entry", async () => {
       const logData = {
         userId: "user123",
@@ -25,7 +25,7 @@ describe("PortfolioEditLog Routes", () => {
       };
 
       const res = await request(app)
-        .post("/api/portfolio-edit-log")
+        .post("/api/portfolios/edit-log")
         .send(logData);
 
       expect(res.status).toBe(201);
@@ -54,7 +54,7 @@ describe("PortfolioEditLog Routes", () => {
       };
 
       const res = await request(app)
-        .post("/api/portfolio-edit-log")
+        .post("/api/portfolios/edit-log")
         .send(logData);
 
       expect(res.status).toBe(201);
@@ -70,7 +70,7 @@ describe("PortfolioEditLog Routes", () => {
       };
 
       const res = await request(app)
-        .post("/api/portfolio-edit-log")
+        .post("/api/portfolios/edit-log")
         .send(logData);
 
       expect(res.status).toBe(400);
@@ -83,7 +83,7 @@ describe("PortfolioEditLog Routes", () => {
       };
 
       const res = await request(app)
-        .post("/api/portfolio-edit-log")
+        .post("/api/portfolios/edit-log")
         .send(logData);
 
       expect(res.status).toBe(400);
@@ -92,7 +92,7 @@ describe("PortfolioEditLog Routes", () => {
 
     it("should handle invalid JSON", async () => {
       const res = await request(app)
-        .post("/api/portfolio-edit-log")
+        .post("/api/portfolios/edit-log")
         .set("Content-Type", "application/json")
         .send("invalid json");
 
@@ -100,7 +100,7 @@ describe("PortfolioEditLog Routes", () => {
     });
   });
 
-  describe("GET /api/portfolio-edit-log", () => {
+  describe("GET /api/portfolios/edit-log", () => {
     it("should return all logs with pagination", async () => {
       // Create test logs
       for (let i = 0; i < 5; i++) {
@@ -110,7 +110,7 @@ describe("PortfolioEditLog Routes", () => {
         });
       }
 
-      const res = await request(app).get("/api/portfolio-edit-log");
+      const res = await request(app).get("/api/portfolios/edit-log");
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -129,7 +129,7 @@ describe("PortfolioEditLog Routes", () => {
       }
 
       const res = await request(app).get(
-        "/api/portfolio-edit-log?page=2&limit=5"
+        "/api/portfolios/edit-log?page=2&limit=5"
       );
 
       expect(res.status).toBe(200);
@@ -140,7 +140,7 @@ describe("PortfolioEditLog Routes", () => {
     });
 
     it("should return empty array when no logs exist", async () => {
-      const res = await request(app).get("/api/portfolio-edit-log");
+      const res = await request(app).get("/api/portfolios/edit-log");
 
       expect(res.status).toBe(200);
       expect(res.body.count).toBe(0);
@@ -148,7 +148,7 @@ describe("PortfolioEditLog Routes", () => {
     });
   });
 
-  describe("GET /api/portfolio-edit-log/user/:userId", () => {
+  describe("GET /api/portfolios/edit-log/user/:userId", () => {
     it("should return logs for a specific user", async () => {
       await PortfolioEditLog.create({
         userId: "user_find",
@@ -166,7 +166,7 @@ describe("PortfolioEditLog Routes", () => {
       });
 
       const res = await request(app).get(
-        "/api/portfolio-edit-log/user/user_find"
+        "/api/portfolios/edit-log/user/user_find"
       );
 
       expect(res.status).toBe(200);
@@ -179,7 +179,7 @@ describe("PortfolioEditLog Routes", () => {
 
     it("should return empty array when user has no logs", async () => {
       const res = await request(app).get(
-        "/api/portfolio-edit-log/user/user_no_logs"
+        "/api/portfolios/edit-log/user/user_no_logs"
       );
 
       expect(res.status).toBe(200);
@@ -194,7 +194,7 @@ describe("PortfolioEditLog Routes", () => {
       });
 
       const res = await request(app).get(
-        "/api/portfolio-edit-log/user/user@special"
+        "/api/portfolios/edit-log/user/user@special"
       );
 
       expect(res.status).toBe(200);
@@ -202,7 +202,7 @@ describe("PortfolioEditLog Routes", () => {
     });
   });
 
-  describe("GET /api/portfolio-edit-log/portfolio/:portfolioID", () => {
+  describe("GET /api/portfolios/edit-log/portfolio/:portfolioID", () => {
     it("should return logs for a specific portfolio", async () => {
       await PortfolioEditLog.create({
         userId: "user1",
@@ -221,7 +221,7 @@ describe("PortfolioEditLog Routes", () => {
       });
 
       const res = await request(app).get(
-        "/api/portfolio-edit-log/portfolio/portfolio_find"
+        "/api/portfolios/edit-log/portfolio/portfolio_find"
       );
 
       expect(res.status).toBe(200);
@@ -233,7 +233,7 @@ describe("PortfolioEditLog Routes", () => {
 
     it("should return empty array when portfolio has no logs", async () => {
       const res = await request(app).get(
-        "/api/portfolio-edit-log/portfolio/portfolio_no_logs"
+        "/api/portfolios/edit-log/portfolio/portfolio_no_logs"
       );
 
       expect(res.status).toBe(200);
@@ -242,7 +242,7 @@ describe("PortfolioEditLog Routes", () => {
     });
   });
 
-  describe("GET /api/portfolio-edit-log/session/:sessionId", () => {
+  describe("GET /api/portfolios/edit-log/session/:sessionId", () => {
     it("should return logs for a specific session", async () => {
       await PortfolioEditLog.create({
         userId: "user1",
@@ -261,7 +261,7 @@ describe("PortfolioEditLog Routes", () => {
       });
 
       const res = await request(app).get(
-        "/api/portfolio-edit-log/session/session_find"
+        "/api/portfolios/edit-log/session/session_find"
       );
 
       expect(res.status).toBe(200);
@@ -273,7 +273,7 @@ describe("PortfolioEditLog Routes", () => {
 
     it("should return empty array when session has no logs", async () => {
       const res = await request(app).get(
-        "/api/portfolio-edit-log/session/session_no_logs"
+        "/api/portfolios/edit-log/session/session_no_logs"
       );
 
       expect(res.status).toBe(200);
@@ -284,13 +284,13 @@ describe("PortfolioEditLog Routes", () => {
 
   describe("Route Error Handling", () => {
     it("should return 404 for non-existent routes", async () => {
-      const res = await request(app).get("/api/portfolio-edit-log/invalid");
+      const res = await request(app).get("/api/portfolios/edit-log/invalid");
 
       expect(res.status).toBe(404);
     });
 
     it("should handle invalid HTTP methods", async () => {
-      const res = await request(app).patch("/api/portfolio-edit-log");
+      const res = await request(app).patch("/api/portfolios/edit-log");
 
       expect(res.status).toBe(404);
     });
@@ -300,7 +300,7 @@ describe("PortfolioEditLog Routes", () => {
     it("should create and retrieve logs in sequence", async () => {
       // Create a log
       const createRes = await request(app)
-        .post("/api/portfolio-edit-log")
+        .post("/api/portfolios/edit-log")
         .send({
           userId: "integration_user",
           portfolioID: "integration_portfolio",
@@ -313,21 +313,21 @@ describe("PortfolioEditLog Routes", () => {
 
       // Retrieve by userId
       const userRes = await request(app).get(
-        "/api/portfolio-edit-log/user/integration_user"
+        "/api/portfolios/edit-log/user/integration_user"
       );
       expect(userRes.status).toBe(200);
       expect(userRes.body.count).toBe(1);
 
       // Retrieve by portfolioID
       const portfolioRes = await request(app).get(
-        "/api/portfolio-edit-log/portfolio/integration_portfolio"
+        "/api/portfolios/edit-log/portfolio/integration_portfolio"
       );
       expect(portfolioRes.status).toBe(200);
       expect(portfolioRes.body.count).toBe(1);
 
       // Retrieve by sessionId
       const sessionRes = await request(app).get(
-        "/api/portfolio-edit-log/session/integration_session"
+        "/api/portfolios/edit-log/session/integration_session"
       );
       expect(sessionRes.status).toBe(200);
       expect(sessionRes.body.count).toBe(1);
@@ -349,7 +349,7 @@ describe("PortfolioEditLog Routes", () => {
 
       // Get first page
       const page1 = await request(app).get(
-        "/api/portfolio-edit-log?page=1&limit=10"
+        "/api/portfolios/edit-log?page=1&limit=10"
       );
       expect(page1.status).toBe(200);
       expect(page1.body.count).toBe(10);
@@ -357,7 +357,7 @@ describe("PortfolioEditLog Routes", () => {
 
       // Get second page
       const page2 = await request(app).get(
-        "/api/portfolio-edit-log?page=2&limit=10"
+        "/api/portfolios/edit-log?page=2&limit=10"
       );
       expect(page2.status).toBe(200);
       expect(page2.body.count).toBe(10);
@@ -365,7 +365,7 @@ describe("PortfolioEditLog Routes", () => {
 
       // Get third page
       const page3 = await request(app).get(
-        "/api/portfolio-edit-log?page=3&limit=10"
+        "/api/portfolios/edit-log?page=3&limit=10"
       );
       expect(page3.status).toBe(200);
       expect(page3.body.count).toBe(10);

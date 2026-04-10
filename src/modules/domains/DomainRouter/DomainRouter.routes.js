@@ -48,7 +48,7 @@ router.get("/", auth, domainCtrl.getMyDomainRoutes);
 router.patch("/:id", auth, domainCtrl.updateDomainRoute);
 router.delete("/:id", auth, domainCtrl.deleteDomainRoute);
 
-router.get("/domainLookup", domainCtrl.domainLookup);
+router.get("/lookup", domainCtrl.domainLookup);
 
 
 module.exports = router;

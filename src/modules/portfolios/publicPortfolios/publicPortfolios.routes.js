@@ -10,10 +10,10 @@ const {
 const auth = require("../../../shared/middleware/auth");
 const optionalAuth = require("../../../shared/middleware/optionalAuth");
 
-// Routes
-router.get("/public", getPublicPortfolios);
+// Routes (mounted at /api/portfolios/public)
+router.get("/list", getPublicPortfolios);
 router.get("/:type/:id", optionalAuth, getPortfolio);
-router.patch("/:id/toggle-public", togglePublicPortfolio);
+router.patch("/:id/toggle", togglePublicPortfolio);
 router.delete("/:id", auth, deletePortfolio);
 
 module.exports = router;

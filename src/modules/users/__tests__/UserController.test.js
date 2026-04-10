@@ -12,10 +12,12 @@ const bcrypt = require('bcrypt');
 
 const User = require('../../../shared/models/User');
 const userRoutes = require('../../../../routes/userRoute');
+const authHttpRoutes = require('../../auth/auth.http.routes');
 
 const app = express();
 app.use(express.json());
 app.use('/api/users', userRoutes);
+app.use('/api/auth', authHttpRoutes);
 
 let testUser;
 let authToken;
@@ -44,7 +46,7 @@ const getUniqueUsername = () => `user${Date.now()}_${Math.random()}`;
 
 describe('User Controller Integration Tests', () => {
   
-  describe('POST /api/users/addUser - Create User', () => {
+  describe('POST /api/users - Create User', () => {
     test('should create a new user with valid data', async () => {
       const newUser = {
         data: {
@@ -67,7 +69,7 @@ describe('User Controller Integration Tests', () => {
       };
 
       const response = await request(app)
-        .post('/api/users/addUser')
+        .post('/api/users')
         .send(newUser);
 
       expect(response.status).toBe(201);
@@ -78,7 +80,7 @@ describe('User Controller Integration Tests', () => {
 
     test('should return 400 for missing required fields', async () => {
       const response = await request(app)
-        .post('/api/users/addUser')
+        .post('/api/users')
         .send({
           data: {
             userInfo: {
@@ -95,7 +97,7 @@ describe('User Controller Integration Tests', () => {
       const email = getUniqueEmail();
       
       await request(app)
-        .post('/api/users/addUser')
+        .post('/api/users')
         .send({
           data: {
             userInfo: {
@@ -107,7 +109,7 @@ describe('User Controller Integration Tests', () => {
         });
 
       const response = await request(app)
-        .post('/api/users/addUser')
+        .post('/api/users')
         .send({
           data: {
             userInfo: {
@@ -124,7 +126,7 @@ describe('User Controller Integration Tests', () => {
 
     test('should set default role to customer', async () => {
       const response = await request(app)
-        .post('/api/users/addUser')
+        .post('/api/users')
         .send({
           data: {
             userInfo: {
@@ -140,10 +142,10 @@ describe('User Controller Integration Tests', () => {
     });
   });
 
-  describe('GET /api/users/getAllUsers', () => {
+  describe('GET /api/users', () => {
     test('should return all users', async () => {
       const response = await request(app)
-        .get('/api/users/getAllUsers')
+        .get('/api/users')
         .expect(200);
 
       expect(response.body).toHaveProperty('users');
@@ -151,10 +153,10 @@ describe('User Controller Integration Tests', () => {
     });
   });
 
-  describe('GET /api/users/getUser/:id', () => {
+  describe('GET /api/users/:id', () => {
     test('should return user by valid ID', async () => {
       const response = await request(app)
-        .get(`/api/users/getUser/${testUser._id}`)
+        .get(`/api/users/${testUser._id}`)
         .expect(200);
 
       expect(response.body.user._id).toBe(testUser._id.toString());
@@ -163,15 +165,16 @@ describe('User Controller Integration Tests', () => {
     test('should return 404 for non-existent user', async () => {
       const fakeId = new mongoose.Types.ObjectId();
       await request(app)
-        .get(`/api/users/getUser/${fakeId}`)
+        .get(`/api/users/${fakeId}`)
         .expect(404);
     });
   });
 
-  describe('PATCH /api/users/updateUser/:id', () => {
+  describe('PATCH /api/users', () => {
     test('should update user with valid data', async () => {
       const response = await request(app)
-        .patch(`/api/users/updateUser/${testUser._id}`)
+        .patch(`/api/users`)
+        .set('Authorization', `Bearer ${authToken}`)
         .send({ firstName: 'Updated' })
         .expect(200);
 
@@ -179,10 +182,10 @@ describe('User Controller Integration Tests', () => {
     });
   });
 
-  describe('DELETE /api/users/deleteUser/:id', () => {
+  describe('DELETE /api/users/:id', () => {
     test('should delete user with valid ID', async () => {
       await request(app)
-        .delete(`/api/users/deleteUser/${testUser._id}`)
+        .delete(`/api/users/${testUser._id}`)
         .expect(200);
 
       const deletedUser = await User.findById(testUser._id);
@@ -207,10 +210,10 @@ describe('User Controller Integration Tests', () => {
     });
   });
 
-  describe('POST /api/users/login', () => {
+  describe('POST /api/auth/login', () => {
     test('should login with valid credentials', async () => {
       const response = await request(app)
-        .post('/api/users/login')
+        .post('/api/auth/login')
         .send({
           email: testUser.email,
           password: 'password123'
@@ -221,10 +224,10 @@ describe('User Controller Integration Tests', () => {
     });
   });
 
-  describe('POST /api/users/signup', () => {
+  describe('POST /api/auth/signup', () => {
     test('should create new user on signup', async () => {
       const response = await request(app)
-        .post('/api/users/signup')
+        .post('/api/auth/signup')
         .send({
           name: 'New User',
           username: getUniqueUsername(),

@@ -52,6 +52,7 @@ jest.mock('../../../legacy/local-vendor/routes/reviewRoutes', () => mockPassThro
 jest.mock('../../../legacy/local-vendor/routes/taggedImageRoutes', () => mockPassThrough);
 jest.mock('../../../legacy/handyman/routes/handymanPortfolioRoutes', () => mockPassThrough);
 jest.mock('../../../legacy/data-scientist/routes/dataScientistRoutes', () => mockPassThrough);
+jest.mock('../../../modules/auth/auth.http.routes', () => mockPassThrough);
 jest.mock('../../../modules/payments/checkout.routes', () => mockPassThrough);
 jest.mock('../../../legacy/handyman/routes/handymanTemplateRoutes', () => mockPassThrough);
 jest.mock('../../../legacy/handyman/routes/handymanInquiryRoutes', () => mockPassThrough);

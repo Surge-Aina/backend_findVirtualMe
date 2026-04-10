@@ -10,7 +10,7 @@ process.env.JWT_SECRET = "test-secret-key-12345";
 let mongoServer;
 const app = express();
 app.use(bodyParser.json());
-app.use("/api/users", router);
+app.use("/api/auth/guest", router);
 
 beforeAll(async () => {
   if (mongoose.connection.readyState !== 0) {
@@ -39,7 +39,7 @@ afterEach(async () => {
 
 describe("GuestUser Controllers", () => {
   it("POST /signup should create a user", async () => {
-    const res = await request(app).post("/api/users/signup").send({
+    const res = await request(app).post("/api/auth/guest/signup").send({
       name: "Charlie",
       username: "charlie123",
       portfolioType: "photographer",
@@ -53,7 +53,7 @@ describe("GuestUser Controllers", () => {
   });
 
   it("POST /login should login a user", async () => {
-    await request(app).post("/api/users/signup").send({
+    await request(app).post("/api/auth/guest/signup").send({
       name: "Charlie",
       username: "charlie123",
       portfolioType: "photographer",
@@ -63,7 +63,7 @@ describe("GuestUser Controllers", () => {
 
     });
 
-    const res = await request(app).post("/api/users/login").send({
+    const res = await request(app).post("/api/auth/guest/login").send({
       email: "charlie@test.com",
       password: "password123",
       portfolioType: "photographer",
@@ -76,7 +76,7 @@ describe("GuestUser Controllers", () => {
   });
 it("PATCH /editProfile should update user info", async () => {
     // Create user
-    await request(app).post("/api/users/signup").send({
+    await request(app).post("/api/auth/guest/signup").send({
       name: "Charlie",
       username: "charlie123",
       portfolioType: "photographer",
@@ -86,7 +86,7 @@ it("PATCH /editProfile should update user info", async () => {
     });
 
     // Login to get token
-    const loginRes = await request(app).post("/api/users/login").send({
+    const loginRes = await request(app).post("/api/auth/guest/login").send({
       email: "charlie@test.com",
       password: "password123",
       portfolioType: "photographer",
@@ -96,7 +96,7 @@ it("PATCH /editProfile should update user info", async () => {
 
     // Update user - CHANGED TO PATCH AND /editProfile
     const res = await request(app)
-      .patch("/api/users/editProfile")
+      .patch("/api/auth/guest/profile")
       .set("Authorization", `Bearer ${token}`)
       .send({
         name: "Charlie Updated",
@@ -109,7 +109,7 @@ it("PATCH /editProfile should update user info", async () => {
 
   it("DELETE /deleteProfile should delete a user", async () => {
     // Create user
-    await request(app).post("/api/users/signup").send({
+    await request(app).post("/api/auth/guest/signup").send({
       name: "Charlie",
       username: "charlie123",
       portfolioType: "photographer",
@@ -119,7 +119,7 @@ it("PATCH /editProfile should update user info", async () => {
     });
 
     // Login to get token
-    const loginRes = await request(app).post("/api/users/login").send({
+    const loginRes = await request(app).post("/api/auth/guest/login").send({
       email: "charlie@test.com",
       password: "password123",
       portfolioType: "photographer",
@@ -129,14 +129,14 @@ it("PATCH /editProfile should update user info", async () => {
 
     // Delete user - CHANGED TO /deleteProfile
     const res = await request(app)
-      .delete("/api/users/deleteProfile")
+      .delete("/api/auth/guest/profile")
       .set("Authorization", `Bearer ${token}`);
 
     expect(res.statusCode).toBe(200);
     expect(res.body.message).toBe("User deleted successfully");
   });
   it("POST /signup should fail with missing fields", async () => {
-  const res = await request(app).post("/api/users/signup").send({
+  const res = await request(app).post("/api/auth/guest/signup").send({
     email: "test@test.com",
     // Missing password, portfolioType, portfolioId
   });
@@ -156,17 +156,17 @@ it("POST /signup should fail with duplicate user", async () => {
   };
 
   // Create user first time
-  await request(app).post("/api/users/signup").send(userData);
+  await request(app).post("/api/auth/guest/signup").send(userData);
 
   // Try to create again - should fail
-  const res = await request(app).post("/api/users/signup").send(userData);
+  const res = await request(app).post("/api/auth/guest/signup").send(userData);
 
   expect(res.statusCode).toBe(400);
   expect(res.body.message).toContain("already exists");
 });
 
 it("POST /login should fail with wrong password", async () => {
-  await request(app).post("/api/users/signup").send({
+  await request(app).post("/api/auth/guest/signup").send({
     name: "Charlie",
     username: "charlie123",
     portfolioType: "photographer",
@@ -175,7 +175,7 @@ it("POST /login should fail with wrong password", async () => {
     portfolioId: "test-portfolio-123",
   });
 
-  const res = await request(app).post("/api/users/login").send({
+  const res = await request(app).post("/api/auth/guest/login").send({
     email: "charlie@test.com",
     password: "wrongpassword",
     portfolioType: "photographer",
@@ -186,7 +186,7 @@ it("POST /login should fail with wrong password", async () => {
 });
 
 it("POST /login should fail for non-existent user", async () => {
-  const res = await request(app).post("/api/users/login").send({
+  const res = await request(app).post("/api/auth/guest/login").send({
     email: "notexist@test.com",
     password: "password123",
     portfolioType: "photographer",

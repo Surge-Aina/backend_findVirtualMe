@@ -27,7 +27,7 @@ const express = require("express");
 // Build a minimal app with ONLY the domainPayment router
 const app = express();
 app.use(express.json());
-app.use("/api/domainPayment", require("../stripe/stripe.route"));
+app.use("/api/payments", require("../stripe/stripe.route"));
 
 
 const namecheap = require("../services/namecheapProxy.service");
@@ -70,14 +70,14 @@ const mockDomainUnavailableResponse = {
 // -------------------------------------------------------
 // PRICE CHECK TESTS
 // -------------------------------------------------------
-describe("GET /api/domainPayment/pricecheck/:domain", () => {
+describe("GET /api/payments/domain-pricecheck/:domain", () => {
   beforeEach(() => jest.clearAllMocks());
 
   test("returns price for an available .com domain", async () => {
     namecheap.checkDomain.mockResolvedValue(mockDomainAvailableResponse);
     namecheap.getPricing.mockResolvedValue(mockPricingResponse);
 
-    const res = await request(app).get("/api/domainPayment/pricecheck/example.com");
+    const res = await request(app).get("/api/payments/domain-pricecheck/example.com");
 
     expect(res.status).toBe(200);
     expect(res.body.available).toBe(true);
@@ -88,7 +88,7 @@ describe("GET /api/domainPayment/pricecheck/:domain", () => {
   test("returns unavailable for a taken domain", async () => {
     namecheap.checkDomain.mockResolvedValue(mockDomainUnavailableResponse);
 
-    const res = await request(app).get("/api/domainPayment/pricecheck/taken.com");
+    const res = await request(app).get("/api/payments/domain-pricecheck/taken.com");
 
     expect(res.status).toBe(200);
     expect(res.body.available).toBe(false);
@@ -108,7 +108,7 @@ describe("GET /api/domainPayment/pricecheck/:domain", () => {
       },
     });
 
-    const res = await request(app).get("/api/domainPayment/pricecheck/premium.com");
+    const res = await request(app).get("/api/payments/domain-pricecheck/premium.com");
 
     expect(res.status).toBe(200);
     expect(res.body.isPremium).toBe(true);
@@ -118,7 +118,7 @@ describe("GET /api/domainPayment/pricecheck/:domain", () => {
   test("returns 500 if namecheap throws", async () => {
     namecheap.checkDomain.mockRejectedValue(new Error("Namecheap down"));
 
-    const res = await request(app).get("/api/domainPayment/pricecheck/error.com");
+    const res = await request(app).get("/api/payments/domain-pricecheck/error.com");
 
     expect(res.status).toBe(500);
     expect(res.body.error).toBe("Namecheap down");

@@ -8,13 +8,10 @@ const {
 
 const auth = require("../../../shared/middleware/auth");
 
-// Update the user's portfolios array
-router.patch("/updateUserPortfolios", auth, updateUserPortfolios);
+router.patch("/", auth, updateUserPortfolios);
 
-// Get portfolio documents from a list
-router.post("/getPortfoliosByList", auth, getPortfoliosByList);
+router.post("/by-list", auth, getPortfoliosByList);
 
-// Update portfolios array for all users (no auth required)
-router.patch("/updateAllUsersPortfolios", updateAllUsersPortfolios);
+router.patch("/sync-all", updateAllUsersPortfolios);
 
 module.exports = router;

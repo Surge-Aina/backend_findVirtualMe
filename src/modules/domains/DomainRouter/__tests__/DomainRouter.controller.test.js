@@ -20,16 +20,16 @@ const { addDomainToUser } = require("../../domain.service");
 
 const app = express();
 app.use(express.json());
-app.use("/domainRouter", require("../DomainRouter.routes"));
+app.use("/api/domains/router", require("../DomainRouter.routes"));
 
 beforeEach(() => jest.clearAllMocks());
 
-describe("POST /domainRouter", () => {
+describe("POST /api/domains/router", () => {
   test("creates a domain mapping and returns 201", async () => {
     createDomainMapping.mockResolvedValue({ domain: "example.com" });
 
     const res = await request(app)
-      .post("/domainRouter")
+      .post("/api/domains/router")
       .send({ domain: "example.com" });
 
     expect(res.status).toBe(201);
@@ -42,14 +42,14 @@ describe("POST /domainRouter", () => {
     createDomainMapping.mockRejectedValue(err);
 
     const res = await request(app)
-      .post("/domainRouter")
+      .post("/api/domains/router")
       .send({ domain: "example.com" });
 
     expect(res.status).toBe(409);
   });
 });
 
-describe("GET /domainRouter", () => {
+describe("GET /api/domains/router", () => {
   test("returns user domain routes", async () => {
     DomainRoute.find.mockReturnValue({
       sort: jest.fn().mockReturnValue({
@@ -57,18 +57,18 @@ describe("GET /domainRouter", () => {
       }),
     });
 
-    const res = await request(app).get("/domainRouter");
+    const res = await request(app).get("/api/domains/router");
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
   });
 });
 
-describe("DELETE /domainRouter/:id", () => {
+describe("DELETE /api/domains/router/:id", () => {
   test("returns 404 if mapping not found", async () => {
     DomainRoute.findById.mockResolvedValue(null);
 
-    const res = await request(app).delete("/domainRouter/abc123");
+    const res = await request(app).delete("/api/domains/router/abc123");
     expect(res.status).toBe(404);
   });
 
@@ -77,7 +77,7 @@ describe("DELETE /domainRouter/:id", () => {
       userId: { equals: jest.fn().mockReturnValue(false) },
     });
 
-    const res = await request(app).delete("/domainRouter/abc123");
+    const res = await request(app).delete("/api/domains/router/abc123");
     expect(res.status).toBe(403);
   });
 
@@ -87,13 +87,13 @@ describe("DELETE /domainRouter/:id", () => {
       deleteOne: jest.fn().mockResolvedValue({}),
     });
 
-    const res = await request(app).delete("/domainRouter/abc123");
+    const res = await request(app).delete("/api/domains/router/abc123");
     expect(res.status).toBe(200);
     expect(res.body.message).toBe("Mapping deleted");
   });
 });
 
-describe("GET /domainRouter/domainLookup", () => {
+describe("GET /api/domains/router/lookup", () => {
   test("returns portfolioId and type for known domain", async () => {
     DomainRoute.findOne.mockReturnValue({
       lean: jest.fn().mockResolvedValue({
@@ -102,7 +102,7 @@ describe("GET /domainRouter/domainLookup", () => {
       }),
     });
 
-    const res = await request(app).get("/domainRouter/domainLookup?domain=example.com");
+    const res = await request(app).get("/api/domains/router/lookup?domain=example.com");
     expect(res.status).toBe(200);
     expect(res.body.portfolioType).toBe("photographer");
   });
@@ -112,7 +112,7 @@ describe("GET /domainRouter/domainLookup", () => {
       lean: jest.fn().mockResolvedValue(null),
     });
 
-    const res = await request(app).get("/domainRouter/domainLookup?domain=unknown.com");
+    const res = await request(app).get("/api/domains/router/lookup?domain=unknown.com");
     expect(res.status).toBe(404);
   });
 });

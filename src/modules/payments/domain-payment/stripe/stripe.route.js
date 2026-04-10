@@ -4,11 +4,9 @@ const auth = require("../../../../shared/middleware/auth");
 
 const stripeController = require("./stripe.controller");
 
-// 1. Endpoint for the frontend to initiate a payment session
-// POST /api/domainPayment/checkout
-router.post("/checkout", auth, stripeController.createCheckoutSession);
+// POST /api/payments/domain-checkout
+router.post("/domain-checkout", auth, stripeController.createCheckoutSession);
 
-// New Route for Price/Availability Check
-router.get("/pricecheck/:domain", stripeController.checkPriceAndAvailability);
+router.get("/domain-pricecheck/:domain", stripeController.checkPriceAndAvailability);
 
 module.exports = router;

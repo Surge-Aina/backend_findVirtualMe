@@ -4,7 +4,7 @@ const { getAllUsers, editUser } = require("./guestAdminPanel.controller");
 
 const router = express.Router();
 
-router.get("/getAllUsers", getAllUsers);
-router.put("/editUser/:id", editUser);
+router.get("/users", getAllUsers);
+router.put("/users/:id", editUser);
 
 module.exports = router;
