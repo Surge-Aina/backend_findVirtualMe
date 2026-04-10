@@ -47,13 +47,6 @@ function mountModules(app) {
     });
   });
 
-  app.get("/test-route", (req, res) => {
-    res.json({
-      message: "Test route is working!",
-      timestamp: new Date().toISOString(),
-    });
-  });
-
   app.use("/api/payments/checkout", auth, checkoutRoutes);
   app.use("/api/payments/subscriptions", auth, roleCheck(["admin"]), subscriptionRoutes);
   app.use("/api/users", userRoutes);

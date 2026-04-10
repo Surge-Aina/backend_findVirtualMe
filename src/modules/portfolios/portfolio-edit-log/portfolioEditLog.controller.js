@@ -2,7 +2,7 @@ const PortfolioEditLog = require("../../../shared/models/portfolioLogs/Portfolio
 
 /**
  * Create a new portfolio edit log entry
- * @route   POST /api/portfolio-edit-log
+ * @route   POST /api/portfolios/edit-log
  * @access  Public (can be made private with auth middleware if needed)
  */
 exports.createLog = async (req, res) => {
@@ -57,7 +57,7 @@ exports.createLog = async (req, res) => {
 
 /**
  * Get portfolio edit logs by user ID
- * @route   GET /api/portfolio-edit-log/user/:userId
+ * @route   GET /api/portfolios/edit-log/user/:userId
  * @access  Private (should add auth middleware)
  */
 exports.getLogsByUserId = async (req, res) => {
@@ -81,7 +81,7 @@ exports.getLogsByUserId = async (req, res) => {
 
 /**
  * Get portfolio edit logs by portfolio ID
- * @route   GET /api/portfolio-edit-log/portfolio/:portfolioID
+ * @route   GET /api/portfolios/edit-log/portfolio/:portfolioID
  * @access  Private (should add auth middleware)
  */
 exports.getLogsByPortfolioId = async (req, res) => {
@@ -105,7 +105,7 @@ exports.getLogsByPortfolioId = async (req, res) => {
 
 /**
  * Get portfolio edit logs by session ID
- * @route   GET /api/portfolio-edit-log/session/:sessionId
+ * @route   GET /api/portfolios/edit-log/session/:sessionId
  * @access  Private (should add auth middleware)
  */
 exports.getLogsBySessionId = async (req, res) => {
@@ -129,7 +129,7 @@ exports.getLogsBySessionId = async (req, res) => {
 
 /**
  * Get all portfolio edit logs (with pagination)
- * @route   GET /api/portfolio-edit-log
+ * @route   GET /api/portfolios/edit-log
  * @access  Private (should add auth middleware, typically admin only)
  */
 exports.getAllLogs = async (req, res) => {
