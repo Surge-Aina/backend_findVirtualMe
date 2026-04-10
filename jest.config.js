@@ -3,21 +3,21 @@ module.exports = {
   setupFilesAfterEnv: ["<rootDir>/setup.js"],
   testMatch: [
     "<rootDir>/tests/**/*.test.js",
-    "<rootDir>/**/__tests__/**/*.test.js", // <- include nested __tests__
-    "**/test/**/*.test.js",
+    "<rootDir>/**/__tests__/**/*.test.js",
+  ],
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    "<rootDir>/src/modules/social-links/__tests__/",
   ],
   transformIgnorePatterns: [
     "/node_modules/(?!(@vercel/sdk|uuid)/)",
   ],
   collectCoverageFrom: [
+    "src/**/*.js",
     "routes/**/*.js",
-    "models/**/*.js",
-    "controllers/**/*.js",
     "!**/node_modules/**",
-    "services/**/*.js",
     "!**/coverage/**",
-    "**/*.js",
-    "!**/node_modules/**",
+    "!**/__tests__/**",
     "!**/test/**",
   ],
   coverageDirectory: "coverage",
