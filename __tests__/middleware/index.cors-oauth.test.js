@@ -58,13 +58,13 @@ jest.mock('../../src/legacy/handyman/routes/handymanInquiryRoutes', () => mockPa
 jest.mock('../../src/legacy/local-vendor/routes/localVendorRoutes', () => mockPassThrough);
 jest.mock('../../src/modules/payments/subscriptions.routes', () => mockPassThrough);
 jest.mock('../../src/modules/payments/stripe-webhook.routes', () => mockPassThrough);
-jest.mock('../../routes/supportFormRoutes', () => mockPassThrough);
+jest.mock('../../src/modules/support/support.routes', () => mockPassThrough);
 jest.mock('../../src/modules/domains/domains.routes', () => mockPassThrough);
-jest.mock('../../routes/telemetry', () => mockPassThrough);
+jest.mock('../../src/modules/telemetry/telemetry.routes', () => mockPassThrough);
 
 jest.mock('../../src/modules/portfolios/publicPortfolios/publicPortfolios.routes', () => mockPassThrough);
 jest.mock('../../src/modules/portfolios/userPortfoliosArray/userPortfoliosArray.routes.js', () => mockPassThrough);
-jest.mock('../../microservices/S3Upload/S3Upload.routes.js', () => mockPassThrough);
+jest.mock('../../src/modules/media/S3Upload.routes.js', () => mockPassThrough);
 jest.mock('../../src/modules/payments/domain-payment/stripe/stripe.route', () => mockPassThrough);
 
 jest.mock('../../src/shared/models/User', () => {

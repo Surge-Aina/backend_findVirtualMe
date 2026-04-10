@@ -5,23 +5,23 @@ const userRoutes = require("../routes/userRoute");
 const checkoutRoutes = require("./modules/payments/checkout.routes");
 const subscriptionRoutes = require("./modules/payments/subscriptions.routes");
 const stripeWebhookRoutes = require("./modules/payments/stripe-webhook.routes");
-const supportFormRoutes = require("../routes/supportFormRoutes");
+const supportFormRoutes = require("./modules/support/support.routes");
 const roleCheck = require("./shared/middleware/roleCheck");
 const auth = require("./shared/middleware/auth");
 const domainRoutes = require("./modules/domains/domains.routes");
-const telemetryRoutes = require("../routes/telemetry");
+const telemetryRoutes = require("./modules/telemetry/telemetry.routes");
 const guestUserRoutes = require("./modules/auth/guestLogin/guestUser.routes");
 const portfolioEditLogRoutes = require("./modules/portfolios/portfolio-edit-log.routes");
 const guestAdminPanelRoutes = require("./modules/auth/guestAdminPanel/guestAdminPanel.routes");
-const socialLinksRoutes = require("../microservices/socialLinks/socialLinks.routes");
+const socialLinksRoutes = require("./modules/social-links/socialLinks.routes");
 const userPortfoliosArrayRoutes = require("./modules/portfolios/userPortfoliosArray/userPortfoliosArray.routes.js");
 const publicPortfoliosRoutes = require("./modules/portfolios/publicPortfolios/publicPortfolios.routes");
 const domainPaymentRouter = require("./modules/payments/domain-payment/stripe/stripe.route");
-const emailMvpRoutes = require("../microservices/emailmvp/emailmvp.routes");
+const emailMvpRoutes = require("./modules/emailmvp/emailmvp.routes");
 const googleLoginRoutes = require("./modules/auth/googleLogin/googleLogin.routes.js");
-const contactMeRoutes = require("../microservices/contactMeForm/contactMeForm.routes.js");
+const contactMeRoutes = require("./modules/contact/contactMeForm.routes.js");
 const domainRouterRoutes = require("./modules/domains/DomainRouter/DomainRouter.routes.js");
-const s3UploadRoutes = require("../microservices/S3Upload/S3Upload.routes.js");
+const s3UploadRoutes = require("./modules/media/S3Upload.routes.js");
 const passwordResetRoutes = require("./modules/auth/passwordReset/passwordReset.routes");
 
 const config = require("./shared/config/app.config.js");
@@ -118,7 +118,7 @@ app.get("/health", (_req, res) =>
 app.use("/healthcare", healthcareRoutes);
 app.use("/api/telemetry", telemetryRoutes);
 
-//microservices
+// Smaller feature modules (B5)
 app.use("/guestUser", guestUserRoutes);
 app.use("/guestAdminPanel", guestAdminPanelRoutes);
 app.use("/social-links", socialLinksRoutes);
@@ -130,15 +130,15 @@ app.use("/contactMe", contactMeRoutes);
 app.use("/domainRouter", domainRouterRoutes);
 app.use("/s3-upload-url", s3UploadRoutes);
 app.use("/api/portfolios", require("./modules/portfolios/portfolio.routes"));
-app.use("/vouchers", require("../microservices/vouchers/voucher.routes.js"));
-app.use("/qrCode", require("../microservices/qrCode/qrCode.routes.js"));
+app.use("/vouchers", require("./modules/vouchers/voucher.routes.js"));
+app.use("/qrCode", require("./modules/qr-code/qrCode.routes.js"));
 app.use(
   "/privacy-policy",
-  require("../microservices/privacyPolicy/privacyPolicy.routes"),
+  require("./modules/privacy-policy/privacyPolicy.routes"),
 );
 app.use(
   "/terms-of-service",
-  require("../microservices/termsOfService/termsOfService.routes"),
+  require("./modules/terms-of-service/termsOfService.routes"),
 );
 app.use("/user", passwordResetRoutes);
 

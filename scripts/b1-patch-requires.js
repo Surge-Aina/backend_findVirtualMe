@@ -68,7 +68,7 @@ function patchContent(rel, content) {
     c = c.replace('require("./utils/db")', 'require("./shared/utils/db")');
     c = c.replace(
       'require("./microservices/S3Upload/gcOrphanImages")',
-      'require("../microservices/S3Upload/gcOrphanImages")',
+      'require("./modules/media/gcOrphanImages")',
     );
   }
 

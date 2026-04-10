@@ -4,9 +4,9 @@ const router = express.Router();
 const { PutObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const uuid = require("uuid").v4;
-const auth = require("../../src/shared/middleware/auth");
-const { assertPortfolioOwner } = require("../../src/modules/portfolios/portfolio.service");
-const { s3, deleteFromS3, keyFromPublicUrl } = require("../../src/shared/services/s3Service");
+const auth = require("../../shared/middleware/auth");
+const { assertPortfolioOwner } = require("../portfolios/portfolio.service");
+const { s3, deleteFromS3, keyFromPublicUrl } = require("../../shared/services/s3Service");
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 

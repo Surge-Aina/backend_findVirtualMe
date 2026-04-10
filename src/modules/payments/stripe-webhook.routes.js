@@ -4,7 +4,7 @@ const Stripe = require("stripe");
 const Subscription = require("../../shared/models/Subscriptions");
 const User = require("../../shared/models/User");
 const stripeController = require("./domain-payment/stripe/stripe.controller");
-const voucherService = require("../../../microservices/vouchers/voucher.service");
+const voucherService = require("../vouchers/voucher.service");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"

@@ -1,5 +1,5 @@
-const { applyDomainVoucher } = require("../../../../../microservices/vouchers/voucher.service");
-const { redeemVoucher } = require("../../../../../microservices/vouchers/voucher.service");
+const { applyDomainVoucher } = require("../../../vouchers/voucher.service");
+const { redeemVoucher } = require("../../../vouchers/voucher.service");
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
     ? process.env.STRIPE_SECRET_KEY_LIVE

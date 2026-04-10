@@ -5,7 +5,7 @@ if (process.env.DNS_FIX === 'true') {
 }
 const connectDB = require("./shared/utils/db");
 const app = require("./index");
-const { startOrphanImageGcCron } = require("../microservices/S3Upload/gcOrphanImages");
+const { startOrphanImageGcCron } = require("./modules/media/gcOrphanImages");
 
 const PORT = process.env.PORT;
 connectDB()

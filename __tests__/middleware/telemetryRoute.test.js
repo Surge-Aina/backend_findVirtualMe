@@ -1,36 +1,28 @@
 const express = require("express");
 const request = require("supertest");
 const mongoose = require("mongoose");
-const { MongoMemoryServer } = require("mongodb-memory-server");
 
-// Model + router under test
 const LocationPing = require("../../src/shared/models/LocationPing");
-const telemetryRouter = require("../../routes/telemetry");
+const telemetryRouter = require("../../src/modules/telemetry/telemetry.routes");
 
-// Mock geoip-lite so we can control lookup() return values
 jest.mock("geoip-lite", () => ({
   lookup: jest.fn(),
 }));
 const geoip = require("geoip-lite");
 
-let mongoServer;
 let app;
 
 beforeAll(async () => {
-  // Spin up in-memory MongoDB
-  mongoServer = await MongoMemoryServer.create();
-  await mongoose.connect(mongoServer.getUri());
+  if (mongoose.connection.readyState === 0) {
+    const { MongoMemoryServer } = require("mongodb-memory-server");
+    const mongoServer = await MongoMemoryServer.create();
+    await mongoose.connect(mongoServer.getUri());
+  }
 
-  // Mount express app
   app = express();
   app.set("trust proxy", true);
   app.use(express.json());
   app.use("/api/telemetry", telemetryRouter);
-});
-
-afterAll(async () => {
-  await mongoose.disconnect();
-  await mongoServer.stop();
 });
 
 beforeEach(async () => {

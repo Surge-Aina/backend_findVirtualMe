@@ -1,96 +1,84 @@
-const SupportForm = require("../src/shared/models/supportForm/SupportForm");
-const { sendSupportFormEmails } = require('../src/shared/services/emailService');
-// Create support form
+const SupportForm = require("../../shared/models/supportForm/SupportForm");
+const { sendSupportFormEmails } = require("../../shared/services/emailService");
+
 exports.createSupportForm = async (req, res) => {
   try {
-    
     const sf = new SupportForm(req.body);
     await sf.save();
 
-    //seeding info
-    //await seedVendor(vendor._id);
-
     res.status(201).json(sf);
-  } catch (err) {
-    console.log(err)
-    res.status(400).json({ error: "Failed to create support form" });
-  }
-};
-// NEW function - just for frontend support form with emails
-exports.submitSupportFormWithEmail = async (req, res) => {
-  try {
-    console.log('🔵 Support form with email submitted');
-    console.log('📥 Request body:', req.body);
-    
-    const { name, email, phone, requestType, portfolioId, message } = req.body;
-    
-    // Validation
-    if (!name || !email || !requestType || !message) {
-      return res.status(400).json({ 
-        error: 'Name, email, request type, and message are required' 
-      });
-    }
-    
-    // Determine user status
-    let userStatus = 'Guest User';
-    let userId = null;
-    
-    if (req.user) {
-      userStatus = 'Logged In User';
-      userId = req.user.id;
-    }
-    
-    // Save to database
-    const sf = new SupportForm({
-      ...req.body,
-      userStatus,
-      userId
-    });
-    
-    await sf.save();
-    
-    console.log('✅ Support request saved');
-    console.log('📝 Ticket ID:', sf.ticketID);
-    
-    // Prepare email data
-    const formData = {
-      name: sf.name,
-      email: sf.email,
-      phone: sf.phone || '',
-      requestType: sf.requestType,
-      portfolioId: sf.portfolioId || 'Not specified',
-      message: sf.message,
-      userStatus
-    };
-    
-    // Send emails (non-blocking)
-    sendSupportFormEmails(formData)
-      .then(() => {
-        console.log('✅ Support emails sent successfully');
-      })
-      .catch((error) => {
-        console.error('❌ Error sending support emails:', error.message);
-      });
-    
-    // Respond
-    res.status(201).json(sf);
-    
   } catch (err) {
     console.log(err);
     res.status(400).json({ error: "Failed to create support form" });
   }
 };
+
+exports.submitSupportFormWithEmail = async (req, res) => {
+  try {
+    console.log("🔵 Support form with email submitted");
+    console.log("📥 Request body:", req.body);
+
+    const { name, email, phone, requestType, portfolioId, message } = req.body;
+
+    if (!name || !email || !requestType || !message) {
+      return res.status(400).json({
+        error: "Name, email, request type, and message are required",
+      });
+    }
+
+    let userStatus = "Guest User";
+    let userId = null;
+
+    if (req.user) {
+      userStatus = "Logged In User";
+      userId = req.user.id;
+    }
+
+    const sf = new SupportForm({
+      ...req.body,
+      userStatus,
+      userId,
+    });
+
+    await sf.save();
+
+    console.log("✅ Support request saved");
+    console.log("📝 Ticket ID:", sf.ticketID);
+
+    const formData = {
+      name: sf.name,
+      email: sf.email,
+      phone: sf.phone || "",
+      requestType: sf.requestType,
+      portfolioId: sf.portfolioId || "Not specified",
+      message: sf.message,
+      userStatus,
+    };
+
+    sendSupportFormEmails(formData)
+      .then(() => {
+        console.log("✅ Support emails sent successfully");
+      })
+      .catch((error) => {
+        console.error("❌ Error sending support emails:", error.message);
+      });
+
+    res.status(201).json(sf);
+  } catch (err) {
+    console.log(err);
+    res.status(400).json({ error: "Failed to create support form" });
+  }
+};
+
 exports.getTickets = async (req, res) => {
   try {
     const items = await SupportForm.find();
     res.json(items);
-    //console.log(items);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching tickets' });
+    res.status(500).json({ message: "Error fetching tickets" });
   }
 };
 
-// update status
 exports.updateSupportFormStatus = async (req, res) => {
   try {
     const { ticketID } = req.params;
@@ -109,9 +97,9 @@ exports.updateSupportFormStatus = async (req, res) => {
     }
 
     const doc = await SupportForm.findOneAndUpdate(
-      { ticketID },           
+      { ticketID },
       { $set: update },
-      { new: true, runValidators: true } 
+      { new: true, runValidators: true },
     );
 
     if (!doc) {
@@ -127,7 +115,7 @@ exports.updateSupportFormStatus = async (req, res) => {
 exports.deleteTicket = async (req, res) => {
   try {
     const { ticketID } = req.params;
-    const doc = await SupportForm.findOneAndDelete({ ticketID }); 
+    const doc = await SupportForm.findOneAndDelete({ ticketID });
     if (!doc) return res.status(404).json({ error: "Ticket not found" });
     return res.json({ ok: true, deleted: ticketID });
   } catch (err) {
@@ -148,7 +136,7 @@ exports.addReply = async (req, res) => {
     const doc = await SupportForm.findOneAndUpdate(
       { ticketID },
       { $push: { replies: message.trim() } },
-      { new: true }
+      { new: true },
     );
 
     if (!doc) return res.status(404).json({ error: "Ticket not found" });

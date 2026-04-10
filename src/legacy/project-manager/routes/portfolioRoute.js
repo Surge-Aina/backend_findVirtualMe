@@ -16,7 +16,7 @@ const {
 } = require("../controllers/portfolioController");
 const {
   submitContact,
-} = require("../../../../microservices/contactMeForm/contactMeForm.controller");
+} = require("../../../modules/contact/contactMeForm.controller");
 const auth = require("../../../shared/middleware/auth");
 
 const upload = multer({ storage: multer.memoryStorage() });

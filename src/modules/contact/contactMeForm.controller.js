@@ -1,7 +1,7 @@
 // contactMeForm.service.js
 // const ProjectManagerContact = require("../../models/projectManager/ProjectManagerContact");
 // const Portfolio = require("../../models/projectManager/portfolioModel");
-const { sendGenericContactEmails } = require("../../src/shared/services/emailService");
+const { sendGenericContactEmails } = require("../../shared/services/emailService");
 const contactMeFormDB = require("./contactMeForm.model");
 
 exports.submitContact = async (req, res) => {
