@@ -12,6 +12,12 @@ jest.mock('../vercel.service', () => ({
   getDomainStatus: jest.fn(),
   getDomainConfig: jest.fn(),
 }));
+jest.mock('../DomainRouter/DomainRouter.service', () => ({
+  createDomainMapping: jest.fn().mockResolvedValue({ domain: 'example.com' }),
+}));
+jest.mock('../DomainRouter/DomainRouter.model', () => ({
+  deleteOne: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+}));
 jest.mock('../../../shared/models/User');
 
 const mockParseString = jest.fn();
@@ -312,13 +318,20 @@ describe('verifyDNS', () => {
   describe('configureCustomDomain', () => {
     it('should successfully configure custom domain', async () => {
       vercelService.addDomain.mockResolvedValue({
-        success: true,
-        domain: 'example.com',
+        domains: [
+          {
+            domain: 'example.com',
+            verified: false,
+            verification: [{ type: 'CNAME', value: 'cname.vercel-dns.com' }],
+          },
+          {
+            domain: 'www.example.com',
+            verified: false,
+            verification: [],
+          },
+        ],
         verified: false,
-        verification: {
-          type: 'CNAME',
-          value: 'cname.vercel-dns.com',
-        },
+        verification: [{ type: 'CNAME', value: 'cname.vercel-dns.com' }],
       });
 
       User.findByIdAndUpdate.mockResolvedValue({});
@@ -330,11 +343,7 @@ describe('verifyDNS', () => {
 
       await domainService.configureCustomDomain(mockReq, mockRes);
 
-      expect(vercelService.addDomain).toHaveBeenCalledWith(
-        'example.com',
-        'user123',
-        'portfolio123'
-      );
+      expect(vercelService.addDomain).toHaveBeenCalledWith('example.com');
 
       expect(User.findByIdAndUpdate).toHaveBeenCalledWith(
         'user123',
@@ -362,15 +371,15 @@ describe('verifyDNS', () => {
       );
     });
 
-    it('should return error when domain or portfolioId missing', async () => {
-      mockReq.body = { domain: 'example.com' }; // missing portfolioId
+    it('should return error when domain is missing', async () => {
+      mockReq.body = { portfolioId: 'portfolio123' };
 
       await domainService.configureCustomDomain(mockReq, mockRes);
 
       expect(vercelService.addDomain).not.toHaveBeenCalled();
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({
-        error: 'Domain and portfolioId are required',
+        error: 'Domain is required',
       });
     });
 
@@ -458,14 +467,14 @@ describe('verifyDNS', () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
     });
 
-    it('should return error when required fields missing', async () => {
-      mockReq.body = { domain: 'example.com' }; // missing portfolioId
+    it('should return error when domain is missing', async () => {
+      mockReq.body = { portfolioId: 'portfolio123' };
 
       await domainService.registerDomain(mockReq, mockRes);
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({
-        error: 'Domain and portfolioId are required',
+        error: 'Domain is required',
       });
     });
 

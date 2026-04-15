@@ -132,7 +132,7 @@ jest.mock("pdf-lib", () => ({
   PDFDocument: { load: jest.fn(async () => ({ getTitle: () => "Mock" })) },
 }));
 
-jest.mock("pdfjs-dist/legacy/build/pdf.js", () => ({
+jest.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
   getDocument: jest.fn(() => ({
     promise: Promise.resolve({
       numPages: 1,
@@ -194,9 +194,8 @@ describe("Local Vendor Portfolio API", () => {
       expect(seedVendor).toHaveBeenCalledTimes(1);
       expect(seedVendor).toHaveBeenCalledWith(expect.any(String));
 
-      expect(User.findByIdAndUpdate).toHaveBeenCalledWith("mockUserId", {
-        $addToSet: { portfolios: expect.any(String) },
-      });
+      // User portfolio linking is commented out in createVendor (see localVendorController.js)
+      expect(User.findByIdAndUpdate).not.toHaveBeenCalled();
     });
 
     it("should return 400 if vendor save fails", async () => {

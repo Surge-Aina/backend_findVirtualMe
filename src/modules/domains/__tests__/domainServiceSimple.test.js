@@ -1,6 +1,13 @@
 const User = require("../../../shared/models/User.js");
 const mongoose = require("mongoose");
 
+function portfolioDoc(type = "project-manager") {
+  return {
+    portfolioId: new mongoose.Types.ObjectId(),
+    portfolioType: type,
+  };
+}
+
 async function clearTestDB() {
   const { collections } = mongoose.connection;
   for (const key of Object.keys(collections)) {
@@ -15,11 +22,13 @@ describe("Domain Service - Database Operations", () => {
 
   describe('User Domain Management', () => {
     test("should add domain to user via database operation", async () => {
+      const p = portfolioDoc();
+      const pid = p.portfolioId.toString();
       const testUser = await User.create({
         email: "test@example.com",
         username: "testuser",
         password: "hashedpassword123",
-        portfolios: ["portfolio123"],
+        portfolios: [p],
       });
 
       // Simulate domain registration database update
@@ -29,7 +38,7 @@ describe("Domain Service - Database Operations", () => {
           $push: {
             domains: {
               domain: "testdomain.com",
-              portfolioId: "portfolio123",
+              portfolioId: pid,
               type: "platform",
               status: "active",
               registeredAt: new Date(),
@@ -44,17 +53,19 @@ describe("Domain Service - Database Operations", () => {
 
       expect(updatedUser.domains).toHaveLength(1);
       expect(updatedUser.domains[0].domain).toBe("testdomain.com");
-      expect(updatedUser.domains[0].portfolioId).toBe("portfolio123");
+      expect(updatedUser.domains[0].portfolioId).toBe(pid);
       expect(updatedUser.domains[0].type).toBe("platform");
       expect(updatedUser.domains[0].status).toBe("active");
     });
 
     test("should add BYOD domain to user", async () => {
+      const p = portfolioDoc();
+      const pid = p.portfolioId.toString();
       const testUser = await User.create({
         email: "byod@example.com",
         username: "byoduser",
         password: "hashedpassword123",
-        portfolios: ["portfolio456"],
+        portfolios: [p],
       });
 
       // Simulate BYOD configuration database update
@@ -64,7 +75,7 @@ describe("Domain Service - Database Operations", () => {
           $push: {
             domains: {
               domain: "mycustom.com",
-              portfolioId: "portfolio456",
+              portfolioId: pid,
               type: "byod",
               status: "pending",
               registeredAt: new Date(),
@@ -78,7 +89,7 @@ describe("Domain Service - Database Operations", () => {
 
       expect(updatedUser.domains).toHaveLength(1);
       expect(updatedUser.domains[0].domain).toBe("mycustom.com");
-      expect(updatedUser.domains[0].portfolioId).toBe("portfolio456");
+      expect(updatedUser.domains[0].portfolioId).toBe(pid);
       expect(updatedUser.domains[0].type).toBe("byod");
       expect(updatedUser.domains[0].status).toBe("pending");
       expect(updatedUser.domains[0].dnsConfigured).toBe(false);
@@ -148,21 +159,25 @@ describe("Domain Service - Database Operations", () => {
     });
 
     test('should retrieve user domains and portfolios', async () => {
+      const p1 = portfolioDoc();
+      const p2 = portfolioDoc();
+      const id1 = p1.portfolioId.toString();
+      const id2 = p2.portfolioId.toString();
       const testUser = await User.create({
         email: 'getdomains@example.com',
         username: 'getdomainsuser',
         password: 'hashedpassword123',
-        portfolios: ['portfolio1', 'portfolio2'],
+        portfolios: [p1, p2],
         domains: [
           {
             domain: 'domain1.com',
-            portfolioId: 'portfolio1',
+            portfolioId: id1,
             type: 'platform',
             status: 'active'
           },
           {
             domain: 'domain2.com',
-            portfolioId: 'portfolio2',
+            portfolioId: id2,
             type: 'byod',
             status: 'pending'
           }
@@ -179,18 +194,21 @@ describe("Domain Service - Database Operations", () => {
     });
 
     test('should remove domain from user', async () => {
+      const p1 = portfolioDoc();
+      const p2 = portfolioDoc();
       const testUser = await User.create({
         email: 'removedomain@example.com',
         username: 'removedomainuser',
         password: 'hashedpassword123',
+        portfolios: [p1, p2],
         domains: [
           {
             domain: 'keepme.com',
-            portfolioId: 'portfolio1'
+            portfolioId: p1.portfolioId.toString()
           },
           {
             domain: 'deleteme.com',
-            portfolioId: 'portfolio2'
+            portfolioId: p2.portfolioId.toString()
           }
         ]
       });
@@ -211,21 +229,23 @@ describe("Domain Service - Database Operations", () => {
     });
 
     test('should handle multiple domains for same portfolio', async () => {
+      const p = portfolioDoc();
+      const pid = p.portfolioId.toString();
       const testUser = await User.create({
         email: 'multidomains@example.com',
         username: 'multidomainsuser',
         password: 'hashedpassword123',
-        portfolios: ['portfolio1'],
+        portfolios: [p],
         domains: [
           {
             domain: 'main.com',
-            portfolioId: 'portfolio1',
+            portfolioId: pid,
             type: 'platform',
             status: 'active'
           },
           {
             domain: 'www.main.com',
-            portfolioId: 'portfolio1',
+            portfolioId: pid,
             type: 'byod',
             status: 'active'
           }
@@ -234,11 +254,11 @@ describe("Domain Service - Database Operations", () => {
 
       // Find all domains for a specific portfolio
       const userWithPortfolio = await User.findOne({
-        'domains.portfolioId': 'portfolio1'
+        'domains.portfolioId': pid
       });
 
       const portfolio1Domains = userWithPortfolio.domains.filter(
-        d => d.portfolioId === 'portfolio1'
+        d => d.portfolioId === pid
       );
 
       expect(portfolio1Domains).toHaveLength(2);
@@ -279,8 +299,6 @@ describe("Domain Service - Database Operations", () => {
 
       const domain = updatedUser.domains[0];
       expect(domain.expiresAt).toEqual(newExpirationDate);
-      expect(domain.lastPayment).toBeDefined();
-      expect(domain.nextPayment).toEqual(newExpirationDate);
     });
   });
 

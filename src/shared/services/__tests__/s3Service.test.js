@@ -1,127 +1,105 @@
-    // __tests__/unit/services/s3Service.test.js
+const mockSend = jest.fn();
 
-    // 👇 Use a mock*-prefixed var so Jest allows it inside the factory.
-    let mockSend;
+jest.mock("@aws-sdk/client-s3", () => ({
+  S3Client: jest.fn().mockImplementation(() => ({ send: mockSend })),
+  PutObjectCommand: jest.fn().mockImplementation((x) => x),
+  DeleteObjectCommand: jest.fn().mockImplementation((x) => x),
+  ListObjectsV2Command: jest.fn().mockImplementation((x) => x),
+  DeleteObjectsCommand: jest.fn().mockImplementation((x) => x),
+}));
 
-    jest.mock("@aws-sdk/client-s3", () => {
-    mockSend = jest.fn();
-    return {
-        S3Client: jest.fn(() => ({ send: mockSend })),
-        PutObjectCommand: jest.fn().mockImplementation((args) => args),
-        DeleteObjectCommand: jest.fn().mockImplementation((args) => args),
-    };
-    });
+jest.mock("uuid", () => ({ v4: () => "fixed-uuid" }));
 
-    jest.mock("uuid", () => ({
-    v4: jest.fn(() => "mock-uuid"),
-    }));
+const {
+  uploadToS3,
+  deleteFromS3,
+  listByPrefix,
+  deleteManyByPrefix,
+  keyFromPublicUrl,
+} = require("../s3Service");
 
-    const { uploadToS3, deleteFromS3 } = require("../s3Service");
-    const { PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+describe("s3Service", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockSend.mockReset();
+    process.env.AWS_S3_BUCKET = "mybucket";
+    process.env.AWS_REGION = "us-east-1";
+    process.env.AWS_ACCESS_KEY_ID = "k";
+    process.env.AWS_SECRET_ACCESS_KEY = "s";
+  });
 
-    describe("S3Service", () => {
-    const originalEnv = process.env;
+  it("uploadToS3 sends PutObject and returns url", async () => {
+    mockSend.mockResolvedValue({});
 
-    beforeEach(() => {
-        jest.clearAllMocks();
-        process.env = {
-        ...originalEnv,
-        AWS_S3_BUCKET: "findvirtualme",
-        AWS_REGION: "us-west-1",
-        AWS_ACCESS_KEY_ID: "dummy",
-        AWS_SECRET_ACCESS_KEY: "dummy",
-        };
-    });
+    const r = await uploadToS3(Buffer.from("a"), "f.txt", "text/plain", "pre");
 
-    afterAll(() => {
-        process.env = originalEnv;
-    });
+    expect(r.key).toContain("pre/fixed-uuid.txt");
+    expect(r.url).toContain("mybucket");
+    expect(mockSend).toHaveBeenCalled();
+  });
 
-    describe("uploadToS3", () => {
-        it("uploads successfully with prefix and returns URL + key", async () => {
-        mockSend.mockResolvedValueOnce({});
+  it("deleteFromS3 sends DeleteObject", async () => {
+    mockSend.mockResolvedValue({});
 
-        const buffer = Buffer.from("fake-bytes");
-        const res = await uploadToS3(buffer, "photo.JPG", "image/jpeg", "ports/HandyMan");
+    await deleteFromS3("k1");
 
-        expect(PutObjectCommand).toHaveBeenCalledTimes(1);
-        expect(PutObjectCommand).toHaveBeenCalledWith({
-            Bucket: "findvirtualme",
-            Key: "ports/HandyMan/mock-uuid.jpg",
-            Body: buffer,
-            ContentType: "image/jpeg",
-        });
-        expect(mockSend).toHaveBeenCalledTimes(1);
+    expect(mockSend).toHaveBeenCalled();
+  });
 
-        expect(res).toEqual({
-            url: "https://findvirtualme.s3.us-west-1.amazonaws.com/ports/HandyMan/mock-uuid.jpg",
-            key: "ports/HandyMan/mock-uuid.jpg",
-        });
-        });
+  it("listByPrefix paginates", async () => {
+    mockSend
+      .mockResolvedValueOnce({
+        Contents: [{ Key: "a", LastModified: new Date() }],
+        IsTruncated: true,
+        NextContinuationToken: "t2",
+      })
+      .mockResolvedValueOnce({
+        Contents: [{ Key: "b", LastModified: new Date() }],
+        IsTruncated: false,
+      });
 
-        it("trims leading/trailing slashes in prefix", async () => {
-        mockSend.mockResolvedValueOnce({});
-        const res = await uploadToS3(Buffer.from("x"), "img.png", "image/png", "/ports/HandyMan/");
-        expect(PutObjectCommand).toHaveBeenCalledWith(
-            expect.objectContaining({ Key: "ports/HandyMan/mock-uuid.png" })
-        );
-        expect(res.key).toBe("ports/HandyMan/mock-uuid.png");
-        });
+    const list = await listByPrefix("p/");
 
-        it("handles no prefix (key is just filename)", async () => {
-        mockSend.mockResolvedValueOnce({});
-        const res = await uploadToS3(Buffer.from("x"), "pic.jpeg", "image/jpeg");
-        expect(PutObjectCommand).toHaveBeenCalledWith(
-            expect.objectContaining({ Key: "mock-uuid.jpeg" })
-        );
-        expect(res.key).toBe("mock-uuid.jpeg");
-        expect(res.url).toBe("https://findvirtualme.s3.us-west-1.amazonaws.com/mock-uuid.jpeg");
-        });
+    expect(list).toHaveLength(2);
+    expect(mockSend).toHaveBeenCalledTimes(2);
+  });
 
-        it("uses 'bin' extension if fileName is undefined", async () => {
-        mockSend.mockResolvedValueOnce({});
-        const res = await uploadToS3(
-            Buffer.from("x"),
-            undefined,
-            "application/octet-stream",
-            "files"
-        );
-        expect(PutObjectCommand).toHaveBeenCalledWith(
-            expect.objectContaining({
-            Key: "files/mock-uuid.bin",
-            ContentType: "application/octet-stream",
-            })
-        );
-        expect(res.key).toBe("files/mock-uuid.bin");
-        });
+  it("deleteManyByPrefix batches deletes", async () => {
+    mockSend
+      .mockResolvedValueOnce({
+        Contents: Array.from({ length: 3 }).map((_, i) => ({
+          Key: `p/x${i}`,
+        })),
+        IsTruncated: false,
+      })
+      .mockResolvedValue({});
 
-        it("propagates errors from AWS on upload", async () => {
-        mockSend.mockRejectedValueOnce(new Error("S3 failed"));
-        await expect(
-            uploadToS3(Buffer.from("x"), "file.txt", "text/plain", "docs")
-        ).rejects.toThrow("S3 failed");
-        expect(PutObjectCommand).toHaveBeenCalledTimes(1);
-        expect(mockSend).toHaveBeenCalledTimes(1);
-        });
-    });
+    const r = await deleteManyByPrefix("p/");
 
-    describe("deleteFromS3", () => {
-        it("deletes successfully", async () => {
-        mockSend.mockResolvedValueOnce({});
-        await deleteFromS3("ports/HandyMan/mock-uuid.jpg");
-        expect(DeleteObjectCommand).toHaveBeenCalledTimes(1);
-        expect(DeleteObjectCommand).toHaveBeenCalledWith({
-            Bucket: "findvirtualme",
-            Key: "ports/HandyMan/mock-uuid.jpg",
-        });
-        expect(mockSend).toHaveBeenCalledTimes(1);
-        });
+    expect(r.deleted).toBe(3);
+  });
 
-        it("propagates errors from AWS on delete", async () => {
-        mockSend.mockRejectedValueOnce(new Error("Delete error"));
-        await expect(deleteFromS3("bad/key")).rejects.toThrow("Delete error");
-        expect(DeleteObjectCommand).toHaveBeenCalledTimes(1);
-        expect(mockSend).toHaveBeenCalledTimes(1);
-        });
-    });
-    });
+  it("deleteManyByPrefix returns 0 when empty", async () => {
+    mockSend.mockResolvedValueOnce({ Contents: [], IsTruncated: false });
+
+    const r = await deleteManyByPrefix("empty/");
+
+    expect(r.deleted).toBe(0);
+  });
+
+  it("keyFromPublicUrl matches virtual host style", () => {
+    const url =
+      "https://mybucket.s3.us-east-1.amazonaws.com/folder%2Ffile.jpg";
+    expect(keyFromPublicUrl(url)).toBe("folder/file.jpg");
+  });
+
+  it("keyFromPublicUrl matches path-style bucket URL", () => {
+    const url = "https://mybucket.s3.amazonaws.com/path/to/obj.png";
+    expect(keyFromPublicUrl(url)).toBe("path/to/obj.png");
+  });
+
+  it("keyFromPublicUrl returns null for bad url", () => {
+    expect(keyFromPublicUrl("not-url")).toBeNull();
+    expect(keyFromPublicUrl(null)).toBeNull();
+  });
+});

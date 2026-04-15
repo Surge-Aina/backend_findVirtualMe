@@ -14,7 +14,7 @@ jest.mock("pdf-lib", () => ({
   PDFDocument: { load: jest.fn() },
 }));
 
-jest.mock("pdfjs-dist/legacy/build/pdf.js", () => ({
+jest.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
   getDocument: jest.fn(),
 }));
 
@@ -66,7 +66,7 @@ describe("PDF extraction fallback branches", () => {
     jest.resetModules();
 
     pdfParse = require("pdf-parse");
-    pdfjs = require("pdfjs-dist/legacy/build/pdf.js");
+    pdfjs = require("pdfjs-dist/legacy/build/pdf.mjs");
     mammoth = require("mammoth");
     pdfLib = require("pdf-lib");
 

@@ -1,18 +1,5 @@
-import mongoose from "mongoose";
-import SocialLinks from "../socialLinks.model.js";
-import { socialLinksService } from "../socialLinks.service.js";
-
-beforeAll(async () => {
-  await mongoose.connect(global.__MONGO_URI__);
-});
-
-afterAll(async () => {
-  await mongoose.connection.close();
-});
-
-afterEach(async () => {
-  await SocialLinks.deleteMany({});
-});
+const mongoose = require("mongoose");
+const { socialLinksService } = require("../socialLinks.service.js");
 
 describe("socialLinksService", () => {
   it("should create a new social links document if none exists", async () => {
@@ -27,7 +14,9 @@ describe("socialLinksService", () => {
     const portfolioId = new mongoose.Types.ObjectId();
     await socialLinksService.updateLinks(portfolioId, { github: "old" });
 
-    const updated = await socialLinksService.updateLinks(portfolioId, { github: "new" });
+    const updated = await socialLinksService.updateLinks(portfolioId, {
+      github: "new",
+    });
     expect(updated.links.github).toBe("new");
   });
 

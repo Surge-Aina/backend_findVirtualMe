@@ -17,26 +17,22 @@ describe('UserData Model Validation Tests', () => {
 
   describe('Required Fields Validation', () => {
     
-    test('should require practiceId field', async () => {
-      const userDataWithoutPracticeId = new UserData({
+    test('allows saving without practiceId when other required fields are present', async () => {
+      const doc = new UserData({
         userId: uniqueUserId(),
-        practice: { name: 'Test Practice' }
+        subdomain: uniqueSubdomain(),
+        practice: { name: 'Test Practice' },
       });
 
-      let error;
-      try {
-        await userDataWithoutPracticeId.save();
-      } catch (err) {
-        error = err;
-      }
-
-      expect(error).toBeDefined();
-      expect(error.errors.practiceId).toBeDefined();
+      const saved = await doc.save();
+      expect(saved._id).toBeDefined();
+      expect(saved.practiceId).toBeUndefined();
     });
 
     test('should require userId field', async () => {
       const userDataWithoutUserId = new UserData({
         practiceId: uniquePracticeId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test Practice' }
       });
 
@@ -55,6 +51,7 @@ describe('UserData Model Validation Tests', () => {
       const userDataWithoutName = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: {}
       });
 
@@ -73,6 +70,7 @@ describe('UserData Model Validation Tests', () => {
       const validUserData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: {
           name: 'Test Medical Center'
         }
@@ -154,23 +152,24 @@ describe('UserData Model Validation Tests', () => {
       expect(error.code).toBe(11000); // Duplicate key error
     });
 
-    test('should allow null subdomain (sparse index)', async () => {
+    test('allows multiple practices with distinct subdomains', async () => {
       const userData1 = await UserData.create({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Practice 1' }
-        // No subdomain
       });
 
       const userData2 = await UserData.create({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Practice 2' }
-        // No subdomain
       });
 
-      expect(userData1.subdomain).toBeUndefined();
-      expect(userData2.subdomain).toBeUndefined();
+      expect(userData1.subdomain).toBeDefined();
+      expect(userData2.subdomain).toBeDefined();
+      expect(userData1.subdomain).not.toBe(userData2.subdomain);
     });
   });
 
@@ -180,6 +179,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: {
           name: 'Elite Medical Center',
           tagline: 'Your Health, Our Priority',
@@ -197,6 +197,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: {
           name: 'Test Practice'
         }
@@ -214,6 +215,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' },
         contact: {
           phone: '+1234567890',
@@ -238,6 +240,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' }
       });
 
@@ -254,6 +257,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' }
       });
 
@@ -267,6 +271,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' },
         hours: {
           weekdays: 'Mon-Fri: 8:00 AM - 6:00 PM',
@@ -287,6 +292,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' }
       });
 
@@ -301,6 +307,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' },
         stats: {
           yearsExperience: '15',
@@ -323,6 +330,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' }
       });
 
@@ -335,6 +343,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' },
         services: [
           {
@@ -366,6 +375,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' },
         services: [{
           id: 'service1',
@@ -386,6 +396,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' }
       });
 
@@ -398,6 +409,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' },
         blogPosts: [{
           id: 1,
@@ -429,6 +441,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' },
         gallery: {
           facilityImages: [
@@ -454,6 +467,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' },
         gallery: {
           beforeAfterCases: [{
@@ -479,6 +493,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' }
       });
 
@@ -492,6 +507,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' },
         seo: {
           siteTitle: 'Best Medical Center',
@@ -512,6 +528,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' },
         ui: {
           hero: {
@@ -534,6 +551,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' }
       });
 
@@ -546,6 +564,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' },
         ui: {
           social: {
@@ -567,6 +586,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' }
       });
 
@@ -579,6 +599,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' }
       });
 
@@ -591,6 +612,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = await UserData.create({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' }
       });
 
@@ -608,6 +630,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' }
       });
 
@@ -619,6 +642,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = new UserData({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' },
         isActive: false
       });
@@ -642,30 +666,26 @@ describe('UserData Model Validation Tests', () => {
       expect(userIdIndex).toBeDefined();
     });
 
-    test('should enforce unique practiceId', async () => {
+    test('allows duplicate practiceId values (field is not unique)', async () => {
       const practiceId = uniquePracticeId();
 
       await UserData.create({
         practiceId,
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'First' }
       });
 
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      let error;
-      try {
-        await UserData.create({
-          practiceId, // Same practiceId
-          userId: uniqueUserId(),
-          practice: { name: 'Second' }
-        });
-      } catch (err) {
-        error = err;
-      }
+      const second = await UserData.create({
+        practiceId,
+        userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
+        practice: { name: 'Second' }
+      });
 
-      expect(error).toBeDefined();
-      expect(error.code).toBe(11000);
+      expect(second.practiceId).toBe(practiceId);
     });
   });
 
@@ -675,6 +695,7 @@ describe('UserData Model Validation Tests', () => {
       const userData = await UserData.create({
         practiceId: uniquePracticeId(),
         userId: uniqueUserId(),
+        subdomain: uniqueSubdomain(),
         practice: { name: 'Test' }
       });
 

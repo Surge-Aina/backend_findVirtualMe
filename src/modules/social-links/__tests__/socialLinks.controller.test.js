@@ -1,21 +1,18 @@
-import request from "supertest";
-import app from "../../app.js"; // your Express app
-import mongoose from "mongoose";
-import SocialLinks from "../socialLinks.model.js";
+const request = require("supertest");
+const express = require("express");
+const mongoose = require("mongoose");
+const socialLinksRoutes = require("../socialLinks.routes.js");
 
-beforeAll(async () => {
-  await mongoose.connect(global.__MONGO_URI__);
-});
-
-afterAll(async () => {
-  await mongoose.connection.close();
-});
-
-afterEach(async () => {
-  await SocialLinks.deleteMany({});
-});
+function createTestApp() {
+  const app = express();
+  app.use(express.json());
+  app.use("/api/social-links", socialLinksRoutes);
+  return app;
+}
 
 describe("SocialLinks API", () => {
+  const app = createTestApp();
+
   it("GET /api/social-links/:portfolioId should return 404 if not found", async () => {
     const portfolioId = new mongoose.Types.ObjectId();
     const res = await request(app).get(`/api/social-links/${portfolioId}`);

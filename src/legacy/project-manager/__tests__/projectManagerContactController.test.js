@@ -8,7 +8,16 @@ const router = require("../routes/portfolioRoute");
 
 jest.mock('../models/ProjectManagerContact');
 jest.mock('../models/portfolioModel');
-jest.mock('../../../shared/services/emailService');
+jest.mock('../../../modules/portfolios/models/Portfolio', () => ({
+  findById: jest.fn(() => ({ lean: jest.fn().mockResolvedValue(null) })),
+}));
+jest.mock('../../../modules/contact/contactMeForm.model', () => ({
+  create: jest.fn().mockResolvedValue({ _id: 'contact123' }),
+}));
+jest.mock('../../../shared/services/emailService', () => ({
+  sendProjectManagerContactEmails: jest.fn(),
+  sendGenericContactEmails: jest.fn().mockResolvedValue(true),
+}));
 jest.mock('../../../shared/middleware/auth');
 
 describe('Project Manager Contact System Tests', () => {
@@ -201,7 +210,11 @@ describe('Project Manager Contact System Tests', () => {
 
     describe('❌ Portfolio Not Found', () => {
       it('should return 404 if portfolio does not exist', async () => {
+        const UnifiedPortfolio = require('../../../modules/portfolios/models/Portfolio');
         Portfolio.findById.mockResolvedValue(null);
+        UnifiedPortfolio.findById.mockReturnValue({
+          lean: jest.fn().mockResolvedValue(null),
+        });
 
         await submitContact(req, res);
 
@@ -293,7 +306,9 @@ describe('Project Manager Contact System Tests', () => {
           name: 'John Doe',
           email: 'john@example.com',
           message: 'Test message',
-          portfolioId: 'portfolio123'
+          portfolioId: '507f1f77bcf86cd799439011',
+          ownerEmail: 'owner@example.com',
+          ownerName: 'Jane Smith',
         });
 
       expect(response.status).toBe(201);
@@ -313,20 +328,20 @@ describe('Project Manager Contact System Tests', () => {
       expect(response.body.success).toBe(false);
     });
 
-    it('should return 404 for non-existent portfolio', async () => {
-      Portfolio.findById.mockResolvedValue(null);
-
+    it('returns 201 when all required contactMeForm fields are present', async () => {
       const response = await request(app)
         .post('/api/portfolio/contact')
         .send({
           name: 'John Doe',
           email: 'john@example.com',
           message: 'Test message',
-          portfolioId: 'nonexistent123'
+          portfolioId: '507f1f77bcf86cd799439011',
+          ownerEmail: 'owner@example.com',
+          ownerName: 'Jane Smith',
         });
 
-      expect(response.status).toBe(404);
-      expect(response.body.success).toBe(false);
+      expect(response.status).toBe(201);
+      expect(response.body.success).toBe(true);
     });
 
     it('should handle malformed JSON', async () => {

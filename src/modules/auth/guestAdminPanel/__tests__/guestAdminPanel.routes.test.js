@@ -15,14 +15,14 @@ describe("GuestAdminPanel Routes", () => {
     jest.clearAllMocks();
   });
 
-  describe("GET /getAllUsers", () => {
+  describe("GET /users", () => {
     it("should route to getAllUsers controller", async () => {
       controller.getAllUsers.mockImplementation((req, res) => {
         res.status(200).json({ success: true, data: [] });
       });
 
       const res = await request(app)
-        .get("/api/admin/getAllUsers")
+        .get("/api/admin/users")
         .query({ portfolioId: "test-123" });
 
       expect(res.statusCode).toBe(200);
@@ -38,7 +38,7 @@ describe("GuestAdminPanel Routes", () => {
       });
 
       const res = await request(app)
-        .get("/api/admin/getAllUsers")
+        .get("/api/admin/users")
         .query({ portfolioId: "portfolio-456" });
 
       expect(res.statusCode).toBe(200);
@@ -50,7 +50,7 @@ describe("GuestAdminPanel Routes", () => {
         res.status(200).json({ success: true, data: [] });
       });
 
-      const res = await request(app).get("/api/admin/getAllUsers");
+      const res = await request(app).get("/api/admin/users");
 
       expect(res.statusCode).toBe(200);
       expect(controller.getAllUsers).toHaveBeenCalled();
@@ -58,14 +58,14 @@ describe("GuestAdminPanel Routes", () => {
 
     it("should not accept POST method", async () => {
       const res = await request(app)
-        .post("/api/admin/getAllUsers")
+        .post("/api/admin/users")
         .send({});
 
       expect(res.statusCode).toBe(404);
     });
   });
 
-  describe("PUT /editUser/:id", () => {
+  describe("PUT /users/:id", () => {
     it("should route to editUser controller", async () => {
       controller.editUser.mockImplementation((req, res) => {
         res.status(200).json({ 
@@ -75,7 +75,7 @@ describe("GuestAdminPanel Routes", () => {
       });
 
       const res = await request(app)
-        .put("/api/admin/editUser/user123")
+        .put("/api/admin/users/user123")
         .send({ name: "Updated Name" });
 
       expect(res.statusCode).toBe(200);
@@ -91,7 +91,7 @@ describe("GuestAdminPanel Routes", () => {
       });
 
       const res = await request(app)
-        .put("/api/admin/editUser/user456")
+        .put("/api/admin/users/user456")
         .send({ name: "Test" });
 
       expect(res.statusCode).toBe(200);
@@ -113,7 +113,7 @@ describe("GuestAdminPanel Routes", () => {
       };
 
       const res = await request(app)
-        .put("/api/admin/editUser/user789")
+        .put("/api/admin/users/user789")
         .send(updateData);
 
       expect(res.statusCode).toBe(200);
@@ -121,21 +121,21 @@ describe("GuestAdminPanel Routes", () => {
     });
 
     it("should not accept GET method", async () => {
-      const res = await request(app).get("/api/admin/editUser/user123");
+      const res = await request(app).get("/api/admin/users/user123");
 
       expect(res.statusCode).toBe(404);
     });
 
     it("should not accept POST method", async () => {
       const res = await request(app)
-        .post("/api/admin/editUser/user123")
+        .post("/api/admin/users/user123")
         .send({ name: "Test" });
 
       expect(res.statusCode).toBe(404);
     });
 
     it("should not accept DELETE method", async () => {
-      const res = await request(app).delete("/api/admin/editUser/user123");
+      const res = await request(app).delete("/api/admin/users/user123");
 
       expect(res.statusCode).toBe(404);
     });
@@ -153,20 +153,20 @@ describe("GuestAdminPanel Routes", () => {
       expect(routes).toHaveLength(2);
     });
 
-    it("should have GET /getAllUsers route", () => {
+    it("should have GET /users route", () => {
       const routes = router.stack
         .filter(layer => layer.route)
         .map(layer => layer.route.path);
 
-      expect(routes).toContain("/getAllUsers");
+      expect(routes).toContain("/users");
     });
 
-    it("should have PUT /editUser/:id route", () => {
+    it("should have PUT /users/:id route", () => {
       const routes = router.stack
         .filter(layer => layer.route)
         .map(layer => layer.route.path);
 
-      expect(routes).toContain("/editUser/:id");
+      expect(routes).toContain("/users/:id");
     });
   });
 

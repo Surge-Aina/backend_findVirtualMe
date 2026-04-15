@@ -1,6 +1,15 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const router = express.Router();
 const UserData = require("../models/userData");
+
+function isMongoObjectIdString(value) {
+  return (
+    typeof value === "string" &&
+    /^[a-fA-F0-9]{24}$/.test(value) &&
+    mongoose.Types.ObjectId.isValid(value)
+  );
+}
 const User = require("../../../shared/models/User");
 const verifyToken = require("../../../shared/middleware/auth");
 
@@ -21,10 +30,13 @@ router.get("/practice/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Try _id first (standard approach like other portfolios)
-    let userData = await UserData.findOne({ _id: id, isActive: true });
+    let userData = null;
 
-    // Fallback: legacy practiceId
+    // Only query by _id when :id is a 24-char hex ObjectId (avoids CastError for legacy practiceId strings)
+    if (isMongoObjectIdString(id)) {
+      userData = await UserData.findOne({ _id: id, isActive: true });
+    }
+
     if (!userData) {
       userData = await UserData.findOne({ practiceId: id, isActive: true });
     }
