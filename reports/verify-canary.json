@@ -1,0 +1,204 @@
+{
+  "startedAt": "2026-03-26T19:56:59.889Z",
+  "options": {
+    "templates": [
+      "healthcare",
+      "projectManager",
+      "handyman"
+    ],
+    "limit": 25,
+    "dnsServers": [
+      "8.8.8.8",
+      "1.1.1.1"
+    ],
+    "allowMissingV2": true,
+    "allowOrphanedOwners": true,
+    "allowHandymanMissingContact": true
+  },
+  "templates": {
+    "healthcare": {
+      "checked": 25,
+      "missingV2": 0,
+      "templateMismatches": 0,
+      "ownerMissing": 0,
+      "sectionIssues": 0,
+      "criticalFieldIssues": 0,
+      "userReferenceIssues": 0,
+      "failures": []
+    },
+    "projectManager": {
+      "checked": 25,
+      "missingV2": 16,
+      "templateMismatches": 0,
+      "ownerMissing": 0,
+      "sectionIssues": 0,
+      "criticalFieldIssues": 0,
+      "userReferenceIssues": 0,
+      "failures": [
+        {
+          "template": "projectManager",
+          "legacyId": "689e23cb113dd7d63df44695",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "689e7989b52ae9a4467ba366",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "689eab9f2df408065aa5e37e",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "689eacb302fabb85f4e586f1",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "689eb74ad18f65f4d57322e5",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "689eca1ab21b537a7bfd7cf4",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "689f6920b21b537a7bfd7e50",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "689f7a72b21b537a7bfd7ec9",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68a0ce72b21b537a7bfd7f49",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ab3c2d820c275b0648a892",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68ad1ed7093eb9e210a77121",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68b1268f57d3609501ca1f98",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68c1f0bbdac2943d7e804dc9",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68c1f2d5182f551cd21ac8ee",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68d030b268f9773a3c337bfd",
+          "reason": "Missing portfolios_v2 document by _id"
+        },
+        {
+          "template": "projectManager",
+          "legacyId": "68d052ac3921a6ed5def1cfb",
+          "reason": "Missing portfolios_v2 document by _id"
+        }
+      ]
+    },
+    "handyman": {
+      "checked": 25,
+      "missingV2": 0,
+      "templateMismatches": 0,
+      "ownerMissing": 0,
+      "sectionIssues": 0,
+      "criticalFieldIssues": 0,
+      "userReferenceIssues": 9,
+      "failures": [
+        {
+          "template": "handyman",
+          "legacyId": "68cb36e35ab7b3cf57e0db0c",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68cb38cf5ab7b3cf57e0db1a",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68cb3cc919735126cb27355d",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68d031d5f058cbd34d48749b",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68d034bbf058cbd34d487505",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68d03fbaf058cbd34d487611",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68d06d7519e5fd278fa2db36",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68d076729501bc7d1f2e5405",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68d07b55255feb998cf03cb1",
+          "reason": "Owner user not found for v2 document"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68d32da49b34cdcbaf27fc4a",
+          "reason": "Critical field checks failed: contact.phoneOrEmail"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68e30154bc2b8eaedb2476b7",
+          "reason": "Critical field checks failed: contact.phoneOrEmail"
+        },
+        {
+          "template": "handyman",
+          "legacyId": "68e301b0bc2b8eaedb2476e5",
+          "reason": "Critical field checks failed: contact.phoneOrEmail"
+        }
+      ]
+    }
+  },
+  "totals": {
+    "checked": 75,
+    "missingV2": 16,
+    "templateMismatches": 0,
+    "ownerMissing": 0,
+    "sectionIssues": 0,
+    "criticalFieldIssues": 0,
+    "handymanMissingContactIssues": 3,
+    "userReferenceIssues": 9,
+    "failures": 28
+  },
+  "completedAt": "2026-03-26T19:57:11.790Z"
+}

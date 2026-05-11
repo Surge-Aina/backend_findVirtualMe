@@ -1,0 +1,92 @@
+{
+  "startedAt": "2026-03-26T20:02:00.418Z",
+  "options": {
+    "dryRun": false,
+    "dnsServers": [
+      "8.8.8.8",
+      "1.1.1.1"
+    ]
+  },
+  "scanned": 122,
+  "eligible": 5,
+  "updated": 5,
+  "skipped": 117,
+  "items": [
+    {
+      "portfolioId": "68d32da49b34cdcbaf27fc4a",
+      "heroPhone": "",
+      "ownerUserFound": true,
+      "ownerPhone": "1122334455",
+      "ownerEmail": "h50@gmail.com",
+      "previousContact": {
+        "phone": "",
+        "email": ""
+      },
+      "nextContact": {
+        "phone": "1122334455",
+        "email": ""
+      }
+    },
+    {
+      "portfolioId": "68e30154bc2b8eaedb2476b7",
+      "heroPhone": "",
+      "ownerUserFound": true,
+      "ownerPhone": "",
+      "ownerEmail": "sj@gmail.com",
+      "previousContact": {
+        "phone": "",
+        "email": ""
+      },
+      "nextContact": {
+        "phone": "",
+        "email": "sj@gmail.com"
+      }
+    },
+    {
+      "portfolioId": "68e301b0bc2b8eaedb2476e5",
+      "heroPhone": "",
+      "ownerUserFound": true,
+      "ownerPhone": "",
+      "ownerEmail": "srj@gmail.com",
+      "previousContact": {
+        "phone": "",
+        "email": ""
+      },
+      "nextContact": {
+        "phone": "",
+        "email": "srj@gmail.com"
+      }
+    },
+    {
+      "portfolioId": "68e7fd0c64e1f1554a223455",
+      "heroPhone": "",
+      "ownerUserFound": true,
+      "ownerPhone": "",
+      "ownerEmail": "testing@gmail.com",
+      "previousContact": {
+        "phone": "",
+        "email": ""
+      },
+      "nextContact": {
+        "phone": "",
+        "email": "testing@gmail.com"
+      }
+    },
+    {
+      "portfolioId": "68eeb64e15c374bf434919bb",
+      "heroPhone": "",
+      "ownerUserFound": true,
+      "ownerPhone": "",
+      "ownerEmail": "janedoe@gmail.com",
+      "previousContact": {
+        "phone": "",
+        "email": ""
+      },
+      "nextContact": {
+        "phone": "",
+        "email": "janedoe@gmail.com"
+      }
+    }
+  ],
+  "completedAt": "2026-03-26T20:02:01.777Z"
+}

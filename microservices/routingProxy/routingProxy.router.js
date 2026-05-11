@@ -1,7 +1,7 @@
 // routes/routingProxy.js
 const express = require("express");
 const router = express.Router();
-const DomainRewrite = require("../models/DomainRewrite"); // Your Mongoose model
+const DomainRewrite = require("./domainRewrite.model"); // Your Mongoose model
 
 router.get("/routing-proxy", async (req, res) => {
   try {
