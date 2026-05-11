@@ -144,6 +144,12 @@ const BLOCK_TYPES = {
     description: "Case study with challenge, solution, and outcome",
     templates: ["agent","projectManager","dataScientist"],
   },
+  account: {
+    label: "Customer Account",
+    description:
+      "Inline login/signup widget for portfolio sub-users; links to the My Account dashboard",
+    templates: ["healthcare"],
+  },
 };
 
 for (const meta of Object.values(BLOCK_TYPES)) {

@@ -70,9 +70,13 @@ const userSchema = new mongoose.Schema({
     type: String,
   },
   skills: [{ type: String }],
+  // Note: portfolio sub-users (a.k.a. customer accounts) are NOT main `User`
+  // documents; they live in the `guestUser` collection. The previous
+  // `"subUser"` enum value here was unused and has been removed to avoid
+  // confusion with the actual sub-user system.
   role: {
     type: String,
-    enum: ["admin", "customer", "user", "subUser"],
+    enum: ["admin", "customer", "user"],
     default: "customer",
   },
   practiceId: {

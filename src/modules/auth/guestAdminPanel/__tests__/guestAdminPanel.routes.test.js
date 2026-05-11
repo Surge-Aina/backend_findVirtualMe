@@ -56,12 +56,13 @@ describe("GuestAdminPanel Routes", () => {
       expect(controller.getAllUsers).toHaveBeenCalled();
     });
 
-    it("should not accept POST method", async () => {
+    it("rejects POST without auth", async () => {
       const res = await request(app)
         .post("/api/admin/users")
         .send({});
 
-      expect(res.statusCode).toBe(404);
+      // Auth middleware short-circuits with 401 when no token is present.
+      expect(res.statusCode).toBe(401);
     });
   });
 
@@ -142,17 +143,6 @@ describe("GuestAdminPanel Routes", () => {
   });
 
   describe("Route existence", () => {
-    it("should have exactly 2 routes defined", () => {
-      const routes = router.stack
-        .filter(layer => layer.route)
-        .map(layer => ({
-          path: layer.route.path,
-          methods: Object.keys(layer.route.methods)
-        }));
-
-      expect(routes).toHaveLength(2);
-    });
-
     it("should have GET /users route", () => {
       const routes = router.stack
         .filter(layer => layer.route)
@@ -167,6 +157,21 @@ describe("GuestAdminPanel Routes", () => {
         .map(layer => layer.route.path);
 
       expect(routes).toContain("/users/:id");
+    });
+
+    it("should expose POST /users for owner-driven creation", () => {
+      const route = router.stack
+        .filter((layer) => layer.route)
+        .find((layer) => layer.route.path === "/users" && layer.route.methods.post);
+      expect(route).toBeDefined();
+    });
+
+    it("should expose activity endpoints", () => {
+      const paths = router.stack
+        .filter((layer) => layer.route)
+        .map((layer) => layer.route.path);
+      expect(paths).toContain("/activities");
+      expect(paths).toContain("/activities/:id");
     });
   });
 

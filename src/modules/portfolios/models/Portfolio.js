@@ -70,6 +70,16 @@ const portfolioSchema = new Schema(
       instagram: { type: String, default: "" },
       website: { type: String, default: "" },
     },
+    /**
+     * Owner-controlled toggles that affect what sub-users (portfolio
+     * customers) are allowed to do from their My Account dashboard. Add new
+     * permission flags here so they all live in one place.
+     */
+    subUserSettings: {
+      // When false, sub-users cannot self-cancel a pending booking — they
+      // must contact the owner. Default is false so cancellation is opt-in.
+      allowBookingCancellation: { type: Boolean, default: false },
+    },
     sections: [SectionSchema],
   },
   { timestamps: true }

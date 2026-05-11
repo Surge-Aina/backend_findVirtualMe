@@ -186,6 +186,20 @@ function normalizeNavBrand(value) {
   };
 }
 
+function normalizeSubUserSettings(value) {
+  if (value === undefined || value === null) return undefined;
+  if (!isPlainObject(value)) {
+    throw new PortfolioValidationError("subUserSettings must be an object", {
+      code: "INVALID_SUB_USER_SETTINGS",
+    });
+  }
+  const out = {};
+  if (value.allowBookingCancellation !== undefined) {
+    out.allowBookingCancellation = Boolean(value.allowBookingCancellation);
+  }
+  return out;
+}
+
 function normalizeLayoutMode(layoutMode, template) {
   if (layoutMode === undefined || layoutMode === null || layoutMode === "") {
     return template === "agent" ? "stacked" : "auto";
@@ -450,10 +464,15 @@ async function updatePortfolio(id, updates) {
     "layoutMode",
     "pageBannerDefaults",
     "navBrand",
+    "subUserSettings",
   ];
   const sanitized = {};
   for (const key of allowed) {
     if (updates[key] !== undefined) sanitized[key] = updates[key];
+  }
+
+  if (sanitized.subUserSettings !== undefined) {
+    sanitized.subUserSettings = normalizeSubUserSettings(sanitized.subUserSettings);
   }
 
   if (sanitized.sections !== undefined) {

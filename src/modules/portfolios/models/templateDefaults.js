@@ -102,8 +102,19 @@ const healthcareDefaults = [
     },
   },
   {
-    type: "hours",
+    type: "account",
     order: 6,
+    data: {
+      title: "Patient Portal",
+      subtitle: "Sign in to view your visits and request appointments",
+      ctaLoggedOut: "Sign in / Create account",
+      ctaLoggedIn: "Open my account",
+      pageBanner: { enabled: false },
+    },
+  },
+  {
+    type: "hours",
+    order: 7,
     data: {
       weekdays: "Mon-Fri: 9:00 AM - 5:00 PM",
       saturday: "Sat: Closed",
@@ -116,7 +127,7 @@ const healthcareDefaults = [
   },
   {
     type: "seo",
-    order: 7,
+    order: 8,
     data: {
       siteTitle: "",
       metaDescription: "",

@@ -1,6 +1,8 @@
 const GuestUser = require("./guestUser.model");
+const Portfolio = require("../../portfolios/models/Portfolio");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { sendSubUserWelcomeEmail } = require("./subUserEmails");
 
 exports.createNewUser = async (userData) => {
   try {
@@ -32,6 +34,26 @@ exports.createNewUser = async (userData) => {
     });
 
     await newUser.save();
+
+    // Fire-and-forget welcome email; failures are logged but never block signup.
+    (async () => {
+      try {
+        let portfolioTitle = "";
+        try {
+          const portfolio = await Portfolio.findById(portfolioId).select("title").lean();
+          portfolioTitle = portfolio?.title || "";
+        } catch (_e) {
+          // portfolioId may be a non-ObjectId string for legacy callers; ignore.
+        }
+        await sendSubUserWelcomeEmail({
+          subUserEmail: email,
+          subUserName: name || username || email,
+          portfolioTitle,
+        });
+      } catch (err) {
+        console.error("[guestUser.service] welcome email failed:", err?.message || err);
+      }
+    })();
 
     return newUser;
   } catch (err) {

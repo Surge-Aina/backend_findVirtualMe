@@ -15,6 +15,7 @@ const auth = require("../shared/middleware/auth");
 const domainRoutes = require("./domains/domains.routes");
 const telemetryRoutes = require("./telemetry/telemetry.routes");
 const guestUserRoutes = require("./auth/guestLogin/guestUser.routes");
+const portfolioActivityRoutes = require("./portfolio-activities/portfolioActivity.routes");
 const portfolioEditLogRoutes = require("./portfolios/portfolio-edit-log.routes");
 const guestAdminPanelRoutes = require("./auth/guestAdminPanel/guestAdminPanel.routes");
 const socialLinksRoutes = require("./social-links/socialLinks.routes");
@@ -63,6 +64,9 @@ function mountModules(app) {
 
   app.use("/api/telemetry", telemetryRoutes);
   app.use("/api/auth/guest", guestUserRoutes);
+  // Cleaner alias for the same sub-user (a.k.a. guestUser) endpoints.
+  app.use("/api/portfolio-users", guestUserRoutes);
+  app.use("/api/portfolio-activities", portfolioActivityRoutes);
   app.use("/api/auth/guest-admin", guestAdminPanelRoutes);
   app.use("/api/social-links", socialLinksRoutes);
   app.use("/api/portfolios/user-array", userPortfoliosArrayRoutes);

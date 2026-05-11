@@ -41,6 +41,11 @@ const guestUserSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  // Reserved for future verification flows; not enforced in MVP.
+  emailVerified: {
+    type: Boolean,
+    default: false,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
