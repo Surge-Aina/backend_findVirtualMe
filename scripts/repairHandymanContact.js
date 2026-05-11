@@ -13,8 +13,8 @@ const path = require("path");
 const dns = require("dns");
 const mongoose = require("mongoose");
 
-const Portfolio = require("../models/portfolio/Portfolio");
-const User = require("../models/User");
+const Portfolio = require("../src/modules/portfolios/models/Portfolio");
+const User = require("../src/shared/models/User");
 
 function parseArgs(argv) {
   const options = {
