@@ -1,7 +1,7 @@
-// //const OnboardingUser = require("../models/onboardingUser");
-// const UserModel = reqire("../models/userModel"); //this will be the main and only model moving forward
+// //const OnboardingUser = require("../src/shared/models/onboardingUser");
+// const UserModel = reqire("../src/shared/models/userModel"); //this will be the main and only model moving forward
 // const bcrypt = require('bcryptjs');
-// const User = require('../models/User'); // main user model
+// const User = require('../src/shared/models/User'); // main user model
 
 // exports.addUser = async(req, res) => {
 //     const { data } = req.body;

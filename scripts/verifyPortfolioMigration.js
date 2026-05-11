@@ -13,11 +13,11 @@ const path = require("path");
 const dns = require("dns");
 const mongoose = require("mongoose");
 
-const HealthcarePortfolio = require("../models/healthcare/userData");
-const ProjectManagerPortfolio = require("../models/projectManager/portfolioModel");
-const HandymanMainPortfolio = require("../models/handyMan/HandymanTemplate");
-const Portfolio = require("../models/portfolio/Portfolio");
-const User = require("../models/User");
+const HealthcarePortfolio = require("../src/legacy/healthcare/models/userData");
+const ProjectManagerPortfolio = require("../src/legacy/project-manager/models/portfolioModel");
+const HandymanMainPortfolio = require("../src/legacy/handyman/models/HandymanTemplate");
+const Portfolio = require("../src/modules/portfolios/models/Portfolio");
+const User = require("../src/shared/models/User");
 
 const SUPPORTED_TEMPLATES = ["healthcare", "projectManager", "handyman"];
 const EXPECTED_SECTION_TYPES = {

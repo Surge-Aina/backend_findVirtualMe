@@ -48,3 +48,7 @@ localTunnel.md
 setup.md
 
 tempFiles/
+
+# Generated / runtime artifacts
+reports/
+uploads/
