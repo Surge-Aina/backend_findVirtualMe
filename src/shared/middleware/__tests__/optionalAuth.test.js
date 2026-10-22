@@ -22,23 +22,25 @@ describe("optionalAuth", () => {
     expect(req.user).toBeUndefined();
   });
 
-  it("sets dummy user for cypress header", async () => {
+  it("does not authenticate an x-cypress header", async () => {
     const req = { headers: { authorization: "Bearer x", "x-cypress": "1" } };
     const next = jest.fn();
 
     await optionalAuth(req, {}, next);
 
-    expect(req.user._id).toBe("test-user-id");
+    expect(req.user).toBeUndefined();
+    expect(User.findById).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalled();
   });
 
-  it("sets dummy user for dummy-token", async () => {
+  it("does not authenticate a placeholder token", async () => {
     const req = { headers: { authorization: "Bearer dummy-token" } };
     const next = jest.fn();
 
     await optionalAuth(req, {}, next);
 
-    expect(req.user.email).toBe("vendor@example.com");
+    expect(req.user).toBeUndefined();
+    expect(User.findById).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalled();
   });
 

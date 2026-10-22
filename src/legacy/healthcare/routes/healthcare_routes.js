@@ -384,22 +384,37 @@ router.delete("/admin/delete/:id", verifyToken, async (req, res) => {
   }
 });
 
-// Demo data initialization
+// Demo data initialization. Disabled unless both demo credentials are provided.
 const initializeData = async () => {
+  const email = process.env.DEMO_HEALTHCARE_EMAIL;
+  const password = process.env.DEMO_HEALTHCARE_PASSWORD;
+  const username = process.env.DEMO_HEALTHCARE_USERNAME;
+
+  if (!email && !password && !username) {
+    return;
+  }
+
+  if (!email || !password || !username) {
+    console.error(
+      "Healthcare demo seed skipped: set DEMO_HEALTHCARE_EMAIL, DEMO_HEALTHCARE_PASSWORD, and DEMO_HEALTHCARE_USERNAME"
+    );
+    return;
+  }
+
   try {
     const demoExists = await UserData.findOne({ practiceId: "practice_demo" });
     if (!demoExists) {
-      console.log("🏥 Creating demo healthcare practice...");
+      console.log("Creating demo healthcare practice");
 
-      let demoUser = await User.findOne({ email: "demo@healthcare.com" });
+      let demoUser = await User.findOne({ email });
       if (!demoUser) {
         const bcrypt = require("bcryptjs");
         demoUser = new User({
-          email: "demo@healthcare.com",
-          password: await bcrypt.hash("demo123", 10),
+          email,
+          password: await bcrypt.hash(password, 10),
           firstName: "Demo",
           lastName: "Practice",
-          username: "demo-healthcare",
+          username,
           role: "user",
         });
         await demoUser.save();
@@ -425,10 +440,10 @@ const initializeData = async () => {
       });
 
       await demoData.save();
-      console.log("✅ Demo healthcare practice created");
+      console.log("Demo healthcare practice created");
     }
-  } catch (error) {
-    console.error("❌ Healthcare init error:", error);
+  } catch {
+    console.error("Healthcare init error");
   }
 };
 

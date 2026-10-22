@@ -128,6 +128,8 @@ describe("portfolioActivity.service", () => {
   it("sub-user can only cancel their own pending activities", async () => {
     const owner = await createOwner();
     const portfolio = await createPortfolio(owner._id);
+    portfolio.subUserSettings = { allowBookingCancellation: true };
+    await portfolio.save();
     const sub = await createSubUser(portfolio._id);
 
     const doc = await service.createByPortfolioUser(sub, { type: "visit" });

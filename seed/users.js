@@ -1,52 +1,64 @@
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const User = require('../src/shared/models/User');
 
+const REQUIRED_ENV = [
+  'ADMIN_EMAIL',
+  'ADMIN_USERNAME',
+  'ADMIN_PASSWORD',
+  'CUSTOMER_EMAIL',
+  'CUSTOMER_USERNAME',
+  'CUSTOMER_PASSWORD',
+];
+
+function requireSeedEnv() {
+  const missing = REQUIRED_ENV.filter((name) => !process.env[name]);
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required environment variable(s) for user seed: ${missing.join(', ')}`
+    );
+  }
+}
+
 /**
- * Seed users for development
- * Creates admin and customer accounts if they don't exist
+ * Seed admin and customer accounts when the database has no users.
+ * Credentials are read from the environment and are never logged.
  */
 const seedUsers = async () => {
-  try {
-    console.log('🔐 Checking for seed users...');
-    
-    // Check if users already exist
-    const existingUsers = await User.find();
-    if (existingUsers.length > 0) {
-      console.log('✅ Users already exist, skipping seed');
-      return;
-    }
+  requireSeedEnv();
 
-    console.log('🌱 Creating seed users...');
+  console.log('Checking for seed users...');
 
-    // Create admin user
-    const adminPassword = await bcrypt.hash('Admin@123', 12);
-    const admin = new User({
-      username: 'admin',
-      email: 'admin@test.com',
-      password: adminPassword,
-      role: 'admin'
-    });
-
-    // Create customer user
-    const customerPassword = await bcrypt.hash('Cust@123', 12);
-    const customer = new User({
-      username: 'customer',
-      email: 'cust@test.com',
-      password: customerPassword,
-      role: 'customer'
-    });
-
-    await admin.save();
-    await customer.save();
-
-    console.log('✅ Seed users created successfully!');
-    console.log('📋 Default Credentials:');
-    console.log('👑 Admin: admin@test.com / Admin@123');
-    console.log('👤 Customer: cust@test.com / Cust@123');
-    console.log('');
-  } catch (error) {
-    console.error('❌ Error seeding users:', error);
+  const existingCount = await User.countDocuments();
+  if (existingCount > 0) {
+    console.log('Users already exist, skipping seed');
+    return;
   }
+
+  console.log('Creating seed users...');
+
+  const admin = new User({
+    userKey: crypto.randomUUID(),
+    practiceId: crypto.randomUUID(),
+    username: process.env.ADMIN_USERNAME,
+    email: process.env.ADMIN_EMAIL,
+    password: await bcrypt.hash(process.env.ADMIN_PASSWORD, 12),
+    role: 'admin',
+  });
+
+  const customer = new User({
+    userKey: crypto.randomUUID(),
+    practiceId: crypto.randomUUID(),
+    username: process.env.CUSTOMER_USERNAME,
+    email: process.env.CUSTOMER_EMAIL,
+    password: await bcrypt.hash(process.env.CUSTOMER_PASSWORD, 12),
+    role: 'customer',
+  });
+
+  await admin.save();
+  await customer.save();
+
+  console.log('Seed users created');
 };
 
-module.exports = seedUsers; 
+module.exports = seedUsers;
