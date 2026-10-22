@@ -119,29 +119,3 @@
     expect(req.user || req.auth || req.currentUser).toBeDefined();
     });
 
-    // generic coverage pass over all exported handlers
-    test('all exported auth handlers can be invoked at least once', async () => {
-    if (!authController) return;
-
-    const entries = Object.entries(authController).filter(
-        ([, value]) => typeof value === 'function',
-    );
-
-    const baseReq = {
-        body: { email: 'user@test.com', password: 'pass' },
-        headers: {},
-    };
-
-    for (const [, fn] of entries) {
-        const req = { ...baseReq };
-        const res = makeRes();
-        const next = jest.fn();
-        try {
-        await fn(req, res, next);
-        } catch (e) {
-        // We only care about executing code paths, not behavior here
-        }
-    }
-
-    expect(true).toBe(true);
-    });

@@ -392,33 +392,4 @@
         },
     );
 
-    // generic coverage pass to hit all exported template handlers at least once
-    it('invokes all exported template handlers at least once', async () => {
-        const entries = Object.entries(controller).filter(
-        ([, value]) => typeof value === 'function',
-        );
-
-        const baseReq = {
-        user: { id: 'owner1', userId: 'owner1' },
-        params: { id: 'abc' },
-        query: {},
-        body: {},
-        headers: {},
-        };
-
-        for (const [, fn] of entries) {
-        const req = { ...baseReq };
-        const res = makeRes();
-        const next = jest.fn();
-
-        try {
-            await fn(req, res, next);
-        } catch (e) {
-            // only need to execute code paths for coverage;
-            // behavior/response isn't asserted here
-        }
-        }
-
-        expect(true).toBe(true);
-    });
     });

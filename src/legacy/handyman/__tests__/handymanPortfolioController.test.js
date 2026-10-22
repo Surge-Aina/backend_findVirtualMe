@@ -413,33 +413,4 @@
         expect(res.statusCode).toBe(400);
     });
 
-    // NEW: generic smoke to invoke any extra handlers at least once
-    it('invokes all exported portfolio handlers at least once (smoke coverage)', async () => {
-        const entries = Object.entries(controller || {}).filter(
-        ([, value]) => typeof value === 'function',
-        );
-
-        const baseReq = {
-        body: {},
-        params: { id: 'hp1' },
-        query: {},
-        user: {},
-        headers: {},
-        files: {},
-        };
-
-        for (const [, fn] of entries) {
-        const req = { ...baseReq };
-        const res = makeRes();
-        const next = jest.fn();
-
-        try {
-            await fn(req, res, next);
-        } catch (e) {
-            // ignore – just for extra coverage
-        }
-        }
-
-        expect(true).toBe(true);
-    });
     });

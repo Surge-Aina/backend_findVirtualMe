@@ -18,15 +18,6 @@ const auth = async (req, res, next) => {
         .json({ error: "Access denied. No token provided." });
     }
 
-    if (token === "dummy-token" || req.headers["x-cypress"]) {
-      req.user = {
-        _id: "test-user-id",
-        email: "vendor@example.com",
-        name: "Cypress Test User",
-      };
-      return next();
-    }
-
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     // console.log('Decoded token:', decoded);

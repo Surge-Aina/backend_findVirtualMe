@@ -15,6 +15,6 @@ connectDB()
       console.log(`listening on PORT:${PORT}`);
     });
   })
-  .catch((error) => {
-    console.error("Database connection failed: ", error);
+  .catch(() => {
+    console.error("Database connection failed");
   });

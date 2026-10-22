@@ -26,4 +26,24 @@ describe("db connectDB", () => {
     expect(errLog).toHaveBeenCalled();
     errLog.mockRestore();
   });
+
+  it("fails clearly when MONGODB_URI is missing", async () => {
+    const previous = process.env.MONGODB_URI;
+    delete process.env.MONGODB_URI;
+    const errLog = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      await expect(connectDB()).rejects.toThrow(
+        "Missing required environment variable: MONGODB_URI"
+      );
+      expect(mongoose.connect).not.toHaveBeenCalled();
+    } finally {
+      if (previous === undefined) {
+        delete process.env.MONGODB_URI;
+      } else {
+        process.env.MONGODB_URI = previous;
+      }
+      errLog.mockRestore();
+    }
+  });
 });
