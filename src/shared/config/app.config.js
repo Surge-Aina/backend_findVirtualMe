@@ -6,10 +6,10 @@ const config = {
     corsOrigin: process.env.CORS_ORIGIN || ['http://localhost:5173', 'http://localhost:5174']
   },
 
-  // Database Configuration
+  // Database Configuration. No local fallback: a missing URI must fail at connect time.
   database: {
-    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/findVirtualMe',
-    testUri: process.env.MONGODB_URI_TEST || 'mongodb://localhost:27017/test-portfolio'
+    uri: process.env.MONGODB_URI,
+    testUri: process.env.MONGODB_URI_TEST
   },
 
   // File Upload Configuration
@@ -59,16 +59,16 @@ const config = {
     }
   },
 
-  // Default Users (for development/testing)
+  // Default users. Emails and usernames come from the environment; there is no built-in account.
   defaultUsers: {
     admin: {
-      email: process.env.ADMIN_EMAIL || 'admin@test.com',
-      username: 'admin',
+      email: process.env.ADMIN_EMAIL,
+      username: process.env.ADMIN_USERNAME,
       role: 'admin'
     },
     customer: {
-      email: process.env.CUSTOMER_EMAIL || 'cust@test.com',
-      username: 'customer',
+      email: process.env.CUSTOMER_EMAIL,
+      username: process.env.CUSTOMER_USERNAME,
       role: 'customer'
     }
   },

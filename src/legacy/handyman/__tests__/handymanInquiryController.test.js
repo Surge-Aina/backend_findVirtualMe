@@ -269,32 +269,4 @@
         expect(res.body).toBeTruthy();
     });
 
-    // smoke run to touch all exported handlers
-    it('invokes all exported inquiry handlers at least once (smoke coverage)', async () => {
-        const entries = Object.entries(controller || {}).filter(
-        ([, value]) => typeof value === 'function',
-        );
-
-        const baseReq = {
-        body: {},
-        params: {},
-        query: {},
-        user: {},
-        headers: {},
-        };
-
-        for (const [, fn] of entries) {
-        const req = { ...baseReq };
-        const res = makeRes();
-        const next = jest.fn();
-
-        try {
-            await fn(req, res, next);
-        } catch (e) {
-            // ignore – just for coverage
-        }
-        }
-
-        expect(true).toBe(true);
-    });
     });

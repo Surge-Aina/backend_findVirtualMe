@@ -419,6 +419,51 @@ describe('auth middleware', () => {
     });
   });
 
+  describe('Rejected auth shortcuts', () => {
+    it('does not accept a placeholder token', async () => {
+      mockReq.headers.authorization = 'Bearer dummy-token';
+
+      await auth(mockReq, mockRes, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(mockRes.json).toHaveBeenCalledWith({ error: 'Invalid token' });
+      expect(mockNext).not.toHaveBeenCalled();
+      expect(User.findById).not.toHaveBeenCalled();
+    });
+
+    it('does not accept an x-cypress header in place of a JWT', async () => {
+      mockReq.headers.authorization = 'Bearer not-a-jwt';
+      mockReq.headers['x-cypress'] = '1';
+
+      await auth(mockReq, mockRes, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(mockNext).not.toHaveBeenCalled();
+      expect(User.findById).not.toHaveBeenCalled();
+    });
+
+    it('still verifies a real JWT when x-cypress is present', async () => {
+      const mockUser = {
+        _id: 'user123',
+        username: 'testuser',
+        email: 'test@example.com',
+      };
+      const token = jwt.sign(
+        { id: 'user123' },
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+      mockReq.headers.authorization = `Bearer ${token}`;
+      mockReq.headers['x-cypress'] = '1';
+      User.findById.mockImplementation(() => createMockQuery(mockUser));
+
+      await auth(mockReq, mockRes, mockNext);
+
+      expect(mockReq.user).toEqual(mockUser);
+      expect(mockNext).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('Token without expiration', () => {
     it('should work with token that has no exp field', async () => {
       const mockUser = {

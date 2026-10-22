@@ -9,15 +9,6 @@ const optionalAuth = async (req, _res, next) => {
       return next();
     }
 
-    if (token === "dummy-token" || req.headers["x-cypress"]) {
-      req.user = {
-        _id: "test-user-id",
-        email: "vendor@example.com",
-        name: "Cypress Test User",
-      };
-      return next();
-    }
-
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     if (decoded.exp && Date.now() >= decoded.exp * 1000) {
       return next();

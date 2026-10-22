@@ -5,6 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "test": "jest",
+    "build": "node --check src/server.js && node --check src/index.js",
     "test:watch": "jest --watch",
     "test:coverage": "node scripts/runCoverageWithTotals.js",
     "start": "node src/server.js",
