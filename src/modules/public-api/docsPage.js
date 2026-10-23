@@ -102,6 +102,17 @@ function renderDocsPage() {
     <p>Catalog: <code>lead.captured</code>, <code>form.submitted</code>, <code>site.published</code>, <code>business_profile.updated</code>, <code>app.installed</code>, <code>app.uninstalled</code>.</p>
     <p>Every attempt sends <code>X-FindVirtualMe-Timestamp</code> (unix seconds), <code>X-FindVirtualMe-Signature: v1=&lt;hex&gt;</code>, <code>X-FindVirtualMe-Event</code> (the event id), and <code>X-FindVirtualMe-Api-Version</code> (<code>2026-10-23</code>). The hex is HMAC-SHA256 of the timestamp, a period, and the exact JSON body, using the endpoint signing secret. Reject timestamps more than 300 seconds from your clock and compare the hex in constant time. The event id stays the same across retries. A new timestamp is used for each attempt. Retries wait 5 seconds, 30 seconds, 2 minutes, 10 minutes, and 1 hour, then stop after 6 attempts.</p>
     <p>Subscriber URLs must be public https. Private, link-local, and metadata addresses are rejected, including names that resolve to those addresses. Redirects are not followed.</p>
+
+    <h2>MCP</h2>
+    <p><code>POST /api/mcp</code> speaks the Model Context Protocol. It uses the same API keys and scopes. Tools: <code>list_sites</code>, <code>get_site</code>, <code>get_business_profile</code>, <code>get_lead</code>, and <code>list_webhooks</code>. <code>get_lead</code> requires <code>leads:read</code>. A missing scope returns an error result and does not log the tool arguments.</p>
+    <pre>{
+  "mcpServers": {
+    "findvirtualme": {
+      "url": "https://findvirtual.me/api/mcp",
+      "headers": { "Authorization": "Bearer fvm_..." }
+    }
+  }
+}</pre>
   </main>
 </body>
 </html>`;
