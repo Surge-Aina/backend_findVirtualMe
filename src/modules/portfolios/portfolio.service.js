@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Portfolio = require("./models/Portfolio");
+const { readLegacyPortfolioById } = require("../../../scripts/migratePortfolios");
 const DomainRoute = require("../domains/DomainRouter/DomainRouter.model");
 const { normalizeDomain } = require("../domains/DomainRouter/utils/domainHelpers");
 const { deleteManyByPrefix } = require("../../shared/services/s3Service");
@@ -360,7 +361,12 @@ async function createAgentPortfolio(ownerId, payload = {}) {
 // ─── Read ────────────────────────────────────────────────────────────────────
 
 async function getPortfolio(id) {
-  return Portfolio.findById(id).lean();
+  const existing = await Portfolio.findById(id).lean();
+  if (existing) return existing;
+
+  // Legacy collections (portfolios, handymantemplates, healthcaresettings)
+  // stay readable until migratePortfolios.js --write copies them.
+  return readLegacyPortfolioById(id);
 }
 
 async function getPortfolioBySlug(slug) {

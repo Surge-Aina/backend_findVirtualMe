@@ -7,6 +7,9 @@ function normalizeUserAppTheme(userDoc) {
     typeof userDoc.toObject === "function"
       ? userDoc.toObject()
       : { ...userDoc };
+  delete u.password;
+  delete u.resetPasswordToken;
+  delete u.resetPasswordExpires;
   return { ...u, appTheme: u.appTheme === "dark" ? "dark" : "light" };
 }
 

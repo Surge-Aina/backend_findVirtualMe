@@ -33,12 +33,12 @@ function normalizeCustomerEmail(email) {
 // NOTE: Use raw body for this route for Stripe signature verification!
 // The path should be /webhook or /stripe/webhook, depending on how you mount the router.
 router.post(
-  "/domain",
+  ["/domain", "/domainPayment-webhook"],
   express.raw({ type: "application/json" }),
   stripeController.handleStripeWebhook
 );
 
-router.post("/stripe", express.raw({ type: "application/json" }), async (req, res) => {
+router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), async (req, res) => {
   const sig = req.headers["stripe-signature"];
 
   //verify that the call came from stripe

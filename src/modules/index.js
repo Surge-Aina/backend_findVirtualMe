@@ -33,6 +33,7 @@ const qrCodeRoutes = require("./qr-code/qrCode.routes.js");
 const privacyPolicyRoutes = require("./privacy-policy/privacyPolicy.routes");
 const termsOfServiceRoutes = require("./terms-of-service/termsOfService.routes");
 const config = require("../shared/config/app.config.js");
+const { loginUser, signupUser } = require("./auth/auth.controller");
 
 const nowIso = () => new Date().toISOString();
 
@@ -49,8 +50,12 @@ function mountModules(app) {
   });
 
   app.use("/api/payments/checkout", auth, checkoutRoutes);
+  app.use("/checkout", auth, checkoutRoutes);
   app.use("/api/payments/subscriptions", auth, roleCheck(["admin"]), subscriptionRoutes);
   app.use("/api/users", userRoutes);
+  app.post("/user/login", loginUser);
+  app.post("/user/signup", signupUser);
+  app.use("/user", userRoutes);
   app.use("/api/support", supportFormRoutes);
   app.use("/api/domains", domainRoutes);
   app.use("/api/portfolios/edit-log", portfolioEditLogRoutes);
@@ -72,15 +77,22 @@ function mountModules(app) {
   app.use("/api/portfolios/user-array", userPortfoliosArrayRoutes);
   app.use("/api/portfolios/public", publicPortfoliosRoutes);
   app.use("/api/payments", domainPaymentRouter);
+  app.use("/api/domainPayment", domainPaymentRouter);
   app.use("/api/auth", authHttpRoutes);
   app.use("/api/contact", contactMeRoutes);
+  app.use("/contactMe", contactMeRoutes);
   app.use("/api/domains/router", domainRouterRoutes);
+  app.use("/domainRouter", domainRouterRoutes);
   app.use("/api/media/s3-upload-url", s3UploadRoutes);
   app.use("/api/portfolios", portfolioRoutes);
   app.use("/api/vouchers", voucherRoutes);
+  app.use("/vouchers", voucherRoutes);
   app.use("/api/qr-codes", qrCodeRoutes);
+  app.use("/qrCode", qrCodeRoutes);
   app.use("/api/legal/privacy-policy", privacyPolicyRoutes);
+  app.use("/privacy-policy", privacyPolicyRoutes);
   app.use("/api/legal/terms-of-service", termsOfServiceRoutes);
+  app.use("/terms-of-service", termsOfServiceRoutes);
 
   app.use("/api/mvp", emailMvpRoutes);
 

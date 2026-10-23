@@ -76,7 +76,7 @@ const userSchema = new mongoose.Schema({
   // confusion with the actual sub-user system.
   role: {
     type: String,
-    enum: ["admin", "customer", "user"],
+    enum: ["admin", "customer", "user", "subUser"],
     default: "customer",
   },
   practiceId: {

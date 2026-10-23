@@ -21,6 +21,16 @@ if (process.env.NODE_ENV === "test" && !process.env.JWT_SECRET) {
   process.env.JWT_SECRET = "test-only-jwt-secret";
 }
 
+if (process.env.NODE_ENV === "test") {
+  process.env.STRIPE_MODE = "test";
+  if (!process.env.STRIPE_SECRET_KEY_TEST) {
+    process.env.STRIPE_SECRET_KEY_TEST = "sk_test_synthetic_only";
+  }
+  if (!process.env.FRONTEND_URL) {
+    process.env.FRONTEND_URL = "http://localhost:5173";
+  }
+}
+
 // Set default port
 if (!process.env.PORT) {
   process.env.PORT = "5100";

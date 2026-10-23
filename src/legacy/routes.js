@@ -61,6 +61,7 @@ function mountLegacy(app) {
   runOAuthEnvSetup();
 
   app.use("/portfolio", projectManagerPortfolioRoutes);
+  app.use("/api/portfolio", projectManagerPortfolioRoutes);
   app.use("/settings", settingsRoutes);
   app.use("/drive", driveRoutes);
   app.use("/photo", photoRoutes);

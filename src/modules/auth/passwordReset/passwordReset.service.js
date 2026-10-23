@@ -83,6 +83,13 @@ exports.resetPassword = async (token, newPassword) => {
       };
     }
 
+    if (!user.password) {
+      return {
+        success: false,
+        message: "This account does not use a password",
+      };
+    }
+
     // Optional: prevent same password reuse
     const isSame = await bcrypt.compare(newPassword, user.password);
     if (isSame) {

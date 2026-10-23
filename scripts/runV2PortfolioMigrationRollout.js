@@ -29,12 +29,17 @@ function parseArgs(argv) {
     skipUnresolvedOwners: false,
     fromStage: "dry-run",
     throughStage: "full",
+    write: false,
     help: false,
   };
 
   for (const arg of argv) {
     if (arg === "--help" || arg === "-h") {
       options.help = true;
+      continue;
+    }
+    if (arg === "--write") {
+      options.write = true;
       continue;
     }
     if (arg.startsWith("--templates=")) {
@@ -105,6 +110,11 @@ function parseArgs(argv) {
     throw new Error(`Unknown argument: ${arg}`);
   }
 
+  if (!options.write) {
+    options.fromStage = "dry-run";
+    options.throughStage = "dry-run";
+  }
+
   const fromIndex = STAGES.indexOf(options.fromStage);
   const throughIndex = STAGES.indexOf(options.throughStage);
   if (fromIndex > throughIndex) {
@@ -127,7 +137,8 @@ Options:
   --skip-unresolved-owners
                      Skip projectManager records with unresolved owners in migration
   --from=...           Start stage: dry-run | canary | full (default dry-run)
-  --through=...        End stage: dry-run | canary | full (default full)
+  --through=...        End stage: dry-run | canary | full (default full, requires --write)
+  --write              Allow canary and full stages to modify the database
   --help, -h           Show this help
   `);
 }
@@ -200,17 +211,20 @@ async function main() {
     if (stageEnabled("canary", options)) {
       runCommand("Repair handyman contact (pre-verify)", [
         "scripts/repairHandymanContact.js",
+        "--write",
         ...dnsArgs,
         reportPath(options.reportsDir, "repair-handyman-contact-canary.json"),
       ]);
       runCommand("Repair projectManager summary email (pre-verify)", [
         "scripts/repairProjectManagerSummaryEmail.js",
+        "--write",
         ...dnsArgs,
         reportPath(options.reportsDir, "repair-projectmanager-summary-email-canary.json"),
       ]);
 
       runCommand("Canary migration", [
         "scripts/migratePortfolios.js",
+        "--write",
         templateArg,
         `--limit=${options.limit}`,
         ...dnsArgs,
@@ -232,17 +246,20 @@ async function main() {
     if (stageEnabled("full", options)) {
       runCommand("Repair handyman contact (pre-verify)", [
         "scripts/repairHandymanContact.js",
+        "--write",
         ...dnsArgs,
         reportPath(options.reportsDir, "repair-handyman-contact-full.json"),
       ]);
       runCommand("Repair projectManager summary email (pre-verify)", [
         "scripts/repairProjectManagerSummaryEmail.js",
+        "--write",
         ...dnsArgs,
         reportPath(options.reportsDir, "repair-projectmanager-summary-email-full.json"),
       ]);
 
       runCommand("Full migration", [
         "scripts/migratePortfolios.js",
+        "--write",
         templateArg,
         ...dnsArgs,
         ...ownerSkipArgs,

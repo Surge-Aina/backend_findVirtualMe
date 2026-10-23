@@ -19,14 +19,18 @@ const router = express.Router();
 
 router.get("/me", auth, getMe);
 router.get("/subscription-info", auth, getSubInfo);
+router.get("/subInfo", auth, getSubInfo);
 router.get("/has-subscription", auth, getHasSubscription);
 router.get("/ai-edit-access", auth, getAiEditAccess);
 
 router.get("/", getAllUsers);
 router.post("/", addUser);
+router.post("/addUser", addUser);
+router.get("/getUser/:id", getUserById);
 router.get("/:id", getUserById);
 
 router.patch("/", auth, updateUser);
+router.patch("/updateUser", auth, updateUser);
 router.patch("/change-password", auth, changePassword);
 router.patch("/app-theme", auth, updateAppTheme);
 router.patch("/portfolio-id", auth, addPortfolioID);

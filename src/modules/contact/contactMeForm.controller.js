@@ -3,10 +3,24 @@
 // const Portfolio = require("../../models/projectManager/portfolioModel");
 const { sendGenericContactEmails } = require("../../shared/services/emailService");
 const contactMeFormDB = require("./contactMeForm.model");
+const portfolioService = require("../portfolios/portfolio.service");
+const User = require("../../shared/models/User");
 
 exports.submitContact = async (req, res) => {
   try {
-    const { name, email, message, portfolioId, ownerEmail, ownerName, portfolioType } = req.body;
+    const { name, email, message, portfolioId, portfolioType } = req.body;
+    let { ownerEmail, ownerName } = req.body;
+
+    if (portfolioId && (!ownerEmail || !ownerName)) {
+      const portfolio = await portfolioService.getPortfolio(portfolioId);
+      if (portfolio?.owner) {
+        const owner = await User.findById(portfolio.owner)
+          .select("email name username")
+          .lean();
+        ownerEmail = ownerEmail || owner?.email;
+        ownerName = ownerName || owner?.name || owner?.username;
+      }
+    }
 
     // Validation
     if (!name || !email || !message || !portfolioId || !ownerEmail || !ownerName) {

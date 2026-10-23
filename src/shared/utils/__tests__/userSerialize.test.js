@@ -23,6 +23,17 @@ describe("userSerialize", () => {
     });
   });
 
+  it("omits password and reset secrets", () => {
+    expect(
+      normalizeUserAppTheme({
+        appTheme: "light",
+        password: "hash",
+        resetPasswordToken: "token",
+        resetPasswordExpires: new Date(),
+      })
+    ).toEqual({ appTheme: "light" });
+  });
+
   it("keeps dark theme", () => {
     expect(normalizeUserAppTheme({ appTheme: "dark" })).toEqual({
       appTheme: "dark",

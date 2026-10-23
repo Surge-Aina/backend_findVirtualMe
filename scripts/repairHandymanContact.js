@@ -18,7 +18,7 @@ const User = require("../src/shared/models/User");
 
 function parseArgs(argv) {
   const options = {
-    dryRun: false,
+    dryRun: true,
     reportJsonPath: "",
     dnsServers: [],
     help: false,
@@ -27,6 +27,10 @@ function parseArgs(argv) {
   for (const arg of argv) {
     if (arg === "--dry-run") {
       options.dryRun = true;
+      continue;
+    }
+    if (arg === "--write") {
+      options.dryRun = false;
       continue;
     }
     if (arg === "--help" || arg === "-h") {
@@ -56,10 +60,11 @@ function parseArgs(argv) {
 function printHelp() {
   console.log(`
 Usage:
-  node scripts/repairHandymanContact.js [--dry-run] [--report-json=path] [--dns-servers=8.8.8.8,1.1.1.1]
+  node scripts/repairHandymanContact.js [--dry-run] [--write] [--report-json=path] [--dns-servers=8.8.8.8,1.1.1.1]
 
 Options:
-  --dry-run            Report changes without writing
+  --dry-run            Default. Report changes without writing
+  --write              Apply contact repairs
   --report-json=...    Write machine-readable report JSON
   --dns-servers=...    Optional DNS servers used for SRV lookup in this Node process
   --help, -h           Show this help message

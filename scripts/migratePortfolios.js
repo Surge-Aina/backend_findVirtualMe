@@ -5,10 +5,12 @@
  *
  * Safe to re-run: skips documents whose _id already exists in portfolios_v2.
  *
+ * Writes are opt-in. With no flags this script only validates and reports.
+ *
  * Usage:
- *   MONGODB_URI=mongodb://... node scripts/migratePortfolios.js --dry-run
- *   MONGODB_URI=mongodb://... node scripts/migratePortfolios.js --templates=healthcare,handyman --limit=25
- *   MONGODB_URI=mongodb://... node scripts/migratePortfolios.js --report-json=./migration-report.json
+ *   MONGODB_URI=mongodb://... node scripts/migratePortfolios.js
+ *   MONGODB_URI=mongodb://... node scripts/migratePortfolios.js --write --templates=healthcare,handyman --limit=25
+ *   MONGODB_URI=mongodb://... node scripts/migratePortfolios.js --write --report-json=./migration-report.json
  */
 
 require("dotenv").config({ path: require("path").resolve(__dirname, "../.env") });
@@ -28,7 +30,7 @@ const SUPPORTED_TEMPLATES = ["healthcare", "projectManager", "handyman"];
 
 function parseArgs(argv) {
   const options = {
-    dryRun: false,
+    dryRun: true,
     templates: [...SUPPORTED_TEMPLATES],
     limit: null,
     reportJsonPath: "",
@@ -40,6 +42,10 @@ function parseArgs(argv) {
   for (const arg of argv) {
     if (arg === "--dry-run") {
       options.dryRun = true;
+      continue;
+    }
+    if (arg === "--write") {
+      options.dryRun = false;
       continue;
     }
     if (arg === "--help" || arg === "-h") {
@@ -105,10 +111,11 @@ function parseArgs(argv) {
 function printHelp() {
   console.log(`
 Usage:
-  node scripts/migratePortfolios.js [--dry-run] [--templates=healthcare,projectManager,handyman] [--limit=50] [--report-json=path] [--dns-servers=8.8.8.8,1.1.1.1] [--skip-unresolved-owners]
+  node scripts/migratePortfolios.js [--dry-run] [--write] [--templates=healthcare,projectManager,handyman] [--limit=50] [--report-json=path] [--dns-servers=8.8.8.8,1.1.1.1] [--skip-unresolved-owners]
 
 Options:
-  --dry-run            Run full transform/validation without writing to portfolios_v2 or User docs
+  --dry-run            Default. Transform and validate without writing to portfolios_v2 or User docs
+  --write              Insert missing portfolios_v2 documents and merge User.portfolios entries
   --templates=...      Comma-separated templates to migrate (healthcare, projectManager, handyman)
   --limit=...          Max number of legacy docs processed per selected template
   --report-json=...    Write machine-readable report JSON to the provided path
@@ -387,8 +394,18 @@ function transformHealthcare(doc) {
   };
 }
 
-async function transformProjectManager(doc) {
-  const { owner, source } = await resolveProjectManagerOwner(doc);
+async function transformProjectManager(doc, { allowUnresolvedOwner = false } = {}) {
+  let owner;
+  let source = "userId";
+  try {
+    const resolved = await resolveProjectManagerOwner(doc);
+    owner = resolved.owner;
+    source = resolved.source;
+  } catch (err) {
+    if (!allowUnresolvedOwner || err?.code !== "UNRESOLVED_OWNER") throw err;
+    owner = null;
+    source = "unresolved";
+  }
   const sections = [];
   let order = 0;
 
@@ -807,8 +824,8 @@ async function migrate(options) {
     report.migration.userSync.attempted = true;
     console.log("\nUpdating User.portfolios arrays...");
 
-    // Rebuild user portfolio arrays from all v2 portfolios to avoid dropping
-    // references outside the currently selected migration templates.
+    // Merge v2 entries into User.portfolios. Entries for templates this
+    // migration does not own stay in place.
     const allSelected = await Portfolio.find(
       {},
       { _id: 1, owner: 1, template: 1, visibility: 1 }
@@ -825,9 +842,27 @@ async function migrate(options) {
       });
     }
 
+    const existingUsers = await User.find({ _id: { $in: [...byOwner.keys()] } })
+      .select("portfolios")
+      .lean();
+    const existingByOwner = new Map(
+      existingUsers.map((user) => [user._id.toString(), user.portfolios || []])
+    );
+
     for (const [ownerId, portfolios] of byOwner) {
       try {
-        await User.findByIdAndUpdate(ownerId, { portfolios });
+        const merged = new Map();
+        for (const entry of existingByOwner.get(ownerId) || []) {
+          const id = entry?.portfolioId?.toString();
+          if (!id) continue;
+          merged.set(id, entry);
+        }
+        for (const entry of portfolios) {
+          const id = entry?.portfolioId?.toString();
+          if (!id) continue;
+          merged.set(id, entry);
+        }
+        await User.findByIdAndUpdate(ownerId, { portfolios: [...merged.values()] });
         report.migration.userSync.usersUpdated += 1;
       } catch (err) {
         report.migration.userSync.failed += 1;
@@ -854,12 +889,57 @@ async function migrate(options) {
   console.log("Done.");
 }
 
+/**
+ * Read one legacy portfolio and return the unified sections shape.
+ * Does not write. Used so custom-domain reads keep working before migration.
+ * Handyman templates win if the same id exists in more than one legacy collection.
+ */
+async function readLegacyPortfolioById(id) {
+  if (!mongoose.Types.ObjectId.isValid(id)) return null;
+
+  try {
+    const handyman = await HandymanMainPortfolio.findById(id).lean();
+    if (handyman) {
+      const galleryItems = await HandymanGalleryItem.find({ templateId: handyman._id }).lean();
+      return transformHandyman(handyman, galleryItems);
+    }
+  } catch (err) {
+    console.error("legacy handyman read failed:", err?.message || err);
+  }
+
+  try {
+    const healthcare = await HealthcarePortfolio.findById(id).lean();
+    if (healthcare) return transformHealthcare(healthcare);
+  } catch (err) {
+    console.error("legacy healthcare read failed:", err?.message || err);
+  }
+
+  try {
+    const projectManager = await ProjectManagerPortfolio.findById(id).lean();
+    if (projectManager) {
+      const payload = await transformProjectManager(projectManager, {
+        allowUnresolvedOwner: true,
+      });
+      delete payload.migrationMeta;
+      return payload;
+    }
+  } catch (err) {
+    console.error("legacy projectManager read failed:", err?.message || err);
+  }
+
+  return null;
+}
+
 async function main() {
   try {
     const options = parseArgs(process.argv.slice(2));
     if (options.help) {
       printHelp();
       return;
+    }
+
+    if (options.dryRun) {
+      console.log("Dry run (default). Pass --write to insert portfolios_v2 documents.");
     }
 
     await migrate(options);
@@ -869,4 +949,11 @@ async function main() {
   }
 }
 
-main();
+module.exports = {
+  readLegacyPortfolioById,
+  parseArgs,
+};
+
+if (require.main === module) {
+  main();
+}

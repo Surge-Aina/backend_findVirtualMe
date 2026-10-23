@@ -13,6 +13,8 @@ app.set("trust proxy", true);
 
 // Stripe webhook must run before express.json()
 app.use("/api/payments/webhooks", stripeWebhookRoutes);
+// Production Stripe endpoints still post to the pre-refactor paths.
+app.use("/stripe-webhook", stripeWebhookRoutes);
 
 app.use(express.json({ limit: "1mb" }));
 
