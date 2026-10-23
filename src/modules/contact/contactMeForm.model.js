@@ -30,6 +30,8 @@ const ContactMeFormSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    /** Set only when the form asks for contact consent. Absent means it did not ask. */
+    consentContact: { type: Boolean },
     status: {
       type: String,
       enum: ["new", "read", "replied"],

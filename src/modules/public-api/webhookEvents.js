@@ -1,5 +1,8 @@
 const { newEventId } = require("./webhookSignature");
+const { parseConsent } = require("./leadConsent");
 const {
+  API_VERSION,
+  SUBSCRIBER_CONTEXT_EVENTS,
   LEAD_CAPTURED,
   SITE_PUBLISHED,
   BUSINESS_PROFILE_UPDATED,
@@ -13,6 +16,8 @@ const {
   appLifecycleFields,
 } = require("./webhookContract");
 
+const subscriberTypes = new Set(SUBSCRIBER_CONTEXT_EVENTS);
+
 function iso(value) {
   const date = value instanceof Date ? value : new Date(value || Date.now());
   if (Number.isNaN(date.getTime())) return new Date().toISOString();
@@ -25,51 +30,87 @@ function optionalText(value) {
   return trimmed ? trimmed : null;
 }
 
+/** Visitor email is copied exactly as submitted. It is not trimmed or lowercased. */
+function exactEmail(value) {
+  return typeof value === "string" ? value : null;
+}
+
+function leadIdValue(value) {
+  if (value === undefined || value === null || value === "") return null;
+  return String(value);
+}
+
+function subscriberEnvelope(fields, type, createdAt, data) {
+  return {
+    [fields.id]: data.eventId || newEventId(),
+    [fields.type]: type,
+    [fields.apiVersion]: API_VERSION,
+    [fields.createdAt]: createdAt,
+    [fields.appId]: null,
+    [fields.installationId]: null,
+    [fields.data]: data.body,
+  };
+}
+
+/**
+ * Copy a built event for one subscription.
+ * Lead, form, site, and profile deliveries carry that subscription's
+ * appId and installationId, or null when the subscription is account-level.
+ * The event id stays the same across subscriptions and retries.
+ */
+function eventForSubscription(event, endpoint) {
+  if (!event || typeof event !== "object") return event;
+  const next = { ...event, apiVersion: API_VERSION };
+  if (!subscriberTypes.has(event.type)) return next;
+  return {
+    ...next,
+    appId: endpoint && endpoint.appId ? String(endpoint.appId) : null,
+    installationId: endpoint && endpoint.installationId ? String(endpoint.installationId) : null,
+  };
+}
+
 /**
  * lead.captured envelope. `id` is stable across delivery retries.
  * createdAt is the time the lead was captured.
  * Wire names come from webhookContract.js.
  */
-function buildLeadCapturedEvent({ siteId, email, name, phone, createdAt, id }) {
+function buildLeadCapturedEvent({ siteId, leadId, email, name, phone, consent, createdAt, id }) {
   const capturedAt = iso(createdAt);
   const fields = leadCapturedFields;
-  return {
-    [fields.id]: id || newEventId(),
-    [fields.type]: LEAD_CAPTURED,
-    [fields.createdAt]: capturedAt,
-    [fields.data]: {
+  const event = subscriberEnvelope(fields, LEAD_CAPTURED, capturedAt, {
+    eventId: id,
+    body: {
+      [fields.leadId]: leadIdValue(leadId),
       [fields.siteId]: String(siteId),
-      [fields.email]: email,
+      [fields.email]: exactEmail(email),
       [fields.name]: optionalText(name),
       [fields.phone]: optionalText(phone),
+      [fields.consent]: parseConsent(consent),
       [fields.capturedAt]: capturedAt,
     },
-  };
+  });
+  return event;
 }
 
 function buildSitePublishedEvent({ siteId, publishedAt, id }) {
   const at = iso(publishedAt);
   const fields = sitePublishedFields;
-  return {
-    [fields.id]: id || newEventId(),
-    [fields.type]: SITE_PUBLISHED,
-    [fields.createdAt]: at,
-    [fields.data]: {
+  return subscriberEnvelope(fields, SITE_PUBLISHED, at, {
+    eventId: id,
+    body: {
       [fields.siteId]: String(siteId),
       [fields.publishedAt]: at,
     },
-  };
+  });
 }
 
 function buildBusinessProfileUpdatedEvent({ siteId, profile, contact, updatedAt, id }) {
   const at = iso(updatedAt);
   const fields = businessProfileFields;
   const source = profile || {};
-  return {
-    [fields.id]: id || newEventId(),
-    [fields.type]: BUSINESS_PROFILE_UPDATED,
-    [fields.createdAt]: at,
-    [fields.data]: {
+  return subscriberEnvelope(fields, BUSINESS_PROFILE_UPDATED, at, {
+    eventId: id,
+    body: {
       [fields.siteId]: String(siteId),
       [fields.businessName]: source.businessName || null,
       [fields.logoUrl]: source.logoUrl || null,
@@ -78,26 +119,26 @@ function buildBusinessProfileUpdatedEvent({ siteId, profile, contact, updatedAt,
       [fields.contact]: contact || null,
       [fields.updatedAt]: at,
     },
-  };
+  });
 }
 
-function buildFormSubmittedEvent({ siteId, form, email, name, phone, message, submittedAt, id }) {
+function buildFormSubmittedEvent({ siteId, leadId, form, email, name, phone, message, consent, submittedAt, id }) {
   const at = iso(submittedAt);
   const fields = formSubmittedFields;
-  return {
-    [fields.id]: id || newEventId(),
-    [fields.type]: FORM_SUBMITTED,
-    [fields.createdAt]: at,
-    [fields.data]: {
+  return subscriberEnvelope(fields, FORM_SUBMITTED, at, {
+    eventId: id,
+    body: {
+      [fields.leadId]: leadIdValue(leadId),
       [fields.siteId]: String(siteId),
       [fields.form]: optionalText(form) || "contact",
-      [fields.email]: optionalText(email),
+      [fields.email]: exactEmail(email),
       [fields.name]: optionalText(name),
       [fields.phone]: optionalText(phone),
       [fields.message]: optionalText(message),
+      [fields.consent]: parseConsent(consent),
       [fields.submittedAt]: at,
     },
-  };
+  });
 }
 
 function buildAppLifecycleEvent(type, { siteId, appId, installationId, scopes, createdAt, id }) {
@@ -106,6 +147,7 @@ function buildAppLifecycleEvent(type, { siteId, appId, installationId, scopes, c
   return {
     [fields.id]: id || newEventId(),
     [fields.type]: type,
+    [fields.apiVersion]: API_VERSION,
     [fields.createdAt]: at,
     [fields.data]: {
       [fields.siteId]: String(siteId),
@@ -130,15 +172,19 @@ function buildTestEvent(type) {
   if (type === LEAD_CAPTURED) {
     return buildLeadCapturedEvent({
       siteId,
+      leadId: siteId,
       email: "webhook-test@example.test",
+      consent: null,
       createdAt: at,
     });
   }
   if (type === FORM_SUBMITTED) {
     return buildFormSubmittedEvent({
       siteId,
+      leadId: siteId,
       form: "test",
       message: "Webhook test",
+      consent: null,
       submittedAt: at,
     });
   }
@@ -164,6 +210,7 @@ function buildTestEvent(type) {
 }
 
 module.exports = {
+  eventForSubscription,
   buildLeadCapturedEvent,
   buildSitePublishedEvent,
   buildBusinessProfileUpdatedEvent,

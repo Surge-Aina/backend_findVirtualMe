@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const { WebhookEndpoint, WebhookDelivery, WEBHOOK_EVENTS } = require("./webhookEndpoint.model");
 const { encryptSecret, decryptSecret } = require("./secretBox");
 const { assertPublicHttpsUrl } = require("./webhookUrls");
-const { buildTestEvent } = require("./webhookEvents");
+const { buildTestEvent, eventForSubscription } = require("./webhookEvents");
 const { sendError } = require("./errors");
 
 let attemptDeliveryFn = null;
@@ -195,15 +195,16 @@ async function sendTestEvent({ userId, endpointId, installationId }) {
   const doc = await ownedEndpoint({ userId, endpointId, installationId });
   const event = buildTestEvent(doc.events[0]);
   if (!event) throw new WebhookError(400, "validation_error", "This endpoint has no supported event");
+  const payload = eventForSubscription(event, doc);
   if (!attemptDeliveryFn) {
     throw new WebhookError(500, "internal_error", "Internal server error");
   }
   const delivery = await WebhookDelivery.create({
     endpointId: doc._id,
     userId,
-    eventId: event.id,
-    type: event.type,
-    rawBody: JSON.stringify(event),
+    eventId: payload.id,
+    type: payload.type,
+    rawBody: JSON.stringify(payload),
     status: "pending",
     attempts: 0,
     nextAttemptAt: new Date(),

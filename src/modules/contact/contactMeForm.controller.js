@@ -6,6 +6,7 @@ const contactMeFormDB = require("./contactMeForm.model");
 const portfolioService = require("../portfolios/portfolio.service");
 const User = require("../../shared/models/User");
 const { notifyLeadCaptured, notifyFormSubmitted } = require("../public-api/lifecycleEvents");
+const { consentContactFromBody } = require("../public-api/leadConsent");
 
 exports.submitContact = async (req, res) => {
   try {
@@ -32,6 +33,8 @@ exports.submitContact = async (req, res) => {
       });
     }
 
+    const consentContact = consentContactFromBody(req.body);
+
     // Save contact to database
     const contact = await contactMeFormDB.create({
       portfolioId,
@@ -42,21 +45,28 @@ exports.submitContact = async (req, res) => {
       email,
       message,
       status: "new",
+      ...(consentContact === undefined ? {} : { consentContact }),
     });
 
     console.log("✅ Contact saved to database:", contact._id);
+    const leadId = contact._id.toString();
+    const consent = consentContact === undefined ? null : { contact: consentContact };
     notifyLeadCaptured({
       siteId: portfolioId,
+      leadId,
       email,
       name,
+      consent,
       createdAt: contact.createdAt,
     });
     notifyFormSubmitted({
       siteId: portfolioId,
+      leadId,
       form: "contact",
       email,
       name,
       message,
+      consent,
       submittedAt: contact.createdAt,
     });
 

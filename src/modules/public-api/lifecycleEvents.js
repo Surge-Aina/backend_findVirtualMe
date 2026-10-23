@@ -44,8 +44,8 @@ async function ownerIdForSite(siteId) {
   return doc?.owner || null;
 }
 
-async function dispatchLeadCaptured({ siteId, email, name, phone, createdAt }) {
-  if (!siteId || typeof email !== "string" || !email.trim()) return;
+async function dispatchLeadCaptured({ siteId, leadId, email, name, phone, consent, createdAt }) {
+  if (!siteId || typeof email !== "string" || email.trim() === "") return;
   let ownerId = null;
   try {
     ownerId = await ownerIdForSite(siteId);
@@ -56,9 +56,11 @@ async function dispatchLeadCaptured({ siteId, email, name, phone, createdAt }) {
   if (!ownerId) return;
   const event = buildLeadCapturedEvent({
     siteId,
-    email: email.trim(),
+    leadId,
+    email,
     name,
     phone,
+    consent,
     createdAt: createdAt || new Date(),
   });
   await dispatchEvent(ownerId, event);

@@ -10,6 +10,7 @@ const handymanInquirySchema = new mongoose.Schema(
     email:  { type: String, required: true },
     phone:  { type: String },
     message:{ type: String, required: true },
+    consentContact: { type: Boolean },
 
     // ✅ Multi-select snapshot
     selectedServiceTitles: { type: [String],  default: [] },

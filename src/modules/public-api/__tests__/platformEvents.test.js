@@ -14,6 +14,10 @@ const {
   dispatchFormSubmitted,
   flushLifecycleEvents,
 } = require("../lifecycleEvents");
+const { eventForSubscription, buildLeadCapturedEvent, buildAppInstalledEvent, buildSitePublishedEvent } = require("../webhookEvents");
+const { API_VERSION, API_VERSION_HEADER } = require("../webhookContract");
+const contactRoutes = require("../../contact/contactMeForm.routes");
+const ContactMeForm = require("../../contact/contactMeForm.model");
 const portfolioService = require("../../portfolios/portfolio.service");
 const { resetPublicApiRateLimits } = require("../rateLimit");
 
@@ -26,6 +30,7 @@ const ENCRYPTION_KEY = crypto.randomBytes(32).toString("base64");
 const app = express();
 app.use(express.json());
 app.use("/api/developer/webhooks", webhookRoutes);
+app.use("/api/contact", contactRoutes);
 mountPublicApi(app);
 
 function nonce() {
@@ -94,18 +99,24 @@ describe("signed event catalog", () => {
       visibility: "public",
     });
 
+    const submittedEmail = " Visitor@Example.TEST ";
+    const leadId = portfolio._id.toString();
     await dispatchLeadCaptured({
       siteId: portfolio._id,
-      email: "visitor@example.test",
+      leadId,
+      email: submittedEmail,
       name: "Visitor Example",
+      consent: { contact: true },
       createdAt: new Date("2026-10-23T12:00:00.000Z"),
     });
     await dispatchFormSubmitted({
       siteId: portfolio._id,
+      leadId,
       form: "contact",
-      email: "visitor@example.test",
+      email: submittedEmail,
       name: "Visitor Example",
       message: "Hello",
+      consent: false,
       submittedAt: new Date("2026-10-23T12:00:00.000Z"),
     });
 
@@ -113,6 +124,18 @@ describe("signed event catalog", () => {
     const form = calls.find((call) => JSON.parse(call.body).type === "form.submitted");
     expect(lead).toBeTruthy();
     expect(form).toBeTruthy();
+    const leadBody = JSON.parse(lead.body);
+    const formBody = JSON.parse(form.body);
+    expect(lead.headers[API_VERSION_HEADER]).toBe(API_VERSION);
+    expect(leadBody.apiVersion).toBe(API_VERSION);
+    expect(leadBody.appId).toBeNull();
+    expect(leadBody.installationId).toBeNull();
+    expect(leadBody.data.leadId).toBe(leadId);
+    expect(formBody.data.leadId).toBe(leadId);
+    expect(leadBody.data.email).toBe(submittedEmail);
+    expect(formBody.data.email).toBe(submittedEmail);
+    expect(leadBody.data.consent).toEqual({ contact: true });
+    expect(formBody.data.consent).toEqual({ contact: false });
     const timestamp = lead.headers["X-FindVirtualMe-Timestamp"];
     expect(lead.headers["X-FindVirtualMe-Signature"]).toBe(
       `v1=${signWebhookPayload(secret, timestamp, lead.body)}`
@@ -139,7 +162,10 @@ describe("signed event catalog", () => {
     const profile = JSON.parse(profileCall.body);
     expect(profile.data.businessName).toBe("Renamed Clinic");
     expect(profile.data.siteId).toBe(portfolio._id.toString());
-    expect(JSON.stringify(profile)).not.toContain("visitor@example.test");
+    expect(profile.apiVersion).toBe(API_VERSION);
+    expect(profile.appId).toBeNull();
+    expect(profile.installationId).toBeNull();
+    expect(JSON.stringify(profile)).not.toContain(submittedEmail);
 
     const rotated = await request(app)
       .post(`/api/developer/webhooks/${created.body.data.id}/rotate`)
@@ -161,8 +187,102 @@ describe("signed event catalog", () => {
     expect(deliveries.status).toBe(200);
     expect(deliveries.body.data.length).toBeGreaterThan(0);
     const deliveryLog = JSON.stringify(deliveries.body);
+    expect(deliveryLog).not.toContain(submittedEmail);
     expect(deliveryLog).not.toContain("visitor@example.test");
     expect(deliveryLog).not.toContain("webhook-test@example.test");
     expect(deliveryLog).not.toContain(rotated.body.secret);
+  });
+
+  it("stamps the delivering installation and keeps a paired lead id", () => {
+    const event = buildLeadCapturedEvent({
+      siteId: "000000000000000000000000",
+      leadId: "111111111111111111111111",
+      email: "Visitor@Example.TEST",
+      consent: null,
+      createdAt: new Date("2026-10-23T12:00:00.000Z"),
+    });
+    const account = eventForSubscription(event, {});
+    expect(account.appId).toBeNull();
+    expect(account.installationId).toBeNull();
+    expect(account.data.consent).toBeNull();
+    expect(account.data.email).toBe("Visitor@Example.TEST");
+    const stamped = eventForSubscription(event, {
+      appId: "222222222222222222222222",
+      installationId: "333333333333333333333333",
+    });
+    expect(stamped.id).toBe(event.id);
+    expect(stamped.appId).toBe("222222222222222222222222");
+    expect(stamped.installationId).toBe("333333333333333333333333");
+    expect(stamped.data.leadId).toBe(event.data.leadId);
+
+    const site = eventForSubscription(
+      buildSitePublishedEvent({ siteId: "000000000000000000000000", publishedAt: new Date() }),
+      { appId: "222222222222222222222222", installationId: "333333333333333333333333" }
+    );
+    expect(site.apiVersion).toBe(API_VERSION);
+    expect(site.appId).toBe("222222222222222222222222");
+
+    const installed = eventForSubscription(
+      buildAppInstalledEvent({
+        siteId: "000000000000000000000000",
+        appId: "222222222222222222222222",
+        installationId: "333333333333333333333333",
+        scopes: ["leads:read"],
+      }),
+      { appId: "999999999999999999999999", installationId: "888888888888888888888888" }
+    );
+    expect(installed.apiVersion).toBe(API_VERSION);
+    expect(installed.appId).toBeUndefined();
+    expect(installed.data.appId).toBe("222222222222222222222222");
+    expect(installed.data.installationId).toBe("333333333333333333333333");
+  });
+
+  it("stores an optional consent answer and emits one lead id for both events", async () => {
+    const user = await createUser("form");
+    const portfolio = await Portfolio.create({
+      owner: user._id,
+      slug: `form${nonce()}`,
+      title: "Form Clinic",
+      template: "healthcare",
+      visibility: "public",
+    });
+    const created = await request(app)
+      .post("/api/developer/webhooks")
+      .set("Authorization", sessionFor(user))
+      .send({ url: "https://hooks.example.test/forms", events: ["lead.captured", "form.submitted"] });
+    expect(created.status).toBe(201);
+
+    const calls = [];
+    global.fetch.mockImplementation(async (_url, init) => {
+      calls.push(init);
+      return { status: 200 };
+    });
+
+    const submittedEmail = "Visitor@Example.TEST";
+    const posted = await request(app).post("/api/contact").send({
+      name: "Visitor Example",
+      email: submittedEmail,
+      message: "Hello",
+      portfolioId: portfolio._id.toString(),
+      ownerEmail: "owner@example.test",
+      ownerName: "Owner Example",
+      consentContact: false,
+    });
+    expect(posted.status).toBe(201);
+    await flushLifecycleEvents();
+
+    const saved = await ContactMeForm.findOne({ portfolioId: portfolio._id }).lean();
+    expect(saved.consentContact).toBe(false);
+    expect(saved.email).toBe(submittedEmail);
+    const lead = calls.map((call) => JSON.parse(call.body)).find((body) => body.type === "lead.captured");
+    const form = calls.map((call) => JSON.parse(call.body)).find((body) => body.type === "form.submitted");
+    expect(lead.data.leadId).toBe(saved._id.toString());
+    expect(form.data.leadId).toBe(saved._id.toString());
+    expect(lead.data.email).toBe(submittedEmail);
+    expect(form.data.email).toBe(submittedEmail);
+    expect(lead.data.consent).toEqual({ contact: false });
+    expect(form.data.consent).toEqual({ contact: false });
+    expect(lead.appId).toBeNull();
+    expect(lead.installationId).toBeNull();
   });
 });

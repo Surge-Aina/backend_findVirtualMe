@@ -173,7 +173,7 @@ function address(portfolio) {
 
 function publishedEmail(value) {
   if (typeof value !== "string") return null;
-  const trimmed = value.trim().toLowerCase();
+  const trimmed = value.trim();
   if (!trimmed || trimmed.length > 254) return null;
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return null;
   return trimmed;

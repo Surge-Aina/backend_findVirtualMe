@@ -4,7 +4,7 @@
     "title": "FindVirtualMe Public API",
     "version": "1.0.0",
     "summary": "Read a FindVirtualMe account's own sites and published business profile.",
-    "description": "Authenticate with a developer API key (`Authorization: Bearer fvm_...`). A key can read only the account that created it, and can manage webhook subscriptions when it has `webhooks:write`. Human docs: `/api/public/docs`."
+    "description": "Authenticate with a developer API key (`Authorization: Bearer fvm_...`). A key can read only the account that created it. `leads:read` reads one captured lead. `webhooks:write` manages webhook subscriptions. Human docs: `/api/public/docs`."
   },
   "servers": [
     {
@@ -32,6 +32,10 @@
     {
       "name": "Webhooks",
       "description": "Signed outbound event subscriptions"
+    },
+    {
+      "name": "Leads",
+      "description": "Contact form submissions captured on an owned site"
     }
   ],
   "security": [
@@ -477,6 +481,56 @@
         "responses": {
           "200": {
             "description": "Deleted"
+          }
+        }
+      }
+    },
+    "/leads/{leadId}": {
+      "get": {
+        "tags": [
+          "Leads"
+        ],
+        "summary": "Read one captured lead",
+        "description": "Requires `leads:read`. Returns the contact or inquiry saved for a site the caller owns. `email` is exactly the submitted address. `consent` is `{ \"contact\": true|false }` when the form asked, otherwise null. Another account's lead id returns `not_found`. An OAuth install token can read leads only for its site.",
+        "operationId": "getLead",
+        "parameters": [
+          {
+            "name": "leadId",
+            "in": "path",
+            "required": true,
+            "description": "Stable id shared by the paired lead.captured and form.submitted events.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The lead",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Lead"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
           }
         }
       }
@@ -926,7 +980,10 @@
         "required": [
           "id",
           "type",
+          "apiVersion",
           "createdAt",
+          "appId",
+          "installationId",
           "data"
         ],
         "properties": {
@@ -938,25 +995,57 @@
             "type": "string",
             "const": "lead.captured"
           },
+          "apiVersion": {
+            "type": "string",
+            "const": "2026-10-23",
+            "example": "2026-10-23"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
           },
+          "appId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Marketplace app id when the delivering subscription belongs to an installation. Null otherwise."
+          },
+          "installationId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Marketplace installation id when the delivering subscription belongs to an installation. Null otherwise."
+          },
           "data": {
             "type": "object",
             "required": [
+              "leadId",
               "siteId",
               "email",
               "name",
               "phone",
+              "consent",
               "createdAt"
             ],
             "properties": {
+              "leadId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Stable id of the saved contact. The paired form.submitted event uses the same leadId."
+              },
               "siteId": {
                 "type": "string"
               },
               "email": {
-                "type": "string"
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Exactly the address submitted on the form."
               },
               "name": {
                 "type": [
@@ -970,7 +1059,412 @@
                   "null"
                 ]
               },
+              "consent": {
+                "description": "Null when the form does not ask for contact consent.",
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "contact"
+                    ],
+                    "properties": {
+                      "contact": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                ]
+              },
               "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        },
+        "example": {
+          "id": "evt_example",
+          "type": "lead.captured",
+          "apiVersion": "2026-10-23",
+          "createdAt": "2026-10-23T12:00:00.000Z",
+          "appId": null,
+          "installationId": null,
+          "data": {
+            "leadId": "507f1f77bcf86cd799439011",
+            "siteId": "507f1f77bcf86cd799439012",
+            "email": "Visitor@Example.TEST",
+            "name": "Visitor Example",
+            "phone": null,
+            "consent": {
+              "contact": true
+            },
+            "createdAt": "2026-10-23T12:00:00.000Z"
+          }
+        }
+      },
+      "Lead": {
+        "type": "object",
+        "required": [
+          "id",
+          "siteId",
+          "form",
+          "email",
+          "name",
+          "phone",
+          "message",
+          "consent",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "form": {
+            "type": "string",
+            "example": "contact"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Exactly the address submitted on the form."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "consent": {
+            "description": "Null when the form does not ask for contact consent.",
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "contact"
+                ],
+                "properties": {
+                  "contact": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            ]
+          },
+          "createdAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "FormSubmittedEvent": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "apiVersion",
+          "createdAt",
+          "appId",
+          "installationId",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "const": "form.submitted"
+          },
+          "apiVersion": {
+            "type": "string",
+            "const": "2026-10-23",
+            "example": "2026-10-23"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "appId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "installationId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "leadId",
+              "siteId",
+              "form",
+              "email",
+              "name",
+              "phone",
+              "message",
+              "consent",
+              "submittedAt"
+            ],
+            "properties": {
+              "leadId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "siteId": {
+                "type": "string"
+              },
+              "form": {
+                "type": "string"
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Exactly the address submitted on the form."
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "phone": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "consent": {
+                "description": "Null when the form does not ask for contact consent.",
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "contact"
+                    ],
+                    "properties": {
+                      "contact": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                ]
+              },
+              "submittedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        },
+        "example": {
+          "id": "evt_example",
+          "type": "form.submitted",
+          "apiVersion": "2026-10-23",
+          "createdAt": "2026-10-23T12:00:00.000Z",
+          "appId": null,
+          "installationId": null,
+          "data": {
+            "leadId": "507f1f77bcf86cd799439011",
+            "siteId": "507f1f77bcf86cd799439012",
+            "form": "contact",
+            "email": "Visitor@Example.TEST",
+            "name": "Visitor Example",
+            "phone": null,
+            "message": "Hello",
+            "consent": {
+              "contact": true
+            },
+            "submittedAt": "2026-10-23T12:00:00.000Z"
+          }
+        }
+      },
+      "SitePublishedEvent": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "apiVersion",
+          "createdAt",
+          "appId",
+          "installationId",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "const": "site.published"
+          },
+          "apiVersion": {
+            "type": "string",
+            "const": "2026-10-23",
+            "example": "2026-10-23"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "appId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "installationId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "siteId",
+              "publishedAt"
+            ],
+            "properties": {
+              "siteId": {
+                "type": "string"
+              },
+              "publishedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      },
+      "BusinessProfileUpdatedEvent": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "apiVersion",
+          "createdAt",
+          "appId",
+          "installationId",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "const": "business_profile.updated"
+          },
+          "apiVersion": {
+            "type": "string",
+            "const": "2026-10-23",
+            "example": "2026-10-23"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "appId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "installationId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "siteId",
+              "businessName",
+              "logoUrl",
+              "brandColors",
+              "address",
+              "contact",
+              "updatedAt"
+            ],
+            "properties": {
+              "siteId": {
+                "type": "string"
+              },
+              "businessName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "logoUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "brandColors": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "address": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": true
+              },
+              "contact": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": true
+              },
+              "updatedAt": {
                 "type": "string",
                 "format": "date-time"
               }
@@ -991,6 +1485,69 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/LeadCapturedEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Receiver accepted the event"
+          }
+        }
+      }
+    },
+    "formSubmitted": {
+      "post": {
+        "summary": "form.submitted",
+        "operationId": "formSubmitted",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FormSubmittedEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Receiver accepted the event"
+          }
+        }
+      }
+    },
+    "sitePublished": {
+      "post": {
+        "summary": "site.published",
+        "operationId": "sitePublished",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SitePublishedEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Receiver accepted the event"
+          }
+        }
+      }
+    },
+    "businessProfileUpdated": {
+      "post": {
+        "summary": "business_profile.updated",
+        "operationId": "businessProfileUpdated",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BusinessProfileUpdatedEvent"
               }
             }
           }

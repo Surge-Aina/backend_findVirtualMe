@@ -1,5 +1,7 @@
 const { WebhookEndpoint, WebhookDelivery } = require("./webhookEndpoint.model");
 const { signingSecretFor } = require("./webhook.service");
+const { API_VERSION, API_VERSION_HEADER } = require("./webhookContract");
+const { eventForSubscription } = require("./webhookEvents");
 
 function loadInstallationModel() {
   try {
@@ -37,16 +39,17 @@ async function enqueueEvent(userId, event) {
   }).lean();
   if (endpoints.length === 0) return [];
 
-  const rawBody = stringifyEvent(event);
   const created = [];
   for (const endpoint of endpoints) {
     if (!(await installationAllows(endpoint, event))) continue;
+    const payload = eventForSubscription(event, endpoint);
+    const rawBody = stringifyEvent(payload);
     try {
       const delivery = await WebhookDelivery.create({
         endpointId: endpoint._id,
         userId,
-        eventId: event.id,
-        type: event.type,
+        eventId: payload.id,
+        type: payload.type,
         rawBody,
         status: "pending",
         attempts: 0,
@@ -100,6 +103,7 @@ async function attemptDelivery(delivery) {
         "X-FindVirtualMe-Timestamp": timestamp,
         "X-FindVirtualMe-Signature": signatureHeader(secret, timestamp, rawBody),
         "X-FindVirtualMe-Event": delivery.eventId,
+        [API_VERSION_HEADER]: API_VERSION,
       },
       body: rawBody,
       signal: AbortSignal.timeout(10000),

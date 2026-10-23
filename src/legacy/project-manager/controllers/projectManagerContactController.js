@@ -3,6 +3,7 @@ const Portfolio = require('../models/portfolioModel');
 const UnifiedPortfolio = require("../../../modules/portfolios/models/Portfolio");
 const { sendProjectManagerContactEmails } = require('../../../shared/services/emailService');
 const { notifyLeadCaptured, notifyFormSubmitted } = require('../../../modules/public-api/lifecycleEvents');
+const { consentContactFromBody } = require('../../../modules/public-api/leadConsent');
 
 exports.submitContact = async (req, res) => {
   try {
@@ -50,6 +51,7 @@ exports.submitContact = async (req, res) => {
     console.log('📧 Owner email:', ownerEmail);
     
     // Save contact to database
+    const consentContact = consentContactFromBody(req.body);
     const contact = await ProjectManagerContact.create({
       portfolioId,
       ownerEmail,
@@ -57,22 +59,29 @@ exports.submitContact = async (req, res) => {
       name,
       email,
       message,
-      status: 'new'
+      status: 'new',
+      ...(consentContact === undefined ? {} : { consentContact }),
     });
     
     console.log('✅ Contact saved to database:', contact._id);
+    const leadId = contact._id.toString();
+    const consent = consentContact === undefined ? null : { contact: consentContact };
     notifyLeadCaptured({
       siteId: portfolioId,
+      leadId,
       email,
       name,
+      consent,
       createdAt: contact.createdAt,
     });
     notifyFormSubmitted({
       siteId: portfolioId,
+      leadId,
       form: "projectManagerContact",
       email,
       name,
       message,
+      consent,
       submittedAt: contact.createdAt,
     });
     

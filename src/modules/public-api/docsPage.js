@@ -48,6 +48,7 @@ function renderDocsPage() {
       <li><code>sites:read</code> — list and fetch the caller's websites.</li>
       <li><code>profile:read</code> — read the published business profile.</li>
       <li><code>webhooks:write</code> — create, list, delete, rotate, and test webhook subscriptions.</li>
+      <li><code>leads:read</code> — read one lead captured on a site the caller owns.</li>
     </ul>
     <p><code>GET /me</code> identifies the key's account and does not require a resource scope. It returns the account id, username, role, active flag, and creation time.</p>
 
@@ -59,6 +60,7 @@ function renderDocsPage() {
         <tr><td>GET</td><td><code>/api/public/v1/sites</code></td><td><code>sites:read</code></td></tr>
         <tr><td>GET</td><td><code>/api/public/v1/sites/:id</code></td><td><code>sites:read</code></td></tr>
         <tr><td>GET</td><td><code>/api/public/v1/business-profile</code></td><td><code>profile:read</code></td></tr>
+        <tr><td>GET</td><td><code>/api/public/v1/leads/:leadId</code></td><td><code>leads:read</code></td></tr>
         <tr><td>POST</td><td><code>/api/public/v1/webhooks</code></td><td><code>webhooks:write</code></td></tr>
         <tr><td>GET</td><td><code>/api/public/v1/webhooks</code></td><td><code>webhooks:write</code></td></tr>
         <tr><td>POST</td><td><code>/api/public/v1/webhooks/:id/rotate</code></td><td><code>webhooks:write</code></td></tr>
@@ -74,10 +76,31 @@ function renderDocsPage() {
     <p>Errors use <code>{ "error": { "code": "...", "message": "..." } }</code>. Unknown and revoked keys both return <code>invalid_api_key</code>. A missing scope returns <code>insufficient_scope</code>. Another customer's site id returns <code>not_found</code>.</p>
     <p>Each key is counted in the database, so the limit is shared by every process. If that counter is unavailable, the process applies the same limit on its own. Defaults are 60 requests per 60 seconds. <code>429</code> responses use code <code>rate_limited</code> and include <code>Retry-After</code>. Successful responses include <code>RateLimit-Limit</code>, <code>RateLimit-Remaining</code>, and <code>RateLimit-Reset</code>.</p>
 
+    <h2>Event contract</h2>
+    <p>Every payload includes top-level <code>apiVersion</code> (<code>2026-10-23</code>). Deliveries also send <code>X-FindVirtualMe-Api-Version</code> with that value. <code>lead.captured</code> and <code>form.submitted</code> for one submission share <code>data.leadId</code>. <code>data.email</code> is the address exactly as the visitor submitted it. <code>data.consent</code> is <code>{"contact": true}</code> or <code>{"contact": false}</code> when the form includes the optional consent checkbox, and <code>null</code> when the form does not ask. Send <code>consentContact</code> as a boolean, or <code>consent</code> as a boolean or <code>{"contact": true}</code>. Omit both when the form does not ask.</p>
+    <p>On <code>lead.captured</code>, <code>form.submitted</code>, <code>site.published</code>, and <code>business_profile.updated</code>, top-level <code>appId</code> and <code>installationId</code> identify the marketplace installation that owns the delivering subscription. Both are <code>null</code> for an account subscription. <code>GET /api/public/v1/leads/:leadId</code> returns that lead for a site the caller owns and omits the site owner's private contact fields.</p>
+    <pre>{
+  "id": "evt_example",
+  "type": "lead.captured",
+  "apiVersion": "2026-10-23",
+  "createdAt": "2026-10-23T12:00:00.000Z",
+  "appId": null,
+  "installationId": null,
+  "data": {
+    "leadId": "507f1f77bcf86cd799439011",
+    "siteId": "507f1f77bcf86cd799439012",
+    "email": "Visitor@Example.TEST",
+    "name": "Visitor Example",
+    "phone": null,
+    "consent": { "contact": true },
+    "createdAt": "2026-10-23T12:00:00.000Z"
+  }
+}</pre>
+
     <h2>Signed webhooks</h2>
     <p>Account owners use <code>/api/developer/webhooks</code> with a session token. Apps use the same actions on <code>/api/public/v1/webhooks</code> with scope <code>webhooks:write</code>. Create, list, and delete subscriptions. <code>POST /:id/rotate</code> returns a new signing secret once. <code>POST /:id/test</code> sends one signed test event. <code>GET /:id/deliveries</code> is the delivery log and does not include the request body.</p>
     <p>Catalog: <code>lead.captured</code>, <code>form.submitted</code>, <code>site.published</code>, <code>business_profile.updated</code>, <code>app.installed</code>, <code>app.uninstalled</code>.</p>
-    <p>Every attempt sends <code>X-FindVirtualMe-Timestamp</code> (unix seconds), <code>X-FindVirtualMe-Signature: v1=&lt;hex&gt;</code>, and <code>X-FindVirtualMe-Event</code> (the event id). The hex is HMAC-SHA256 of the timestamp, a period, and the exact JSON body, using the endpoint signing secret. Reject timestamps more than 300 seconds from your clock and compare the hex in constant time. The event id stays the same across retries. A new timestamp is used for each attempt. Retries wait 5 seconds, 30 seconds, 2 minutes, 10 minutes, and 1 hour, then stop after 6 attempts.</p>
+    <p>Every attempt sends <code>X-FindVirtualMe-Timestamp</code> (unix seconds), <code>X-FindVirtualMe-Signature: v1=&lt;hex&gt;</code>, <code>X-FindVirtualMe-Event</code> (the event id), and <code>X-FindVirtualMe-Api-Version</code> (<code>2026-10-23</code>). The hex is HMAC-SHA256 of the timestamp, a period, and the exact JSON body, using the endpoint signing secret. Reject timestamps more than 300 seconds from your clock and compare the hex in constant time. The event id stays the same across retries. A new timestamp is used for each attempt. Retries wait 5 seconds, 30 seconds, 2 minutes, 10 minutes, and 1 hour, then stop after 6 attempts.</p>
   </main>
 </body>
 </html>`;
