@@ -30,6 +30,9 @@ const MONTHS = {
   december: 11,
 };
 
+const MAX_LOCAL_TEXT = 20000;
+const MAX_DATE_LINE = 300;
+
 const SECTION_RULES = [
   ["summary", /^(summary|professional summary|profile|objective|about)\b[:\s-]*$/i],
   ["experience", /^(experience|work experience|professional experience|employment|work history)\b[:\s-]*$/i],
@@ -58,10 +61,10 @@ function asStringList(value, maxItems, maxLen) {
 
 function parseSingleDate(token) {
   const text = String(token || "").trim();
-  if (!text) return null;
+  if (!text || text.length > 32) return null;
   if (/^(present|current|now|ongoing)$/i.test(text)) return null;
 
-  const monthYear = text.match(/^([A-Za-z]+)\.?\s+(\d{4})$/);
+  const monthYear = text.match(/^([A-Za-z]{3,10})\.?\s+(\d{4})$/);
   if (monthYear) {
     const month = MONTHS[monthYear[1].toLowerCase().replace(/\.$/, "")];
     const year = Number(monthYear[2]);
@@ -91,14 +94,54 @@ function parseSingleDate(token) {
   return null;
 }
 
+function findRangeSplit(text) {
+  const lower = text.toLowerCase();
+  const markers = [" - ", " – ", " — ", " to "];
+  let at = -1;
+  let length = 0;
+  for (const marker of markers) {
+    const index = lower.indexOf(marker);
+    if (index !== -1 && (at === -1 || index < at)) {
+      at = index;
+      length = marker.length;
+    }
+  }
+  if (at === -1) {
+    const compact = text.match(/^(\d{4})-(\d{4})$/);
+    if (!compact) return null;
+    return { left: compact[1], right: compact[2] };
+  }
+  return { left: text.slice(0, at).trim(), right: text.slice(at + length).trim() };
+}
+
+function dateFromEnd(chunk) {
+  const words = String(chunk || "").split(/\s+/).filter(Boolean).slice(-3);
+  for (let count = words.length; count >= 1; count -= 1) {
+    const date = parseSingleDate(words.slice(-count).join(" "));
+    if (date) return date;
+  }
+  return null;
+}
+
+function dateFromStart(chunk) {
+  const words = String(chunk || "").split(/\s+/).filter(Boolean).slice(0, 3);
+  if (!words.length) return { date: null, open: false };
+  if (/^(present|current|now|ongoing)$/i.test(words[0])) return { date: null, open: true };
+  for (let count = 1; count <= words.length; count += 1) {
+    const date = parseSingleDate(words.slice(0, count).join(" "));
+    if (date) return { date, open: false };
+  }
+  return { date: null, open: false };
+}
+
 function parseDateRange(line) {
-  const match = String(line || "").match(
-    /([A-Za-z]+\.?\s+\d{4}|\d{4}(?:-\d{2}(?:-\d{2})?)?|\d{1,2}\/\d{4})\s*(?:-|–|—|\bto\b)\s*(present|current|now|ongoing|[A-Za-z]+\.?\s+\d{4}|\d{4}(?:-\d{2}(?:-\d{2})?)?|\d{1,2}\/\d{4})/i,
-  );
-  if (!match) return null;
-  const startDate = parseSingleDate(match[1]);
-  const endIsOpen = /^(present|current|now|ongoing)$/i.test(match[2]);
-  const endDate = endIsOpen ? null : parseSingleDate(match[2]);
+  const text = String(line || "").trim();
+  if (!text || text.length > MAX_DATE_LINE) return null;
+  const split = findRangeSplit(text);
+  if (!split) return null;
+  const startDate = dateFromEnd(split.left);
+  const end = dateFromStart(split.right);
+  const endDate = end.open ? null : end.date;
   if (!startDate && !endDate) return null;
   return { startDate, endDate };
 }
@@ -140,11 +183,6 @@ function blocks(lines) {
   }
   if (current.length) groups.push(current);
   return groups;
-}
-
-function findEmail(text) {
-  const match = String(text || "").match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  return match ? match[0] : "";
 }
 
 function findPhone(text) {
@@ -309,7 +347,8 @@ function sanitizePortfolio(input) {
 }
 
 function parseResumeLocally(text) {
-  const raw = String(text || "");
+  const source = String(text || "").replace(/\r\n/g, "\n");
+  const raw = source.length > MAX_LOCAL_TEXT ? source.slice(0, MAX_LOCAL_TEXT) : source;
   const sections = splitSections(raw);
   const preamble = (sections.preamble || []).filter((line) => line && !looksLikeContact(line) && !isSectionHeader(line));
   const locationLine = preamble.find((line) => /^[A-Za-z .'-]+,\s*[A-Z]{2}$/.test(line));
@@ -320,7 +359,6 @@ function parseResumeLocally(text) {
     name,
     title,
     summary: (sections.summary || []).filter(Boolean).join("\n"),
-    email: findEmail(raw),
     phone: findPhone(raw),
     location: locationLine || "",
     skills: parseSkills(sections.skills),

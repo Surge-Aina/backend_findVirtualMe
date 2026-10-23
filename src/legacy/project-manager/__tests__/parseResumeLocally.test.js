@@ -82,4 +82,20 @@ describe("parseResumeLocally", () => {
     expect(parsed.skills).toEqual([]);
     expect(parsed.experiences).toEqual([]);
   });
+
+  test("finishes adversarial 100k inputs within 200ms", () => {
+    const samples = [
+      "a".repeat(100000),
+      "a@a.".repeat(25000),
+      `Experience\n${"a".repeat(100000)}`,
+    ];
+
+    for (const sample of samples) {
+      const start = process.hrtime.bigint();
+      const parsed = parseResumeLocally(sample);
+      const elapsedMs = Number(process.hrtime.bigint() - start) / 1e6;
+      expect(parsed.skills).toEqual([]);
+      expect(elapsedMs).toBeLessThan(200);
+    }
+  });
 });
