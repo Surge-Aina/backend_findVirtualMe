@@ -2,6 +2,7 @@ const express = require("express");
 const request = require("supertest");
 const User = require("../../../shared/models/User");
 const Portfolio = require("../../portfolios/models/Portfolio");
+const ContactMeForm = require("../../contact/contactMeForm.model");
 const { createKey } = require("../apiKey.service");
 const { mountMcp } = require("../mcp");
 
@@ -55,8 +56,62 @@ describe("MCP server", () => {
     const text = JSON.stringify(body);
     expect(text).toContain("list_sites");
     expect(text).toContain("get_business_profile");
+    expect(text).toContain("get_lead");
     expect(text).toContain("list_webhooks");
     expect(text).not.toContain("list_leads");
     expect(text).not.toContain(key.secret);
+  });
+
+  it("reads an owned lead and rejects a key without leads:read", async () => {
+    const user = await createUser();
+    const site = await Portfolio.create({
+      owner: user._id,
+      slug: `lead${nonce()}`,
+      title: "Lead Clinic",
+      template: "healthcare",
+      visibility: "public",
+    });
+    const submittedEmail = "Visitor@Example.TEST";
+    const lead = await ContactMeForm.create({
+      portfolioId: site._id,
+      ownerEmail: "owner@example.test",
+      ownerName: "Owner Example",
+      name: "Visitor Example",
+      email: submittedEmail,
+      message: "Hello",
+      consentContact: true,
+    });
+    const key = await createKey({ userId: user._id, scopes: ["leads:read"], name: "Leads" });
+    const found = await request(app)
+      .post("/api/mcp")
+      .set("Authorization", `Bearer ${key.secret}`)
+      .set("Accept", "application/json, text/event-stream")
+      .send({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "tools/call",
+        params: { name: "get_lead", arguments: { leadId: lead._id.toString() } },
+      });
+    expect(found.status).toBe(200);
+    const body = JSON.stringify(found.body);
+    expect(body).toContain(submittedEmail);
+    expect(body).toContain(lead._id.toString());
+    expect(body).not.toContain("owner@example.test");
+    expect(body).not.toContain(key.secret);
+
+    const sitesOnly = await createKey({ userId: user._id, scopes: ["sites:read"], name: "Sites" });
+    const denied = await request(app)
+      .post("/api/mcp")
+      .set("Authorization", `Bearer ${sitesOnly.secret}`)
+      .set("Accept", "application/json, text/event-stream")
+      .send({
+        jsonrpc: "2.0",
+        id: 3,
+        method: "tools/call",
+        params: { name: "get_lead", arguments: { leadId: lead._id.toString() } },
+      });
+    expect(denied.status).toBe(200);
+    expect(JSON.stringify(denied.body)).toContain("insufficient_scope");
+    expect(JSON.stringify(denied.body)).not.toContain(submittedEmail);
   });
 });

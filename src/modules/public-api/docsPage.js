@@ -104,7 +104,7 @@ function renderDocsPage() {
     <p>Subscriber URLs must be public https. Private, link-local, and metadata addresses are rejected, including names that resolve to those addresses. Redirects are not followed.</p>
 
     <h2>MCP</h2>
-    <p><code>POST /api/mcp</code> speaks the Model Context Protocol. It uses the same API keys and scopes. Tools: <code>list_sites</code>, <code>get_site</code>, <code>get_business_profile</code>, and <code>list_webhooks</code>. A missing scope returns an error result and does not log the tool arguments.</p>
+    <p><code>POST /api/mcp</code> speaks the Model Context Protocol. It uses the same API keys and scopes. Tools: <code>list_sites</code>, <code>get_site</code>, <code>get_business_profile</code>, <code>get_lead</code>, and <code>list_webhooks</code>. <code>get_lead</code> requires <code>leads:read</code>. A missing scope returns an error result and does not log the tool arguments.</p>
     <pre>{
   "mcpServers": {
     "findvirtualme": {

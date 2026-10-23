@@ -5,6 +5,7 @@ const express = require("express");
 const { authenticateApiKey } = require("./publicApi.auth");
 const { publicApiRateLimit } = require("./rateLimit");
 const sitesService = require("./sites.service");
+const leadsService = require("./leads.service");
 const { listEndpoints } = require("./webhook.service");
 
 function textResult(value) {
@@ -63,6 +64,24 @@ function registerTools(server, auth) {
       const profile = await sitesService.getBusinessProfile({ ownerId, siteId });
       if (!profile) return { isError: true, content: [{ type: "text", text: "not_found" }] };
       return textResult(profile);
+    }
+  );
+
+  server.registerTool(
+    "get_lead",
+    {
+      description: "Fetch one lead captured on a site owned by the authenticated account. The email is exactly as submitted.",
+      inputSchema: { leadId: z.string() },
+    },
+    async ({ leadId }) => {
+      if (!hasScope(auth, "leads:read")) return scopeError("leads:read");
+      const lead = await leadsService.getLead({
+        ownerId,
+        leadId,
+        siteId: auth.siteId || null,
+      });
+      if (!lead) return { isError: true, content: [{ type: "text", text: "not_found" }] };
+      return textResult(lead);
     }
   );
 
