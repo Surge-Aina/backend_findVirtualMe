@@ -1,12 +1,12 @@
 const express = require("express");
 const cors = require("cors");
-const localVendorRoutes = require("./routes/localFoodVendor/localVendorRoutes");
-const menuRoutes = require("./routes/localFoodVendor/menuRoutes");
-const aboutRoutes = require("./routes/localFoodVendor/aboutRoutes");
-const bannerRoutes = require("./routes/localFoodVendor/bannerRoutes");
-const galleryRoutes = require("./routes/localFoodVendor/galleryRoutes");
-const reviewRoutes = require("./routes/localFoodVendor/reviewRoutes");
-const taggedImageRoutes = require("./routes/localFoodVendor/taggedImageRoutes");
+const localVendorRoutes = require("./src/legacy/local-vendor/routes/localVendorRoutes");
+const menuRoutes = require("./src/legacy/local-vendor/routes/menuRoutes");
+const aboutRoutes = require("./src/legacy/local-vendor/routes/aboutRoutes");
+const bannerRoutes = require("./src/legacy/local-vendor/routes/bannerRoutes");
+const galleryRoutes = require("./src/legacy/local-vendor/routes/galleryRoutes");
+const reviewRoutes = require("./src/legacy/local-vendor/routes/reviewRoutes");
+const taggedImageRoutes = require("./src/legacy/local-vendor/routes/taggedImageRoutes");
 
 const app = express();
 app.use(cors());

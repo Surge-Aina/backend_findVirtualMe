@@ -78,21 +78,11 @@ npm test -- tests/softwareeng.model.test.js
 
 ## Environment Variables
 
-The tests will work with default values, but you can create a `.env` file for custom configuration:
+Deployed environments must set `MONGODB_URI` and `JWT_SECRET`. Do not commit those values.
 
-```bash
-# Copy the example file
-cp .env.example .env
+User seeding reads `ADMIN_EMAIL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `CUSTOMER_EMAIL`, `CUSTOMER_USERNAME`, and `CUSTOMER_PASSWORD`. The seed fails if any of them are missing.
 
-# Or create manually with these variables:
-NODE_ENV=development
-PORT=5100
-MONGODB_URI=mongodb://localhost:27017/findVirtualMe
-JWT_SECRET=your_jwt_secret_key_here
-MONGODB_URI_TEST=mongodb://localhost:27017/test-portfolio
-```
-
-**Note**: If no `.env` file exists, the tests will use default values automatically.
+The Jest setup forces `NODE_ENV=test` and, only in that mode, fills a synthetic `JWT_SECRET` when one is not already set. That value is not a production secret.
 
 ## Test Data
 

@@ -16,10 +16,19 @@ if (!process.env.MONGODB_URI_TEST) {
   process.env.MONGODB_URI_TEST = "mongodb://localhost:27017/test-portfolio";
 }
 
-// Set JWT secret for tests
-if (!process.env.JWT_SECRET) {
-  process.env.JWT_SECRET =
-    "eadf50f302ece478535332bd3f0cee4a6fa76e247f884833e38912d96a421096";
+// Synthetic test signing key only. Never reuse this value outside NODE_ENV=test.
+if (process.env.NODE_ENV === "test" && !process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = "test-only-jwt-secret";
+}
+
+if (process.env.NODE_ENV === "test") {
+  process.env.STRIPE_MODE = "test";
+  if (!process.env.STRIPE_SECRET_KEY_TEST) {
+    process.env.STRIPE_SECRET_KEY_TEST = "sk_test_synthetic_only";
+  }
+  if (!process.env.FRONTEND_URL) {
+    process.env.FRONTEND_URL = "http://localhost:5173";
+  }
 }
 
 // Set default port
