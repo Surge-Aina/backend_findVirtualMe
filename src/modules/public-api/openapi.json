@@ -1,0 +1,402 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FindVirtualMe Public API",
+    "version": "1.0.0",
+    "summary": "Read a FindVirtualMe account's own sites and published business profile.",
+    "description": "Authenticate with a developer API key (`Authorization: Bearer fvm_...`). A key can read only the account that created it. Human docs: `/api/public/docs`. Outbound webhooks, the add-to-wallet block, and stored partner credentials are not part of this version."
+  },
+  "servers": [
+    {
+      "url": "/api/public/v1",
+      "description": "Public API v1 on this FindVirtualMe API host"
+    }
+  ],
+  "tags": [
+    { "name": "Account", "description": "Identity of the key owner" },
+    { "name": "Sites", "description": "Websites owned by the key's account" },
+    { "name": "Profile", "description": "Published business profile for wallet-card prefill" },
+    { "name": "Discovery", "description": "Unauthenticated API description" }
+  ],
+  "security": [{ "bearerAuth": [] }],
+  "paths": {
+    "/openapi.json": {
+      "get": {
+        "tags": ["Discovery"],
+        "summary": "OpenAPI document",
+        "operationId": "getOpenApi",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "This document",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object", "additionalProperties": true }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/me": {
+      "get": {
+        "tags": ["Account"],
+        "summary": "Key owner",
+        "description": "Non-sensitive account fields for the key owner. Any valid key may call this. Email, personal name, and phone are omitted.",
+        "operationId": "getMe",
+        "responses": {
+          "200": {
+            "description": "Owning account",
+            "headers": {
+              "RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
+              "RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
+              "RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data"],
+                  "properties": { "data": { "$ref": "#/components/schemas/Account" } }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/sites": {
+      "get": {
+        "tags": ["Sites"],
+        "summary": "List sites",
+        "description": "Websites for the key owner, oldest first. Requires `sites:read`.",
+        "operationId": "listSites",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Page size from 1 to 100. Default 20.",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor from a previous page's nextCursor.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of sites",
+            "headers": {
+              "RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
+              "RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
+              "RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data", "page"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Site" }
+                    },
+                    "page": { "$ref": "#/components/schemas/CursorPage" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/sites/{id}": {
+      "get": {
+        "tags": ["Sites"],
+        "summary": "Get a site",
+        "description": "One website owned by the key's account. Another account's id is `not_found`. Requires `sites:read`.",
+        "operationId": "getSite",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Site",
+            "headers": {
+              "RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
+              "RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
+              "RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data"],
+                  "properties": { "data": { "$ref": "#/components/schemas/Site" } }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/business-profile": {
+      "get": {
+        "tags": ["Profile"],
+        "summary": "Published business profile",
+        "description": "Business name, logo URL, brand colors, and address taken from the caller's site. Requires `profile:read`. Without `siteId`, the newest published site is used, then the newest site. The response omits private contact data.",
+        "operationId": "getBusinessProfile",
+        "parameters": [
+          {
+            "name": "siteId",
+            "in": "query",
+            "required": false,
+            "description": "Owned site to read. Another account's id is `not_found`.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Business profile",
+            "headers": {
+              "RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
+              "RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
+              "RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data"],
+                  "properties": { "data": { "$ref": "#/components/schemas/BusinessProfile" } }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Developer API key issued by FindVirtualMe. The secret starts with fvm_ and is shown only once."
+      }
+    },
+    "headers": {
+      "RateLimitLimit": {
+        "description": "Maximum requests in the current window for this key.",
+        "schema": { "type": "integer" }
+      },
+      "RateLimitRemaining": {
+        "description": "Remaining requests in the current window for this key.",
+        "schema": { "type": "integer" }
+      },
+      "RateLimitReset": {
+        "description": "Seconds until this key's window resets.",
+        "schema": { "type": "integer" }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Missing, unknown, or revoked API key",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" },
+            "example": {
+              "error": {
+                "code": "invalid_api_key",
+                "message": "Invalid or revoked API key"
+              }
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "The key is missing a scope, or the account is inactive",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" },
+            "examples": {
+              "scope": {
+                "value": {
+                  "error": {
+                    "code": "insufficient_scope",
+                    "message": "API key is missing a required scope",
+                    "details": { "requiredScope": "sites:read" }
+                  }
+                }
+              },
+              "inactive": {
+                "value": {
+                  "error": {
+                    "code": "account_inactive",
+                    "message": "Account is inactive"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "The resource does not exist for this account",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "A query parameter is invalid",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "This key exceeded its request window",
+        "headers": {
+          "Retry-After": {
+            "description": "Seconds to wait before retrying.",
+            "schema": { "type": "integer" }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" },
+            "example": {
+              "error": {
+                "code": "rate_limited",
+                "message": "API key rate limit exceeded"
+              }
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ErrorEnvelope": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" },
+              "details": { "type": "object", "additionalProperties": true }
+            }
+          }
+        }
+      },
+      "Account": {
+        "type": "object",
+        "required": ["id", "username", "role", "active", "createdAt"],
+        "properties": {
+          "id": { "type": "string" },
+          "username": { "type": "string" },
+          "role": { "type": "string" },
+          "active": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Domain": {
+        "type": "object",
+        "required": ["domain", "status"],
+        "properties": {
+          "domain": { "type": "string" },
+          "status": { "type": "string" }
+        }
+      },
+      "Site": {
+        "type": "object",
+        "required": ["id", "title", "subdomain", "hostname", "published", "domains"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "template": { "type": ["string", "null"] },
+          "subdomain": { "type": ["string", "null"] },
+          "hostname": {
+            "type": ["string", "null"],
+            "description": "Platform hostname formed from the subdomain and PUBLIC_SITE_HOST."
+          },
+          "published": { "type": "boolean" },
+          "domains": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Domain" }
+          }
+        }
+      },
+      "CursorPage": {
+        "type": "object",
+        "required": ["limit", "hasMore", "nextCursor"],
+        "properties": {
+          "limit": { "type": "integer" },
+          "hasMore": { "type": "boolean" },
+          "nextCursor": { "type": ["string", "null"] }
+        }
+      },
+      "Address": {
+        "type": "object",
+        "required": ["line1", "city", "region", "postalCode", "country", "formatted"],
+        "properties": {
+          "line1": { "type": ["string", "null"] },
+          "city": { "type": ["string", "null"] },
+          "region": { "type": ["string", "null"] },
+          "postalCode": { "type": ["string", "null"] },
+          "country": { "type": ["string", "null"] },
+          "formatted": { "type": "string" }
+        }
+      },
+      "BusinessProfile": {
+        "type": "object",
+        "required": ["siteId", "businessName", "logoUrl", "brandColors", "address"],
+        "properties": {
+          "siteId": { "type": "string" },
+          "businessName": { "type": ["string", "null"] },
+          "logoUrl": { "type": ["string", "null"] },
+          "brandColors": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "description": "Color tokens published on the site, such as accent, accentStrong, page, and text."
+          },
+          "address": {
+            "oneOf": [
+              { "$ref": "#/components/schemas/Address" },
+              { "type": "null" }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

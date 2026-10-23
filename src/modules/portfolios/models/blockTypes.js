@@ -160,6 +160,9 @@ for (const meta of Object.values(BLOCK_TYPES)) {
 
 const KNOWN_BLOCK_TYPES = Object.keys(BLOCK_TYPES);
 
+// `addToWallet` is reserved for a later WalletMe slice and is intentionally
+// absent here. See src/modules/public-api/walletmeExtensions.js.
+
 function isKnownBlockType(type) {
   return KNOWN_BLOCK_TYPES.includes(type);
 }
