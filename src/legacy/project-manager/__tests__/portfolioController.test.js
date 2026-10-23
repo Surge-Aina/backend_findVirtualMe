@@ -263,12 +263,13 @@ describe('Portfolio Controller Tests', () => {
 
 
   describe('addPDF', () => {
-    it('should upload PDF and create portfolio', async () => {
+    it('should upload PDF and create portfolio for the authenticated user', async () => {
+      req.user = { email: 'john@example.com', _id: new mongoose.Types.ObjectId(), role: 'customer' };
       req.file = {
-        buffer: Buffer.from('mock PDF content'),
+        buffer: Buffer.from('%PDF-1.4 mock PDF content'),
         originalname: 'resume.pdf',
       };
-      req.body.email = 'john@example.com';
+      req.body.email = 'someone-else@example.com';
 
       pdfParse.mockResolvedValue({
         numpages: 1,
@@ -280,7 +281,7 @@ describe('Portfolio Controller Tests', () => {
 
       const mockPortfolioJSON = JSON.stringify({
         name: 'John Doe',
-        email: 'john@example.com',
+        email: 'someone-else@example.com',
         title: 'Software Engineer',
         skills: ['JavaScript'],
       });
@@ -296,15 +297,17 @@ describe('Portfolio Controller Tests', () => {
           email: 'john@example.com',
         })
       );
+      expect(await Portfolio.findOne({ email: 'someone-else@example.com' })).toBeNull();
     });
 
-    it('should handle sessionId', async () => {
+    it('should bind an unauthenticated upload to the onboarding session', async () => {
+      req.user = {};
       req.file = {
-        buffer: Buffer.from('mock PDF'),
+        buffer: Buffer.from('%PDF-1.4 mock PDF'),
         originalname: 'resume.pdf',
       };
-      req.body.email = 'john@example.com';
-      req.body.sessionId = 'session123';
+      req.body.email = 'victim@example.com';
+      req.body.sessionId = '11111111-1111-4111-8111-111111111111';
 
       pdfParse.mockResolvedValue({
         numpages: 1,
@@ -316,7 +319,7 @@ describe('Portfolio Controller Tests', () => {
 
       generatePortfolioJSON.mockResolvedValue(JSON.stringify({
         name: 'John Doe',
-        email: 'john@example.com',
+        email: 'victim@example.com',
       }));
 
       await addPDF(req, res);
@@ -324,9 +327,46 @@ describe('Portfolio Controller Tests', () => {
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          sessionId: 'session123',
+          sessionId: '11111111-1111-4111-8111-111111111111',
+          email: 'onboarding+11111111-1111-4111-8111-111111111111@onboarding.invalid',
         })
       );
+      expect(await Portfolio.findOne({ email: 'victim@example.com' })).toBeNull();
+    });
+
+    it('should reject an unauthenticated upload without a session', async () => {
+      req.user = {};
+      req.file = {
+        buffer: Buffer.from('%PDF-1.4 mock PDF'),
+        originalname: 'resume.pdf',
+      };
+      req.body.email = 'john@example.com';
+
+      await addPDF(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+    });
+
+    it('should not overwrite a resume that already belongs to a user', async () => {
+      const ownerId = new mongoose.Types.ObjectId();
+      await Portfolio.create({
+        name: 'Owner',
+        email: 'owner@example.com',
+        userId: ownerId,
+        sessionId: '22222222-2222-4222-8222-222222222222',
+      });
+      req.user = {};
+      req.file = {
+        buffer: Buffer.from('%PDF-1.4 mock PDF'),
+        originalname: 'resume.pdf',
+      };
+      req.body.sessionId = '22222222-2222-4222-8222-222222222222';
+
+      await addPDF(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      const stored = await Portfolio.findOne({ email: 'owner@example.com' });
+      expect(stored.name).toBe('Owner');
     });
 
     it('should return 400 if no file uploaded', async () => {
@@ -339,8 +379,9 @@ describe('Portfolio Controller Tests', () => {
     });
 
     it('should return 500 if PDF parsing fails', async () => {
+      req.user = { email: 'john@example.com', _id: new mongoose.Types.ObjectId() };
       req.file = {
-        buffer: Buffer.from('mock PDF'),
+        buffer: Buffer.from('%PDF-1.4 mock PDF'),
       };
       req.body.email = 'john@example.com';
 
@@ -353,8 +394,9 @@ describe('Portfolio Controller Tests', () => {
     });
 
     it('should return 500 if OpenAI fails', async () => {
+      req.user = { email: 'john@example.com', _id: new mongoose.Types.ObjectId() };
       req.file = {
-        buffer: Buffer.from('mock PDF'),
+        buffer: Buffer.from('%PDF-1.4 mock PDF'),
       };
       req.body.email = 'john@example.com';
 

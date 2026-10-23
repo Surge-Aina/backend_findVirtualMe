@@ -1,17 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const dashboardController = require('../controllers/dashboardController');
-const { adminOnly } = require('../../legacyWriteGuard');
+const { dataScientistWrite } = require('../../legacyWriteGuard');
 
 // Get dashboard data (public)
 router.get('/', dashboardController.getDashboard);
 
-// Update dashboard data (admin only)
-router.put('/', ...adminOnly, dashboardController.updateDashboard);
+// Update dashboard data (portfolio owner or admin)
+router.put('/', ...dataScientistWrite, dashboardController.updateDashboard);
 
-// Create new dashboard (admin only)
-router.post('/', ...adminOnly, dashboardController.createDashboard);
+// Create new dashboard (portfolio owner or admin)
+router.post('/', ...dataScientistWrite, dashboardController.createDashboard);
 
-// Delete dashboard (admin only)
-router.delete('/:id', ...adminOnly, dashboardController.deleteDashboard);
+// Delete dashboard (portfolio owner or admin)
+router.delete('/:id', ...dataScientistWrite, dashboardController.deleteDashboard);
 module.exports = router;

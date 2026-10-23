@@ -1,8 +1,30 @@
-const req = require("express/lib/request");
 const Portfolio = require("../models/portfolioModel");
 const pdfParse = require("pdf-parse");
 const { generatePortfolioJSON, generateMatchSummary } = require("../../../shared/services/openAiService");
 const { uploadToS3, deleteFromS3 } = require("../../../shared/services/s3Service");
+const User = require("../../../shared/models/User");
+
+const SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ONBOARDING_EMAIL_DOMAIN = "onboarding.invalid";
+const MAX_JOB_TEXT = 20000;
+const MAX_RESUME_JSON = 100000;
+
+function onboardingEmail(sessionId) {
+  return `onboarding+${String(sessionId).toLowerCase()}@${ONBOARDING_EMAIL_DOMAIN}`;
+}
+
+function validSessionId(value) {
+  return SESSION_ID_RE.test(String(value || "").trim()) ? String(value).trim() : "";
+}
+
+function isPdfBuffer(buffer) {
+  return Buffer.isBuffer(buffer) && buffer.length >= 5 && buffer.subarray(0, 5).toString("utf8") === "%PDF-";
+}
+
+function isOnboardingDraft(doc) {
+  if (!doc || doc.userId) return false;
+  return String(doc.email || "").toLowerCase().endsWith(`@${ONBOARDING_EMAIL_DOMAIN}`);
+}
 
 function publicPortfolio(doc) {
   const plain = typeof doc.toObject === "function" ? doc.toObject() : { ...doc };
@@ -130,17 +152,55 @@ exports.addPortfolio = async(req, res) => {
 };
 
 exports.addPDF = async(req, res) => {
-    const email = req.user?.email || req.body.email;
-    const sessionId = req.body.sessionId; // get sessionId
     if (!req.file) {
         return res.status(400).json({ error: "No PDF file uploaded" });
     }
+    if (!isPdfBuffer(req.file.buffer)) {
+        return res.status(400).json({ error: "Only PDF files are allowed" });
+    }
+
+    const actor = req.user && (req.user.email || req.user._id) ? req.user : null;
+    const sessionId = validSessionId(req.body?.sessionId);
+    if (!actor && !sessionId) {
+        return res.status(401).json({ error: "A valid onboarding sessionId is required" });
+    }
 
     try {
-        // req.file.buffer contains the PDF file in memory
-        const data = await pdfParse(req.file.buffer);
+        let existing = null;
+        let email;
+        let userId = null;
+        let storedSessionId = null;
 
-        // Example: Simple JSON response with extracted text and number of pages
+        if (actor) {
+            email = String(actor.email || "").trim().toLowerCase();
+            userId = actor._id || actor.id || null;
+            if (userId) existing = await Portfolio.findOne({ userId });
+            if (!existing && email) existing = await Portfolio.findOne({ email });
+            if (!existing && sessionId) {
+                const draft = await Portfolio.findOne({ sessionId });
+                if (draft && isOnboardingDraft(draft)) existing = draft;
+                else if (draft) {
+                    return res.status(403).json({ error: "Cannot overwrite another user's resume" });
+                }
+            }
+        } else {
+            email = onboardingEmail(sessionId);
+            storedSessionId = sessionId;
+            existing = await Portfolio.findOne({ sessionId });
+            if (existing && !isOnboardingDraft(existing)) {
+                return res.status(403).json({ error: "Cannot overwrite another user's resume" });
+            }
+            if (req.body?.email) {
+                const claimed = await User.findOne({
+                    email: String(req.body.email).trim().toLowerCase(),
+                }).select("_id");
+                if (claimed && existing && String(existing.email).toLowerCase() === String(req.body.email).trim().toLowerCase()) {
+                    return res.status(403).json({ error: "Cannot overwrite another user's resume" });
+                }
+            }
+        }
+
+        const data = await pdfParse(req.file.buffer);
         const jsonResponse = {
             numPages: data.numpages,
             numRenderedPages: data.numrender,
@@ -149,26 +209,23 @@ exports.addPDF = async(req, res) => {
             text: data.text,
         };
 
-        //call openAI API
         const jsonPortfolio = await generatePortfolioJSON(jsonResponse.text, email);
-        console.log(jsonPortfolio);
-
         const portfolioObj = typeof jsonPortfolio === "string" ? JSON.parse(jsonPortfolio) : jsonPortfolio;
+        delete portfolioObj._id;
+        delete portfolioObj.__v;
+        portfolioObj.email = email;
+        portfolioObj.sessionId = storedSessionId;
+        if (userId) portfolioObj.userId = userId;
+        else delete portfolioObj.userId;
 
-        //save portfolio
-        // add sessionId to portfolio object
-        if (sessionId && !req.user?.email) {
-            portfolioObj.sessionId = sessionId;
+        let saved;
+        if (existing) {
+            existing.set(portfolioObj);
+            saved = await existing.save();
+        } else {
+            saved = await new Portfolio(portfolioObj).save();
         }
-        if (req.user?.email) {
-            portfolioObj.email = req.user.email;
-            if (req.user._id) portfolioObj.userId = req.user._id;
-            delete portfolioObj.sessionId;
-        }
-        console.log("Session ID:", sessionId);
-        const newPortfolio = new Portfolio(portfolioObj);
-        await newPortfolio.save();
-        res.status(201).json(newPortfolio);
+        res.status(201).json(saved);
     } catch (err) {
         console.error("Error parsing PDF:", err);
         res.status(500).json({ error: "Failed to parse PDF" });
@@ -248,6 +305,11 @@ exports.deletePortfolioByEmail = async(req, res) => {
 exports.aiSummary = async(req, res) => {
     const { resumeJSON, jobText } = req.body;
     if (!resumeJSON || !jobText) return res.status(400).json({ error: "Missing input" });
+    const jobSize = typeof jobText === "string" ? jobText.length : JSON.stringify(jobText).length;
+    const resumeSize = typeof resumeJSON === "string" ? resumeJSON.length : JSON.stringify(resumeJSON).length;
+    if (jobSize > MAX_JOB_TEXT || resumeSize > MAX_RESUME_JSON) {
+        return res.status(400).json({ error: "Input is too large" });
+    }
 
     try {
         const summary = await generateMatchSummary(resumeJSON, jobText);

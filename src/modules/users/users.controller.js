@@ -131,12 +131,26 @@ exports.addUser = async (req, res) => {
       onboardingUser = new User(userObj);
       await onboardingUser.save();
 
-      const sessionId = data.sessionId;
-      if (sessionId) {
-        await Portfolio.updateMany(
-          { sessionId },
-          { $set: { email: onboardingUser.email, sessionId: null } },
-        );
+      const sessionId = data.sessionId || req.body.sessionId;
+      if (sessionId && typeof sessionId === "string") {
+        try {
+          await Portfolio.updateMany(
+            {
+              sessionId,
+              email: { $regex: /@onboarding\.invalid$/i },
+              $or: [{ userId: null }, { userId: { $exists: false } }],
+            },
+            {
+              $set: {
+                email: onboardingUser.email,
+                userId: onboardingUser._id,
+                sessionId: null,
+              },
+            },
+          );
+        } catch (claimErr) {
+          console.error("Onboarding portfolio claim failed");
+        }
       }
     } catch (error) {
       if (error.code === 11000) {
@@ -215,7 +229,7 @@ exports.getSubInfo = async (req, res) => {
       expand: ["data.plan.product"],
     });
 
-    console.log(`fetched subscription info for ${req.user.email} from stripe`);
+    console.log("fetched subscription info from stripe");
     const subscriptionList = (subscriptions.data || []).map((sub) => ({
       status: sub.status,
       cancel_at_period_end: Boolean(sub.cancel_at_period_end),
@@ -256,7 +270,7 @@ exports.getHasSubscription = async (req, res) => {
     user.stripeCustomerId = sub.customerId;
     await user.save();
 
-    console.log(`User ${email} does have a subscription`);
+    console.log("User has a subscription");
 
     res.status(200).json({ hasSubscription: true });
   } catch (error) {
@@ -271,9 +285,7 @@ exports.getHasSubscription = async (req, res) => {
 exports.getAiEditAccess = async (req, res) => {
   try {
     const user = req.user || {};
-    console.log(
-      `[AI-ACCESS] checking for email=${user.email}, stripeCustomerId=${user.stripeCustomerId}`,
-    );
+    console.log("[AI-ACCESS] checking subscription for authenticated user");
     const access = await subscriptionAccess.getAiEditingAccess(user);
     console.log(
       `[AI-ACCESS] result: hasAccess=${access.hasAccess}, subscription=${JSON.stringify(access.subscription?._id || null)}, usage=${JSON.stringify(access.usage)}`,

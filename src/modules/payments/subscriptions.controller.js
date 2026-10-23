@@ -272,11 +272,11 @@ exports.issueRefund = async (req, res) => {
         // Cancel subscription immediately
         await stripe.subscriptions.cancel(subscriptionId);
         subscriptionCanceled = true;
-        console.log("refunded and canceled sub immediately for: ", charge.customer);
+        console.log("refunded and canceled sub immediately");
       } else if (reason === "duplicate") {
         // Don't alter sub, just refund duplicate
         subscriptionCanceled = false;
-        console.log("refunded and kept sub for: ", charge.customer);
+        console.log("refunded and kept sub");
       }
     }
 

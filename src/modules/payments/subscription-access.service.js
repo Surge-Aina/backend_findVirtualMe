@@ -134,7 +134,7 @@ async function getActiveSubscriptionForUser(user = {}) {
   const stripeCustomerId = cleanString(user.stripeCustomerId);
   if (!stripeCustomerId) return null;
 
-  console.log(`[AI-ACCESS] MongoDB miss for ${user.email}, falling back to Stripe API for customer ${stripeCustomerId}`);
+  console.log("[AI-ACCESS] MongoDB miss, falling back to Stripe API");
   return getActiveSubscriptionFromStripe(stripeCustomerId);
 }
 

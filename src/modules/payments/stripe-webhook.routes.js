@@ -127,7 +127,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
         );
 
         console.log(
-          `Subscription ${event.type} processed for customer ${subscription.customer} - Status: ${subscription.status}`
+          `Subscription ${event.type} processed - Status: ${subscription.status}`
         );
         break;
       }
@@ -199,9 +199,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
         );
 
         console.log(
-          `Subscription canceled for customer ${subscription.customer} - Email: ${
-            customer.email
-          } - Period ends: ${
+          `Subscription canceled - Period ends: ${
             subscription.current_period_end
               ? new Date(subscription.current_period_end * 1000).toLocaleDateString()
               : "N/A"
@@ -228,7 +226,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
           }
         );
 
-        console.log(`Subscription paused for customer ${subscription.customer}`);
+        console.log("Subscription paused");
         break;
       }
       // Handle subscription resumed
@@ -249,7 +247,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
           }
         );
 
-        console.log(`Subscription resumed for customer ${subscription.customer}`);
+        console.log("Subscription resumed");
         break;
       }
 
@@ -293,9 +291,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
           );
 
           console.log(
-            `Payment intent succeeded: ${
-              paymentIntent.id
-            } with charge: ${chargeId} for customer ${paymentIntent.customer} - Amount: ${
+            `Payment intent succeeded: ${paymentIntent.id} with charge: ${chargeId} - Amount: ${
               paymentIntent.amount / 100
             } ${paymentIntent.currency}`
           );
@@ -337,9 +333,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
         }
 
         console.log(
-          `Invoice payment succeeded for ${invoice.customer} - Amount: ${
-            invoice.amount_paid / 100
-          } ${invoice.currency}`
+          `Invoice payment succeeded - Amount: ${invoice.amount_paid / 100} ${invoice.currency}`
         );
         break;
       }
@@ -375,9 +369,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
           }
         );
 
-        console.log(
-          `Invoice payment failed for ${invoice.customer} - Attempt: ${invoice.attempt_count}`
-        );
+        console.log(`Invoice payment failed - Attempt: ${invoice.attempt_count}`);
         break;
       }
 
@@ -401,7 +393,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
           }
         );
 
-        console.log(`Trial ending for customer ${subscription.customer}`);
+        console.log("Trial ending");
         break;
       }
 
@@ -425,7 +417,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
           }
         );
 
-        console.log(`Payment action required for customer ${invoice.customer}`);
+        console.log("Payment action required");
         break;
       }
 

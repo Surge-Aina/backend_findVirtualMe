@@ -1,14 +1,17 @@
 const express = require('express');
 const { google } = require('googleapis');
 const { oauth2Client, listFilesInFolder } = require('../oauth-handler');
-const { adminOnly } = require('../../legacyWriteGuard');
+const { adminOnly, optionalAuth, isAdmin } = require('../../legacyWriteGuard');
 const router = express.Router();
 const backendUrl = process.env.VITE_BACKEND_API;
 const dotenv = require('dotenv');
 dotenv.config();
 
-// Check OAuth2 status
-router.get('/status', (req, res) => {
+// Credential configuration is admin-only. Other callers get a redacted body.
+router.get('/status', optionalAuth, (req, res) => {
+  if (!isAdmin(req.user)) {
+    return res.json({ message: 'Drive status is restricted' });
+  }
   const hasCredentials = !!(oauth2Client.credentials && oauth2Client.credentials.refresh_token);
   res.json({
     configured: hasCredentials,

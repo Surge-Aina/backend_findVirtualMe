@@ -7,7 +7,6 @@ const { consentContactFromBody } = require('../../../modules/public-api/leadCons
 exports.submitContact = async (req, res) => {
   try {
     console.log('🔵 Data Scientist contact form submitted');
-    console.log('📥 Request body:', req.body);
     
     const { name, email, message, portfolioId } = req.body;
     
@@ -32,8 +31,7 @@ exports.submitContact = async (req, res) => {
     const ownerEmail = portfolio.email;
     const ownerName = portfolio.name || 'Data Scientist';
     
-    console.log('✅ Portfolio found:', ownerName);
-    console.log('📧 Owner email:', ownerEmail);
+    console.log("Portfolio found for contact");
     
     // Save contact to database
     const consentContact = consentContactFromBody(req.body);

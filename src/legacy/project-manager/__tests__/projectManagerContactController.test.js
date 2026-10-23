@@ -491,8 +491,7 @@ describe('Console Logging', () => {
     await submitContact(req, res);
 
     expect(console.log).toHaveBeenCalledWith('🔵 Project Manager contact form submitted');
-    expect(console.log).toHaveBeenCalledWith('📥 Request body:', req.body);
-    expect(console.log).toHaveBeenCalledWith('✅ Portfolio found:', 'Jane Smith');
+    expect(console.log).toHaveBeenCalledWith('Portfolio found for contact');
     expect(console.log).toHaveBeenCalledWith('✅ Sending success response to frontend');
   });
 
