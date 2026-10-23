@@ -1,0 +1,163 @@
+const crypto = require("crypto");
+const express = require("express");
+const request = require("supertest");
+const jwt = require("jsonwebtoken");
+const User = require("../../../shared/models/User");
+const Portfolio = require("../../portfolios/models/Portfolio");
+const { mountPublicApi } = require("../../public-api/mount");
+const { signWebhookPayload } = require("../../public-api/webhookSignature");
+const { flushLifecycleEvents } = require("../../public-api/lifecycleEvents");
+const {
+  developerApps,
+  adminApps,
+  oauth,
+} = require("../marketplace.routes");
+
+const ENCRYPTION_KEY = crypto.randomBytes(32).toString("base64");
+
+const app = express();
+app.use(express.json());
+app.use("/api/developer/apps", developerApps);
+app.use("/api/admin/apps", adminApps);
+app.use("/api/oauth", oauth);
+mountPublicApi(app);
+
+function nonce() {
+  return `${Date.now().toString(36)}${Math.random().toString(16).slice(2, 8)}`;
+}
+
+function sessionFor(user) {
+  return `Bearer ${jwt.sign({ id: user._id.toString() }, process.env.JWT_SECRET, { expiresIn: "20m" })}`;
+}
+
+async function createUser(tag, role = "customer") {
+  const id = nonce();
+  return User.create({
+    username: `acct_${tag}_${id}`,
+    email: `mailbox.${tag}.${id}@example.test`,
+    password: "synthetic-password",
+    userKey: `uk_${id}`,
+    practiceId: `pid_${id}`,
+    role,
+  });
+}
+
+describe("marketplace standards", () => {
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    process.env.PARTNER_CREDENTIALS_KEY = ENCRYPTION_KEY;
+    process.env.PARTNER_CREDENTIALS_KEY_VERSION = "1";
+    global.fetch = jest.fn(async () => ({ status: 200, text: async () => "{\"ok\":true}" }));
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it("installs per site and signs the app.installed event", async () => {
+    const developer = await createUser("dev");
+    const admin = await createUser("admin", "admin");
+    const owner = await createUser("owner");
+    const site = await Portfolio.create({
+      owner: owner._id,
+      slug: `site${nonce()}`,
+      title: "Synthetic Site",
+      template: "healthcare",
+      visibility: "public",
+    });
+    const other = await Portfolio.create({
+      owner: owner._id,
+      slug: `other${nonce()}`,
+      title: "Other Site",
+      template: "healthcare",
+      visibility: "public",
+    });
+
+    const registered = await request(app)
+      .post("/api/developer/apps")
+      .set("Authorization", sessionFor(developer))
+      .send({
+        name: "Sample Partner",
+        redirectUris: ["https://hooks.example.test/callback"],
+        webhookUrl: "https://hooks.example.test/app",
+        scopes: ["sites:read", "profile:read", "webhooks:write"],
+      });
+    expect(registered.status).toBe(201);
+    const webhookSecret = registered.body.webhookSecret;
+    expect(webhookSecret.startsWith("whsec_")).toBe(true);
+    expect(JSON.stringify(registered.body.data)).not.toContain(webhookSecret);
+
+    await request(app)
+      .post(`/api/admin/apps/${registered.body.data.id}/review`)
+      .set("Authorization", sessionFor(admin))
+      .send({ reviewStatus: "approved" });
+
+    const chooser = await request(app)
+      .get("/api/oauth/authorize")
+      .query({ response_type: "code", client_id: registered.body.data.clientId })
+      .set("Authorization", sessionFor(owner));
+    expect(chooser.status).toBe(200);
+    expect(chooser.body.data.map((item) => item.id)).toContain(site._id.toString());
+
+    const verifier = crypto.randomBytes(32).toString("base64url");
+    const challenge = crypto.createHash("sha256").update(verifier).digest("base64url");
+    const consent = await request(app)
+      .get("/api/oauth/authorize")
+      .query({
+        response_type: "code",
+        client_id: registered.body.data.clientId,
+        redirect_uri: "https://hooks.example.test/callback",
+        scope: "sites:read profile:read",
+        state: "state_synthetic",
+        code_challenge: challenge,
+        code_challenge_method: "S256",
+        site_id: site._id.toString(),
+      })
+      .set("Authorization", sessionFor(owner))
+      .redirects(0);
+    expect(consent.status).toBe(302);
+    const location = new URL(consent.headers.location);
+    const code = location.searchParams.get("code");
+    expect(code).toBeTruthy();
+
+    const token = await request(app)
+      .post("/api/oauth/token")
+      .type("form")
+      .send({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: "https://hooks.example.test/callback",
+        client_id: registered.body.data.clientId,
+        client_secret: registered.body.clientSecret,
+        code_verifier: verifier,
+      });
+    expect(token.status).toBe(200);
+    expect(token.body.site_id).toBe(site._id.toString());
+    expect(token.body.expires_in).toBe(3600);
+
+    await flushLifecycleEvents();
+    const installCall = global.fetch.mock.calls.find((call) => String(call[1].body).includes("app.installed"));
+    expect(installCall[0]).toBe("https://hooks.example.test/app");
+    const installBody = installCall[1].body;
+    const timestamp = installCall[1].headers["X-FindVirtualMe-Timestamp"];
+    expect(installCall[1].headers["X-FindVirtualMe-Signature"]).toBe(
+      `v1=${signWebhookPayload(webhookSecret, timestamp, installBody)}`
+    );
+    expect(installBody).not.toContain(webhookSecret);
+
+    const bearer = `Bearer ${token.body.access_token}`;
+    const me = await request(app).get("/api/public/v1/me").set("Authorization", bearer);
+    expect(me.status).toBe(200);
+    expect(me.body.data.siteId).toBe(site._id.toString());
+
+    const sites = await request(app).get("/api/public/v1/sites").set("Authorization", bearer);
+    expect(sites.body.data.map((item) => item.id)).toEqual([site._id.toString()]);
+
+    const foreign = await request(app)
+      .get(`/api/public/v1/sites/${other._id}`)
+      .set("Authorization", bearer);
+    expect(foreign.status).toBe(404);
+    expect(JSON.stringify(installBody)).not.toContain(owner.email);
+  });
+});

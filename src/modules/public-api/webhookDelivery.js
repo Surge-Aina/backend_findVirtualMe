@@ -1,16 +1,8 @@
 const { WebhookEndpoint, WebhookDelivery } = require("./webhookEndpoint.model");
+const Installation = require("../marketplace/installation.model");
 const { signingSecretFor } = require("./webhook.service");
 const { API_VERSION, API_VERSION_HEADER } = require("./webhookContract");
 const { eventForSubscription } = require("./webhookEvents");
-
-function loadInstallationModel() {
-  try {
-    return require("../marketplace/installation.model");
-  } catch (err) {
-    if (err && err.code === "MODULE_NOT_FOUND") return null;
-    throw err;
-  }
-}
 const { signatureHeader, nextBackoffMs, MAX_ATTEMPTS } = require("./webhookSignature");
 const { postWebhook } = require("./webhookUrls");
 
@@ -22,8 +14,6 @@ function stringifyEvent(event) {
 
 async function installationAllows(endpoint, event) {
   if (!endpoint.installationId) return true;
-  const Installation = loadInstallationModel();
-  if (!Installation) return false;
   const installation = await Installation.findById(endpoint.installationId)
     .select("status siteId")
     .lean();

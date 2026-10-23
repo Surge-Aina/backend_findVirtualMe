@@ -1,4 +1,5 @@
 const apiKeyService = require("./apiKey.service");
+const { authenticateAccessToken } = require("../marketplace/oauth.service");
 const { sendError } = require("./errors");
 
 const INVALID_KEY = {
@@ -15,6 +16,24 @@ async function authenticateApiKey(req, res, next) {
     }
 
     const secret = header.slice("Bearer ".length).trim();
+    if (secret.startsWith("fvm_at_")) {
+      const oauth = await authenticateAccessToken(secret);
+      if (!oauth) {
+        return sendError(res, INVALID_KEY.status, INVALID_KEY.code, INVALID_KEY.message);
+      }
+      if (oauth.user.isActive === false) {
+        return sendError(res, 403, "account_inactive", "Account is inactive");
+      }
+      req.publicApi = {
+        user: oauth.user,
+        key: { scopes: oauth.scopes, _id: oauth.installation._id },
+        appId: oauth.installation.appId,
+        installationId: oauth.installation._id,
+        siteId: oauth.installation.siteId,
+        authType: "oauth",
+      };
+      return next();
+    }
     const auth = await apiKeyService.authenticate(secret);
     if (!auth) {
       return sendError(res, INVALID_KEY.status, INVALID_KEY.code, INVALID_KEY.message);
@@ -32,6 +51,11 @@ async function authenticateApiKey(req, res, next) {
   }
 }
 
+function installedSiteId(req) {
+  if (req.publicApi?.authType !== "oauth" || !req.publicApi.siteId) return null;
+  return String(req.publicApi.siteId);
+}
+
 function requireScope(scope) {
   return function requireScopeMiddleware(req, res, next) {
     const scopes = req.publicApi?.key?.scopes || [];
@@ -47,4 +71,5 @@ function requireScope(scope) {
 module.exports = {
   authenticateApiKey,
   requireScope,
+  installedSiteId,
 };
