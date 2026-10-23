@@ -427,6 +427,7 @@ describe('Portfolio Controller Tests', () => {
       });
 
       req.query.email = 'john@example.com';
+      req.user = { email: 'john@example.com', role: 'customer' };
 
       await deletePortfolioByEmail(req, res);
 
@@ -436,6 +437,7 @@ describe('Portfolio Controller Tests', () => {
 
     it('should return 404 if portfolio not found', async () => {
       req.query.email = 'notfound@example.com';
+      req.user = { email: 'notfound@example.com', role: 'customer' };
 
       await deletePortfolioByEmail(req, res);
 
@@ -443,8 +445,18 @@ describe('Portfolio Controller Tests', () => {
       expect(res.json).toHaveBeenCalledWith({ message: 'item not found' });
     });
 
+    it('should return 403 when deleting another email', async () => {
+      req.query.email = 'someone@example.com';
+      req.user = { email: 'owner@example.com', role: 'customer' };
+
+      await deletePortfolioByEmail(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
     it('should return 500 on delete error', async () => {
       req.query.email = 'test@example.com';
+      req.user = { email: 'test@example.com', role: 'customer' };
 
       jest.spyOn(Portfolio, 'findOneAndDelete').mockRejectedValueOnce(new Error('Delete error'));
 

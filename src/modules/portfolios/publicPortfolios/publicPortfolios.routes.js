@@ -13,7 +13,7 @@ const optionalAuth = require("../../../shared/middleware/optionalAuth");
 // Routes (mounted at /api/portfolios/public)
 router.get("/list", getPublicPortfolios);
 router.get("/:type/:id", optionalAuth, getPortfolio);
-router.patch("/:id/toggle", togglePublicPortfolio);
+router.patch("/:id/toggle", auth, togglePublicPortfolio);
 router.delete("/:id", auth, deletePortfolio);
 
 module.exports = router;

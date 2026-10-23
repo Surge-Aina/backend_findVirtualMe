@@ -7,23 +7,19 @@ const {
   getLogsBySessionId,
   getAllLogs
 } = require("./portfolio-edit-log/portfolioEditLog.controller");
-// Optional: Add auth middleware if needed
-// const auth = require('../src/shared/middleware/auth');
+const auth = require("../../shared/middleware/auth");
+const roleCheck = require("../../shared/middleware/roleCheck");
 
-// POST /api/portfolios/edit-log - Create a new log entry
+const adminOnly = [auth, roleCheck(["admin"])];
+
+// POST stays reachable without a session: onboarding logs edits before login.
+// Reads include emails and are admin-only.
 router.post('/', createLog);
 
-// GET /api/portfolios/edit-log - Get all logs (with pagination)
-router.get('/', getAllLogs);
-
-// GET /api/portfolios/edit-log/user/:userId - Get logs by user ID
-router.get('/user/:userId', getLogsByUserId);
-
-// GET /api/portfolios/edit-log/portfolio/:portfolioID - Get logs by portfolio ID
-router.get('/portfolio/:portfolioID', getLogsByPortfolioId);
-
-// GET /api/portfolios/edit-log/session/:sessionId - Get logs by session ID
-router.get('/session/:sessionId', getLogsBySessionId);
+router.get('/', ...adminOnly, getAllLogs);
+router.get('/user/:userId', ...adminOnly, getLogsByUserId);
+router.get('/portfolio/:portfolioID', ...adminOnly, getLogsByPortfolioId);
+router.get('/session/:sessionId', ...adminOnly, getLogsBySessionId);
 
 module.exports = router;
 

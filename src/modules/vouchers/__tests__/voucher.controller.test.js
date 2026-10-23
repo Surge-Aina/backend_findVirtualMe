@@ -58,11 +58,12 @@ describe("voucher.controller", () => {
   });
 
   it("redeemVoucher", async () => {
-    mockReq = { body: { userVoucherId: "uv1" } };
+    mockReq = { user: { _id: "u1" }, body: { userVoucherId: "uv1" } };
     voucherService.redeemVoucher.mockResolvedValue({ status: "redeemed" });
 
     await controller.redeemVoucher(mockReq, mockRes);
 
+    expect(voucherService.redeemVoucher).toHaveBeenCalledWith("uv1", "u1");
     expect(mockRes.json).toHaveBeenCalledWith({ status: "redeemed" });
   });
 
@@ -85,7 +86,7 @@ describe("voucher.controller", () => {
   });
 
   it("redeemVoucher 500", async () => {
-    mockReq = { body: { userVoucherId: "uv1" } };
+    mockReq = { user: { _id: "u1" }, body: { userVoucherId: "uv1" } };
     voucherService.redeemVoucher.mockRejectedValue(new Error("x"));
 
     await controller.redeemVoucher(mockReq, mockRes);

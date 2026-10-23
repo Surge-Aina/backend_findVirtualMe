@@ -1,15 +1,35 @@
 const express = require("express");
 const request = require("supertest");
+const jwt = require("jsonwebtoken");
 
 const supportFormRoutes = require("../../../modules/support/support.routes");
 const SupportForm = require("../../models/supportForm/SupportForm");
 const Counter = require("../../models/supportForm/Counter");
+const User = require("../../models/User");
 
 const app = express();
 app.use(express.json());
 app.use("/api/support", supportFormRoutes);
 
 describe("SupportForm API", () => {
+  let adminAuth;
+
+  beforeEach(async () => {
+    const stamp = `${Date.now()}_${Math.random()}`;
+    const admin = await User.create({
+      email: `admin_${stamp}@example.com`,
+      username: `admin_${stamp}`,
+      password: "password123",
+      userKey: `key_${stamp}`,
+      practiceId: `practice_${stamp}`,
+      role: "admin",
+    });
+    const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
+    adminAuth = { Authorization: `Bearer ${token}` };
+  });
+
   describe("POST /api/support - Create support form", () => {
     test("should successfully create a support form", async () => {
       const payload = {
@@ -85,14 +105,19 @@ describe("SupportForm API", () => {
         ticketID: "T00001"
       });
 
-      const res = await request(app).get("/api/support");
+      const res = await request(app).get("/api/support").set(adminAuth);
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveLength(1);
     });
 
-    test("should return empty array when no tickets exist", async () => {
+    test("returns 401 without a token", async () => {
       const res = await request(app).get("/api/support");
+      expect(res.status).toBe(401);
+    });
+
+    test("should return empty array when no tickets exist", async () => {
+      const res = await request(app).get("/api/support").set(adminAuth);
       expect(res.status).toBe(200);
       expect(res.body).toEqual([]);
     });
@@ -111,6 +136,7 @@ describe("SupportForm API", () => {
     test("should successfully update status to 'In Progress'", async () => {
       const res = await request(app)
         .put("/api/support/T00001")
+        .set(adminAuth)
         .send({ status: "In Progress" });
 
       expect(res.status).toBe(200);
@@ -121,6 +147,7 @@ describe("SupportForm API", () => {
     test("should successfully update status to 'Completed'", async () => {
       const res = await request(app)
         .put("/api/support/T00001")
+        .set(adminAuth)
         .send({ status: "Completed" });
 
       expect(res.status).toBe(200);
@@ -131,6 +158,7 @@ describe("SupportForm API", () => {
     test("should reject invalid status values", async () => {
       const res = await request(app)
         .put("/api/support/T00001")
+        .set(adminAuth)
         .send({ status: "InvalidStatus" });
 
       expect(res.status).toBe(400);
@@ -148,7 +176,7 @@ describe("SupportForm API", () => {
     });
 
     test("should successfully delete existing ticket", async () => {
-      const res = await request(app).delete("/api/support/T00001");
+      const res = await request(app).delete("/api/support/T00001").set(adminAuth);
 
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);
@@ -168,6 +196,7 @@ describe("SupportForm API", () => {
     test("should successfully add a reply", async () => {
       const res = await request(app)
         .post("/api/support/T00001/replies")
+        .set(adminAuth)
         .send({ message: "Admin reply" });
 
       expect(res.status).toBe(200);
@@ -177,6 +206,7 @@ describe("SupportForm API", () => {
     test("should reject empty replies", async () => {
       const res = await request(app)
         .post("/api/support/T00001/replies")
+        .set(adminAuth)
         .send({ message: "" });
 
       expect(res.status).toBe(400);

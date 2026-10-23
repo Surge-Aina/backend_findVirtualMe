@@ -163,7 +163,16 @@ exports.addPDF = async(req, res) => {
 
 
 exports.deletePortfolioByEmail = async(req, res) => {
-    const email = req.query.email;
+    const email = (req.query.email || "").toString().trim();
+    const actor = req.user || {};
+    const actorEmail = (actor.email || "").toString().trim();
+    const isAdmin = actor.role === "admin";
+    if (!actorEmail && !isAdmin) {
+        return res.status(401).json({ message: "Unauthorized" });
+    }
+    if (!isAdmin && email.toLowerCase() !== actorEmail.toLowerCase()) {
+        return res.status(403).json({ message: "Forbidden" });
+    }
     try {
         const deletedItem = await Portfolio.findOneAndDelete({ email });
         if (!deletedItem) {

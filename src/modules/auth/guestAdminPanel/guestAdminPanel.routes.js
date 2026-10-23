@@ -10,8 +10,8 @@ const activityController = require("../../portfolio-activities/portfolioActivity
 
 const router = express.Router();
 
-router.get("/users", getAllUsers);
-router.put("/users/:id", editUser);
+router.get("/users", ownerAuth, getAllUsers);
+router.put("/users/:id", ownerAuth, editUser);
 
 // New owner-protected endpoints for the sub-user / activity admin UI.
 router.post("/users", ownerAuth, createUserAsOwner);

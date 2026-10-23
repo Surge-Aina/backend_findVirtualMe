@@ -9,6 +9,10 @@ jest.mock("../../../../shared/models/User", () => ({
   findByIdAndUpdate: jest.fn(),
 }));
 
+jest.mock("../../portfolio.service", () => ({
+  assertPortfolioOwner: jest.fn(),
+}));
+
 const {
   getPublicPortfolios,
   getPortfolio,
@@ -17,6 +21,7 @@ const {
 } = require("../publicPortfolios.controller");
 const service = require("../publicPortfolios.service");
 const User = require("../../../../shared/models/User");
+const portfolioService = require("../../portfolio.service");
 
 describe("publicPortfolios.controller", () => {
   let mockReq;
@@ -24,6 +29,7 @@ describe("publicPortfolios.controller", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    portfolioService.assertPortfolioOwner.mockResolvedValue({ ok: true });
     mockRes = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn().mockReturnThis(),
@@ -130,6 +136,20 @@ describe("publicPortfolios.controller", () => {
       });
     });
 
+    it("returns 403 when the caller does not own the portfolio", async () => {
+      mockReq = { params: { id: "p1" }, user: { _id: "u2", role: "customer" } };
+      portfolioService.assertPortfolioOwner.mockResolvedValue({
+        ok: false,
+        status: 403,
+        error: "Forbidden",
+      });
+
+      await togglePublicPortfolio(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(403);
+      expect(service.togglePublicPortfolio).not.toHaveBeenCalled();
+    });
+
     it("returns 500 on error", async () => {
       mockReq = { params: { id: "p1" } };
       service.togglePublicPortfolio.mockRejectedValue(new Error("db"));
@@ -172,6 +192,20 @@ describe("publicPortfolios.controller", () => {
         success: true,
         portfolio: result,
       });
+    });
+
+    it("returns 403 when the caller does not own the portfolio", async () => {
+      mockReq = { params: { id: "p1" }, user: { _id: "u2", role: "customer" } };
+      portfolioService.assertPortfolioOwner.mockResolvedValue({
+        ok: false,
+        status: 403,
+        error: "Forbidden",
+      });
+
+      await deletePortfolio(mockReq, mockRes);
+
+      expect(mockRes.status).toHaveBeenCalledWith(403);
+      expect(service.deletePortfolio).not.toHaveBeenCalled();
     });
 
     it("returns 500 on error", async () => {

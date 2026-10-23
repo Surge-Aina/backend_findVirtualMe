@@ -112,7 +112,19 @@ router.get("/session/:id", async (req, res) => {
 
   try {
     const session = await stripe.checkout.sessions.retrieve(id);
-    res.json(session);
+    const ownerId = session.metadata?.appUserId
+      ? String(session.metadata.appUserId)
+      : "";
+    const actorId = String(req.user?._id || req.user?.id || "");
+    const isAdmin = req.user?.role === "admin";
+    if (!isAdmin && (!ownerId || ownerId !== actorId)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    res.json({
+      id: session.id,
+      payment_status: session.payment_status,
+      status: session.status,
+    });
   } catch (err) {
     console.error("Failed to retrieve session:", err.response?.data || err.message);
     res.status(500).json({ error: err.message, message: "Failed to fetch session" });
@@ -129,7 +141,7 @@ router.post("/create-customer", async (req, res) => {
 
     //already has stripe customerId
     if (user.stripeCustomerId) {
-      return res.json({ customerId: user.stripeCustomerId });
+      return res.json({ hasCustomer: true });
     }
 
     //create customer on stripe
@@ -142,7 +154,7 @@ router.post("/create-customer", async (req, res) => {
     user.stripeCustomerId = customer.id;
     await user.save();
 
-    res.json({ customerId: customer.id });
+    res.json({ hasCustomer: true });
   } catch (error) {
     console.error("error creating stripe customer: ", error);
     res.status(500).json({ message: "Error creating stripe customer", error: error });

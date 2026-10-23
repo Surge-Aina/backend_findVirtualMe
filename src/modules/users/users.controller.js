@@ -1,10 +1,54 @@
+const mongoose = require("mongoose");
 const User = require("../../shared/models/User");
-const { normalizeUserAppTheme } = require("../../shared/utils/userSerialize");
+const {
+  normalizeUserAppTheme,
+  serializeUser,
+  serializePublicUser,
+} = require("../../shared/utils/userSerialize");
 const Subscriptions = require("../../shared/models/Subscriptions");
 const bcrypt = require("bcrypt");
 const Stripe = require("stripe");
 const Portfolio = require("../../legacy/project-manager/models/portfolioModel");
 const subscriptionAccess = require("../payments/subscription-access.service");
+
+const BLOCKED_UPDATE_FIELDS = [
+  "_id",
+  "id",
+  "__v",
+  "resetPasswordToken",
+  "resetPasswordExpires",
+  "resetCode",
+  "stripeCustomerId",
+  "stripeSubscriptionId",
+  "googleId",
+  "passwordHash",
+];
+const ADMIN_ONLY_UPDATE_FIELDS = ["role", "isAdmin", "password"];
+
+function actorId(user) {
+  return String(user?._id || user?.id || "");
+}
+
+function isAdmin(user) {
+  return user?.role === "admin";
+}
+
+async function sanitizeUserUpdate(body, actorIsAdmin) {
+  const data = { ...(body || {}) };
+  for (const key of BLOCKED_UPDATE_FIELDS) delete data[key];
+  if (!actorIsAdmin) {
+    for (const key of ADMIN_ONLY_UPDATE_FIELDS) delete data[key];
+    return data;
+  }
+  if (typeof data.password === "string" && data.password.length > 0) {
+    if (!data.password.startsWith("$2")) {
+      data.password = await bcrypt.hash(data.password, 10);
+    }
+  } else {
+    delete data.password;
+  }
+  return data;
+}
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
@@ -42,6 +86,7 @@ exports.addUser = async (req, res) => {
       industry: data.industry,
       experienceLevel: data.experience,
       skills: data.skills,
+      role: "customer",
     };
 
     let onboardingUser;
@@ -64,7 +109,9 @@ exports.addUser = async (req, res) => {
       }
       throw error;
     }
-    res.status(201).json({ user: onboardingUser });
+    res.status(201).json({
+      user: serializeUser(onboardingUser, { includeEmail: true }),
+    });
   } catch (error) {
     console.error("AddUser error:", error);
     res.status(500).json({ message: error.message });
@@ -74,7 +121,9 @@ exports.addUser = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find();
-    res.status(200).json({ users });
+    res.status(200).json({
+      users: users.map((user) => serializeUser(user, { includeEmail: true })),
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -82,9 +131,33 @@ exports.getAllUsers = async (req, res) => {
 
 exports.getUserById = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ message: "User not found" });
+    }
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.status(200).json({ user });
+
+    const self = actorId(req.user) === String(user._id);
+    if (!self && !isAdmin(req.user)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    res.status(200).json({
+      user: serializeUser(user, { includeEmail: true }),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getPublicUser = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.status(200).json({ user: serializePublicUser(user) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -106,7 +179,16 @@ exports.getSubInfo = async (req, res) => {
     });
 
     console.log(`fetched subscription info for ${req.user.email} from stripe`);
-    res.status(200).json({ subscriptionList: subscriptions.data });
+    const subscriptionList = (subscriptions.data || []).map((sub) => ({
+      status: sub.status,
+      cancel_at_period_end: Boolean(sub.cancel_at_period_end),
+      plan: {
+        product: {
+          name: sub.plan?.product?.name || sub.plan?.nickname || null,
+        },
+      },
+    }));
+    res.status(200).json({ subscriptionList });
   } catch (error) {
     res.status(500).json({
       message: "error getting subscription info",
@@ -139,11 +221,7 @@ exports.getHasSubscription = async (req, res) => {
 
     console.log(`User ${email} does have a subscription`);
 
-    res.status(200).json({
-      hasSubscription: true,
-      subscriptionId: sub.subscriptionId,
-      customerId: sub.customerId,
-    });
+    res.status(200).json({ hasSubscription: true });
   } catch (error) {
     console.error("Error in getHasSubscription:", error);
     res.status(500).json({
@@ -181,10 +259,29 @@ exports.getAiEditAccess = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
   try {
-    const id = req.user._id;
-    const user = await User.findByIdAndUpdate(id, req.body, { new: true });
+    const selfId = actorId(req.user);
+    const targetId = req.params.id ? String(req.params.id) : selfId;
+    if (!mongoose.Types.ObjectId.isValid(targetId)) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const existing = await User.findById(targetId);
+    if (!existing) return res.status(404).json({ message: "User not found" });
+
+    const actorIsAdmin = isAdmin(req.user);
+    if (targetId !== selfId && !actorIsAdmin) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const updates = await sanitizeUserUpdate(req.body, actorIsAdmin);
+    const user = await User.findByIdAndUpdate(targetId, updates, {
+      new: true,
+      runValidators: true,
+    });
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.status(200).json({ user });
+    res.status(200).json({
+      user: serializeUser(user, { includeEmail: true }),
+    });
   } catch (error) {
     console.error("Update user error in users.controller.js:", error);
     res.status(500).json({ message: error.message });
@@ -308,7 +405,9 @@ exports.addPortfolioID = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json({ user });
+    res.status(200).json({
+      user: serializeUser(user, { includeEmail: true }),
+    });
   } catch (error) {
     console.error("addPortfolioID error in users.controller.js:", error);
     res.status(500).json({ message: error.message });

@@ -66,8 +66,15 @@ exports.applyDomainVoucher = async (req, res) => {
 exports.redeemVoucher = async (req, res) => {
   try {
     const { userVoucherId } = req.body;
+    const userId = req.user?._id || req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
-    const updated = await voucherService.redeemVoucher(userVoucherId);
+    const updated = await voucherService.redeemVoucher(userVoucherId, userId);
+    if (!updated) {
+      return res.status(404).json({ message: "Voucher not found" });
+    }
 
     res.json(updated);
   } catch (err) {

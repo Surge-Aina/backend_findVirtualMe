@@ -20,25 +20,43 @@ app.use('/api/users', userRoutes);
 app.use('/api/auth', authHttpRoutes);
 
 let testUser;
+let otherUser;
+let adminUser;
 let authToken;
+let otherToken;
+let adminToken;
 
-beforeEach(async () => {
-  testUser = await User.create({
-    email: `test${Date.now()}@example.com`,
-    username: `user${Date.now()}`,
+async function makeUser(role) {
+  return User.create({
+    email: getUniqueEmail(),
+    username: getUniqueUsername(),
     password: await bcrypt.hash('password123', 10),
     firstName: 'Test',
     lastName: 'User',
     userKey: uniqueKey(),
     practiceId: uniquePracticeId(),
-    role: 'customer'
+    role,
+    stripeCustomerId: `cus_${role}_${Date.now()}`,
+    stripeSubscriptionId: `sub_${role}_${Date.now()}`,
+    resetPasswordToken: `reset_${role}`,
   });
+}
 
-  authToken = jwt.sign(
-    { id: testUser._id, role: 'customer' },
+function signToken(user) {
+  return jwt.sign(
+    { id: user._id, role: user.role },
     process.env.JWT_SECRET,
     { expiresIn: '1h' }
   );
+}
+
+beforeEach(async () => {
+  testUser = await makeUser('customer');
+  otherUser = await makeUser('customer');
+  adminUser = await makeUser('admin');
+  authToken = signToken(testUser);
+  otherToken = signToken(otherUser);
+  adminToken = signToken(adminUser);
 });
 
 const getUniqueEmail = () => `test${Date.now()}_${Math.random()}@example.com`;
@@ -76,6 +94,9 @@ describe('User Controller Integration Tests', () => {
       expect(response.body).toHaveProperty('user');
       expect(response.body.user.email).toBe(newUser.data.userInfo.email);
       expect(response.body.user.role).toBe('customer');
+      expect(response.body.user.password).toBeUndefined();
+      expect(response.body.user.stripeCustomerId).toBeUndefined();
+      expect(response.body.user.resetPasswordToken).toBeUndefined();
     });
 
     test('should return 400 for missing required fields', async () => {
@@ -143,30 +164,93 @@ describe('User Controller Integration Tests', () => {
   });
 
   describe('GET /api/users', () => {
-    test('should return all users', async () => {
+    test('should return 401 when unauthenticated', async () => {
+      await request(app).get('/api/users').expect(401);
+    });
+
+    test('should return 403 for a non-admin', async () => {
+      await request(app)
+        .get('/api/users')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(403);
+    });
+
+    test('should return all users for an admin without secrets', async () => {
       const response = await request(app)
         .get('/api/users')
+        .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
       expect(response.body).toHaveProperty('users');
       expect(Array.isArray(response.body.users)).toBe(true);
+      const listed = response.body.users.find(
+        (user) => user._id === testUser._id.toString()
+      );
+      expect(listed.email).toBe(testUser.email);
+      expect(listed.password).toBeUndefined();
+      expect(listed.stripeCustomerId).toBeUndefined();
+      expect(listed.resetPasswordToken).toBeUndefined();
     });
   });
 
   describe('GET /api/users/:id', () => {
-    test('should return user by valid ID', async () => {
+    test('should return 401 when unauthenticated', async () => {
+      await request(app).get(`/api/users/${testUser._id}`).expect(401);
+    });
+
+    test('should return the caller their own record', async () => {
       const response = await request(app)
         .get(`/api/users/${testUser._id}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(response.body.user._id).toBe(testUser._id.toString());
+      expect(response.body.user.email).toBe(testUser.email);
+      expect(response.body.user.password).toBeUndefined();
+      expect(response.body.user.stripeCustomerId).toBeUndefined();
+      expect(response.body.user.resetPasswordToken).toBeUndefined();
+    });
+
+    test('should return 403 when a user reads someone else', async () => {
+      const response = await request(app)
+        .get(`/api/users/${otherUser._id}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(403);
+
+      expect(response.body.user).toBeUndefined();
+      expect(JSON.stringify(response.body)).not.toContain(otherUser.email);
+    });
+
+    test('should allow an admin to read another user', async () => {
+      const response = await request(app)
+        .get(`/api/users/${testUser._id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(response.body.user.email).toBe(testUser.email);
+      expect(response.body.user.password).toBeUndefined();
     });
 
     test('should return 404 for non-existent user', async () => {
       const fakeId = new mongoose.Types.ObjectId();
       await request(app)
         .get(`/api/users/${fakeId}`)
+        .set('Authorization', `Bearer ${authToken}`)
         .expect(404);
+    });
+  });
+
+  describe('GET /api/users/public/:id', () => {
+    test('should return a display projection without email or secrets', async () => {
+      const response = await request(app)
+        .get(`/api/users/public/${testUser._id}`)
+        .expect(200);
+
+      expect(response.body.user.username).toBe(testUser.username);
+      expect(response.body.user.email).toBeUndefined();
+      expect(response.body.user.password).toBeUndefined();
+      expect(response.body.user.stripeCustomerId).toBeUndefined();
+      expect(response.body.user.resetPasswordToken).toBeUndefined();
     });
   });
 
@@ -180,12 +264,63 @@ describe('User Controller Integration Tests', () => {
 
       expect(response.body.user.firstName).toBe('Updated');
     });
+
+    test('should ignore role changes from a non-admin', async () => {
+      const response = await request(app)
+        .patch('/api/users')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ role: 'admin', isAdmin: true, password: 'stolen-hash' })
+        .expect(200);
+
+      expect(response.body.user.role).toBe('customer');
+      expect(response.body.user.password).toBeUndefined();
+      const stored = await User.findById(testUser._id);
+      expect(stored.role).toBe('customer');
+      expect(stored.password).toBe(testUser.password);
+    });
+
+    test('should return 403 when a user updates someone else', async () => {
+      await request(app)
+        .patch(`/api/users/${otherUser._id}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ firstName: 'Hijack' })
+        .expect(403);
+
+      const stored = await User.findById(otherUser._id);
+      expect(stored.firstName).toBe('Test');
+    });
+
+    test('should let an admin update another user and change role', async () => {
+      const response = await request(app)
+        .patch(`/api/users/${testUser._id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ role: 'admin', firstName: 'Promoted' })
+        .expect(200);
+
+      expect(response.body.user.role).toBe('admin');
+      expect(response.body.user.firstName).toBe('Promoted');
+      expect(response.body.user.password).toBeUndefined();
+    });
   });
 
   describe('DELETE /api/users/:id', () => {
-    test('should delete user with valid ID', async () => {
+    test('should return 401 when unauthenticated', async () => {
+      await request(app).delete(`/api/users/${testUser._id}`).expect(401);
+      expect(await User.findById(testUser._id)).not.toBeNull();
+    });
+
+    test('should return 403 for a non-admin', async () => {
+      await request(app)
+        .delete(`/api/users/${otherUser._id}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(403);
+      expect(await User.findById(otherUser._id)).not.toBeNull();
+    });
+
+    test('should delete user when caller is an admin', async () => {
       await request(app)
         .delete(`/api/users/${testUser._id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
       const deletedUser = await User.findById(testUser._id);

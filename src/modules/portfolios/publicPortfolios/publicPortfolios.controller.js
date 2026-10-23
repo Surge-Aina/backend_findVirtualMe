@@ -6,6 +6,15 @@ const {
   deletePortfolio,
 } = require("./publicPortfolios.service");
 const User = require("../../../shared/models/User");
+const portfolioService = require("../portfolio.service");
+
+async function assertCanMutatePortfolio(req, portfolioId) {
+  if (req.user?.role === "admin") return null;
+  const userId = req.user?._id || req.user?.id;
+  const check = await portfolioService.assertPortfolioOwner(portfolioId, userId);
+  if (check.ok) return null;
+  return check;
+}
 
 // GET all public portfolios
 exports.getPublicPortfolios = async (req, res) => {
@@ -38,6 +47,10 @@ exports.getPortfolio = async (req, res) => {
 exports.togglePublicPortfolio = async (req, res) => {
   try {
     const { id } = req.params;
+    const denied = await assertCanMutatePortfolio(req, id);
+    if (denied) {
+      return res.status(denied.status).json({ success: false, message: denied.error });
+    }
 
     const result = await togglePublicPortfolio(id);
 
@@ -54,6 +67,10 @@ exports.togglePublicPortfolio = async (req, res) => {
 exports.deletePortfolio = async (req, res) => {
   try {
     const { id } = req.params;
+    const denied = await assertCanMutatePortfolio(req, id);
+    if (denied) {
+      return res.status(denied.status).json({ success: false, message: denied.error });
+    }
 
     const result = await deletePortfolio(id);
 

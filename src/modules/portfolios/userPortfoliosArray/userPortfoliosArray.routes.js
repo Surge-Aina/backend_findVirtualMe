@@ -7,11 +7,12 @@ const {
 } = require("./userPortfoliosArray.controller");
 
 const auth = require("../../../shared/middleware/auth");
+const roleCheck = require("../../../shared/middleware/roleCheck");
 
 router.patch("/", auth, updateUserPortfolios);
 
 router.post("/by-list", auth, getPortfoliosByList);
 
-router.patch("/sync-all", updateAllUsersPortfolios);
+router.patch("/sync-all", auth, roleCheck(["admin"]), updateAllUsersPortfolios);
 
 module.exports = router;
