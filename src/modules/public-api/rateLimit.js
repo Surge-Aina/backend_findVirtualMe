@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const { sendError } = require("./errors");
+const { incrementRateBucket, errorClass } = require("../../shared/middleware/rateBucket");
 
 /**
  * Fixed window, keyed by API key id (or installation id for an OAuth token).
@@ -8,21 +9,6 @@ const { sendError } = require("./errors");
  */
 
 const buckets = new Map();
-
-const rateBucketSchema = new mongoose.Schema(
-  {
-    _id: { type: String },
-    count: { type: Number, default: 0 },
-    expireAt: { type: Date, required: true },
-  },
-  { versionKey: false }
-);
-
-rateBucketSchema.index({ expireAt: 1 }, { expireAfterSeconds: 0 });
-
-const RateBucket =
-  mongoose.models.ApiRateBucket ||
-  mongoose.model("ApiRateBucket", rateBucketSchema, "api_rate_buckets");
 
 function readPositiveInt(name, fallback, max) {
   const raw = process.env[name];
@@ -59,28 +45,8 @@ function localIncrement(keyId, windowMs) {
   return { count: bucket.count, resetAt: bucket.resetAt };
 }
 
-async function mongoIncrement(keyId, windowMs) {
-  const now = Date.now();
-  const windowStart = Math.floor(now / windowMs) * windowMs;
-  const id = `${keyId}:${windowStart}`;
-  const expireAt = new Date(windowStart + windowMs + 60_000);
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      const doc = await RateBucket.findOneAndUpdate(
-        { _id: id },
-        { $inc: { count: 1 }, $setOnInsert: { expireAt } },
-        { upsert: true, new: true }
-      );
-      if (!doc || typeof doc.count !== "number") {
-        throw new Error("rate counter missing");
-      }
-      return { count: doc.count, resetAt: windowStart + windowMs };
-    } catch (err) {
-      if (err && err.code === 11000 && attempt === 0) continue;
-      throw err;
-    }
-  }
-  throw new Error("rate counter missing");
+function mongoIncrement(keyId, windowMs) {
+  return incrementRateBucket(keyId, windowMs);
 }
 
 let sharedCounter = mongoIncrement;
@@ -100,11 +66,13 @@ async function publicApiRateLimit(req, res, next) {
   let resetAt;
   try {
     if (mongoose.connection.readyState !== 1) {
-      throw new Error("mongo unavailable");
+      const unavailable = new Error("mongo unavailable");
+      unavailable.name = "MongoUnavailableError";
+      throw unavailable;
     }
     ({ count, resetAt } = await sharedCounter(keyId, windowMs));
-  } catch (_err) {
-    console.error("public_api_rate_limit_degraded");
+  } catch (err) {
+    console.error("public_api_rate_limit_degraded", errorClass(err));
     ({ count, resetAt } = localIncrement(keyId, windowMs));
   }
 

@@ -295,6 +295,7 @@ describe('Portfolio Controller Tests', () => {
         expect.objectContaining({
           name: 'John Doe',
           email: 'john@example.com',
+          aiParsed: true,
         })
       );
       expect(await Portfolio.findOne({ email: 'someone-else@example.com' })).toBeNull();
@@ -378,38 +379,67 @@ describe('Portfolio Controller Tests', () => {
       expect(res.json).toHaveBeenCalledWith({ error: 'No PDF file uploaded' });
     });
 
-    it('should return 500 if PDF parsing fails', async () => {
+    it('should return 400 if PDF parsing fails', async () => {
       req.user = { email: 'john@example.com', _id: new mongoose.Types.ObjectId() };
       req.file = {
         buffer: Buffer.from('%PDF-1.4 mock PDF'),
       };
       req.body.email = 'john@example.com';
 
-      pdfParse.mockRejectedValue(new Error('Parse error'));
+      pdfParse.mockRejectedValue(new Error('Parse error: resume body'));
 
       await addPDF(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Failed to parse PDF' });
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid PDF' });
+      expect(JSON.stringify(console.error.mock.calls)).not.toContain('resume body');
     });
 
-    it('should return 500 if OpenAI fails', async () => {
+    it('should save a local draft when OpenAI fails', async () => {
       req.user = { email: 'john@example.com', _id: new mongoose.Types.ObjectId() };
       req.file = {
         buffer: Buffer.from('%PDF-1.4 mock PDF'),
       };
-      req.body.email = 'john@example.com';
-
+      req.body.email = 'someone-else@example.com';
+      const resume = [
+        'Ada Lovelace',
+        'Mathematician',
+        'ada@example.com',
+        '(415) 555-1212',
+        'London, UK',
+        '',
+        'Skills',
+        'Analysis, Mathematics',
+      ].join('\n');
       pdfParse.mockResolvedValue({
         numpages: 1,
-        text: 'Resume text',
+        text: resume,
       });
 
-      generatePortfolioJSON.mockRejectedValue(new Error('OpenAI error'));
+      const failure = new Error('429 You have no credits remaining');
+      failure.code = 'credit_balance_exhausted';
+      failure.status = 429;
+      generatePortfolioJSON.mockRejectedValue(failure);
 
       await addPDF(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        aiParsed: false,
+        email: 'john@example.com',
+        name: 'Ada Lovelace',
+        phone: '(415) 555-1212',
+        skills: expect.arrayContaining(['Analysis', 'Mathematics']),
+      }));
+      const saved = await Portfolio.findOne({ email: 'john@example.com' });
+      expect(saved.aiParsed).toBe(false);
+      expect(saved.name).toBe('Ada Lovelace');
+      const logged = JSON.stringify(console.error.mock.calls);
+      expect(logged).toContain('portfolio_ai_unavailable');
+      expect(logged).toContain('credit_balance_exhausted');
+      expect(logged).not.toContain('Ada Lovelace');
+      expect(logged).not.toContain('credits');
+      expect(logged).not.toContain(resume);
     });
   });
 
@@ -568,18 +598,25 @@ describe('Portfolio Controller Tests', () => {
       expect(res.json).toHaveBeenCalledWith({ error: 'Missing input' });
     });
 
-    it('should return 500 if OpenAI fails', async () => {
+    it('should return 503 if OpenAI fails', async () => {
       req.body = {
-        resumeJSON: { name: 'John' },
-        jobText: 'Job text',
+        resumeJSON: { name: 'John', secret: 'resume-body-do-not-log' },
+        jobText: 'Job text do not log',
       };
 
-      generateMatchSummary.mockRejectedValue(new Error('OpenAI error'));
+      const failure = new Error('OpenAI error resume-body-do-not-log');
+      failure.code = 'credit_balance_exhausted';
+      generateMatchSummary.mockRejectedValue(failure);
 
       await aiSummary(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Generation failed' });
+      expect(res.status).toHaveBeenCalledWith(503);
+      expect(res.json).toHaveBeenCalledWith({ error: 'AI summary is temporarily unavailable' });
+      const logged = JSON.stringify(console.error.mock.calls);
+      expect(logged).toContain('portfolio_ai_summary_unavailable');
+      expect(logged).toContain('credit_balance_exhausted');
+      expect(logged).not.toContain('resume-body-do-not-log');
+      expect(logged).not.toContain('Job text');
     });
   });
 });

@@ -15,6 +15,7 @@ jest.mock("../../../shared/services/openAiService", () => ({
   generateMatchSummary: jest.fn(async () => "Matched on javascript"),
 }));
 
+const { generatePortfolioJSON, generateMatchSummary } = require("../../../shared/services/openAiService");
 const express = require("express");
 const request = require("supertest");
 const jwt = require("jsonwebtoken");
@@ -223,5 +224,59 @@ describe("pre-login resume upload", () => {
       .set("Authorization", `Bearer ${token}`)
       .send({ resumeJSON: { skills: ["js"] }, jobText: "javascript role" });
     expect(limited.status).toBe(429);
+  });
+
+  test("creates a draft when AI parsing is unavailable", async () => {
+    const failure = new Error("429 You have no credits remaining for Jane Doe software engineer");
+    failure.code = "credit_balance_exhausted";
+    failure.status = 429;
+    generatePortfolioJSON.mockRejectedValueOnce(failure);
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    const uploaded = await request(app)
+      .post("/portfolio/upload-pdf")
+      .field("sessionId", SESSION)
+      .field("email", "victim@example.com")
+      .attach("resume", pdf, { filename: "resume.pdf", contentType: "application/pdf" });
+
+    expect(uploaded.status).toBe(200);
+    expect(uploaded.body.aiParsed).toBe(false);
+    expect(uploaded.body.email).toBe(`onboarding+${SESSION}@onboarding.invalid`);
+    expect(uploaded.body.name).toBe("Jane Doe software engineer");
+    const stored = await Portfolio.findById(uploaded.body._id);
+    expect(stored.aiParsed).toBe(false);
+    const logged = JSON.stringify(errorSpy.mock.calls);
+    expect(logged).toContain("credit_balance_exhausted");
+    expect(logged).not.toContain("Jane Doe");
+    expect(logged).not.toContain("victim@example.com");
+    expect(logged).not.toContain("credits");
+  });
+
+  test("ai-summary reports AI outages as 503", async () => {
+    const user = await User.create({
+      email: `ai_down_${Date.now()}@example.com`,
+      username: `ai_down_${Date.now()}`,
+      password: await bcrypt.hash("password123", 10),
+      userKey: `key_ai_down_${Date.now()}`,
+      practiceId: `practice_ai_down_${Date.now()}`,
+      role: "customer",
+    });
+    const failure = new Error("job text private-role-do-not-log");
+    failure.code = "credit_balance_exhausted";
+    generateMatchSummary.mockRejectedValueOnce(failure);
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    const res = await request(app)
+      .post("/portfolio/ai-summary")
+      .set("Authorization", `Bearer ${sign(user)}`)
+      .send({ resumeJSON: { skills: ["js"], note: "private-resume" }, jobText: "private-role-do-not-log" });
+
+    expect(res.status).toBe(503);
+    expect(res.body).toEqual({ error: "AI summary is temporarily unavailable" });
+    const logged = JSON.stringify(errorSpy.mock.calls);
+    expect(logged).toContain("portfolio_ai_summary_unavailable");
+    expect(logged).toContain("credit_balance_exhausted");
+    expect(logged).not.toContain("private-role-do-not-log");
+    expect(logged).not.toContain("private-resume");
   });
 });

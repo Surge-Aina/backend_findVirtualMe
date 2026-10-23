@@ -438,10 +438,12 @@ describe("public API v1", () => {
     const limited = await publicGet("/api/public/v1/me", created.secret);
     expect(limited.status).toBe(429);
     expect(limited.body.error.code).toBe("rate_limited");
-    expect(JSON.stringify(errorSpy.mock.calls)).toBe(
-      JSON.stringify([["public_api_rate_limit_degraded"], ["public_api_rate_limit_degraded"]])
-    );
+    expect(errorSpy.mock.calls).toEqual([
+      ["public_api_rate_limit_degraded", "Error"],
+      ["public_api_rate_limit_degraded", "Error"],
+    ]);
     expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(created.secret);
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("counter unavailable");
   });
 
   it("stops at the active key limit and still allows rotation", async () => {

@@ -4,6 +4,7 @@ const { generatePortfolioJSON, generateMatchSummary } = require("../../../shared
 const { uploadToS3, deleteFromS3 } = require("../../../shared/services/s3Service");
 const User = require("../../../shared/models/User");
 const { onboardingSessionId } = require("../onboardingSession");
+const { parseResumeLocally, sanitizePortfolio } = require("../parseResumeLocally");
 
 const ONBOARDING_EMAIL_DOMAIN = "onboarding.invalid";
 const MAX_JOB_TEXT = 20000;
@@ -19,6 +20,60 @@ function validSessionId(value) {
 
 function isPdfBuffer(buffer) {
   return Buffer.isBuffer(buffer) && buffer.length >= 5 && buffer.subarray(0, 5).toString("utf8") === "%PDF-";
+}
+
+function upstreamErrorCode(err) {
+  const candidates = [
+    err && err.code,
+    err && err.error && err.error.code,
+    err && err.status,
+    err && err.statusCode,
+    err && err.name,
+  ];
+  for (const value of candidates) {
+    if (value == null || value === "") continue;
+    const cleaned = String(value).replace(/[^A-Za-z0-9_.:-]/g, "").slice(0, 64);
+    if (cleaned) return cleaned;
+  }
+  return "unknown";
+}
+
+function errorClass(err) {
+  const name = String((err && err.name) || "Error").replace(/[^A-Za-z0-9_]/g, "").slice(0, 80) || "Error";
+  const rawCode = err && (err.code != null && err.code !== "" ? err.code : err.codeName);
+  if (rawCode == null || rawCode === "") return name;
+  const code = String(rawCode).replace(/[^A-Za-z0-9_]/g, "").slice(0, 40);
+  return code ? `${name}:${code}` : name;
+}
+
+function parseAiPayload(value) {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value;
+  let text = String(value || "").trim();
+  if (text.startsWith("```")) {
+    text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  }
+  const parsed = JSON.parse(text);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    const err = new Error("invalid ai payload");
+    err.code = "invalid_ai_payload";
+    throw err;
+  }
+  return parsed;
+}
+
+async function portfolioFromResume(text, email) {
+  try {
+    const jsonPortfolio = await generatePortfolioJSON(text, email);
+    return { fields: sanitizePortfolio(parseAiPayload(jsonPortfolio)), aiParsed: true };
+  } catch (err) {
+    console.error("portfolio_ai_unavailable", upstreamErrorCode(err));
+    try {
+      return { fields: sanitizePortfolio(parseResumeLocally(text)), aiParsed: false };
+    } catch (fallbackErr) {
+      console.error("portfolio_local_parse_failed", errorClass(fallbackErr));
+      return null;
+    }
+  }
 }
 
 function isOnboardingDraft(doc) {
@@ -165,12 +220,12 @@ exports.addPDF = async(req, res) => {
         return res.status(401).json({ error: "A valid onboarding sessionId is required" });
     }
 
-    try {
-        let existing = null;
-        let email;
-        let userId = null;
-        let storedSessionId = null;
+    let existing = null;
+    let email;
+    let userId = null;
+    let storedSessionId = null;
 
+    try {
         if (actor) {
             email = String(actor.email || "").trim().toLowerCase();
             userId = actor._id || actor.id || null;
@@ -199,29 +254,35 @@ exports.addPDF = async(req, res) => {
                 }
             }
         }
+    } catch (err) {
+        console.error("portfolio_upload_lookup", errorClass(err));
+        return res.status(500).json({ error: "Failed to save portfolio" });
+    }
 
+    let text = "";
+    try {
         const data = await pdfParse(req.file.buffer);
-        const text = String(data.text || "");
-        if (text.length > MAX_RESUME_JSON) {
-            return res.status(400).json({ error: "PDF text is too large" });
-        }
-        const jsonResponse = {
-            numPages: data.numpages,
-            numRenderedPages: data.numrender,
-            info: data.info,
-            metadata: data.metadata,
-            text,
-        };
+        text = String(data && data.text || "");
+    } catch (err) {
+        console.error("portfolio_pdf_invalid", errorClass(err));
+        return res.status(400).json({ error: "Invalid PDF" });
+    }
+    if (text.length > MAX_RESUME_JSON) {
+        return res.status(400).json({ error: "PDF text is too large" });
+    }
 
-        const jsonPortfolio = await generatePortfolioJSON(jsonResponse.text, email);
-        const portfolioObj = typeof jsonPortfolio === "string" ? JSON.parse(jsonPortfolio) : jsonPortfolio;
-        delete portfolioObj._id;
-        delete portfolioObj.__v;
-        portfolioObj.email = email;
-        portfolioObj.sessionId = storedSessionId;
-        if (userId) portfolioObj.userId = userId;
-        else delete portfolioObj.userId;
+    const drafted = await portfolioFromResume(text, email);
+    if (!drafted) {
+        return res.status(503).json({ error: "AI parsing is temporarily unavailable" });
+    }
 
+    const portfolioObj = drafted.fields;
+    portfolioObj.aiParsed = drafted.aiParsed;
+    portfolioObj.email = email;
+    portfolioObj.sessionId = storedSessionId;
+    if (userId) portfolioObj.userId = userId;
+
+    try {
         let saved;
         if (existing) {
             existing.set(portfolioObj);
@@ -229,10 +290,13 @@ exports.addPDF = async(req, res) => {
         } else {
             saved = await new Portfolio(portfolioObj).save();
         }
-        res.status(201).json(saved);
+        return res.status(drafted.aiParsed ? 201 : 200).json(saved);
     } catch (err) {
-        console.error("Error parsing PDF:", err);
-        res.status(500).json({ error: "Failed to parse PDF" });
+        console.error("portfolio_upload_save", errorClass(err));
+        if (!drafted.aiParsed) {
+            return res.status(503).json({ error: "AI parsing is temporarily unavailable" });
+        }
+        return res.status(500).json({ error: "Failed to save portfolio" });
     }
 };
 
@@ -319,8 +383,8 @@ exports.aiSummary = async(req, res) => {
         const summary = await generateMatchSummary(resumeJSON, jobText);
         res.json({ summary });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Generation failed" });
+        console.error("portfolio_ai_summary_unavailable", upstreamErrorCode(err));
+        res.status(503).json({ error: "AI summary is temporarily unavailable" });
     }
 };
 
