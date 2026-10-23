@@ -6,7 +6,7 @@ const OAuthCode = require("./oauthCode.model");
 const OAuthToken = require("./oauthToken.model");
 const Portfolio = require("../portfolios/models/Portfolio");
 const User = require("../../shared/models/User");
-const { hashKey } = require("../public-api/apiKey.service");
+const { hashKey, hashesEqual } = require("../public-api/apiKey.service");
 const { isPublicApiScope, PUBLIC_API_SCOPES } = require("../public-api/scopes");
 const { notifyAppInstalled, notifyAppUninstalled } = require("../public-api/lifecycleEvents");
 const { assertPublicHttpsUrl } = require("../public-api/webhookUrls");
@@ -352,8 +352,19 @@ async function authorizeInstall({
 
 function pkceMatches(verifier, challenge) {
   if (typeof verifier !== "string" || verifier.length < 43 || verifier.length > 128) return false;
+  if (typeof challenge !== "string" || challenge.length < 43 || challenge.length > 128) return false;
   const digest = crypto.createHash("sha256").update(verifier).digest("base64url");
-  return digest === challenge;
+  return hashesEqual(digest, challenge);
+}
+
+function presentedSecret(value) {
+  return typeof value === "string" ? value : "";
+}
+
+function clientAuthenticated(app, clientSecret) {
+  if (!app) return false;
+  const matches = hashesEqual(hashKey(presentedSecret(clientSecret)), app.clientSecretHash);
+  return matches && app.reviewStatus === "approved";
 }
 
 async function issueTokenPair({ installation, appId, userId, siteId, scopes }) {
@@ -388,11 +399,21 @@ async function issueTokenPair({ installation, appId, userId, siteId, scopes }) {
 
 async function exchangeAuthorizationCode({ code, redirectUri, clientId, clientSecret, codeVerifier }) {
   const app = await PlatformApp.findOne({ clientId });
-  if (!app || hashKey(clientSecret || "") !== app.clientSecretHash) {
+  if (!clientAuthenticated(app, clientSecret)) {
     throw new MarketplaceError(401, "invalid_client", "Client authentication failed");
   }
-  const record = await OAuthCode.findOne({ codeHash: hashKey(code || "") });
-  if (!record || record.usedAt || record.expiresAt < new Date() || String(record.appId) !== String(app._id)) {
+  const codeHash = hashKey(presentedSecret(code));
+  const record = await OAuthCode.findOneAndUpdate(
+    {
+      codeHash,
+      appId: app._id,
+      usedAt: null,
+      expiresAt: { $gt: new Date() },
+    },
+    { $set: { usedAt: new Date() } },
+    { new: true }
+  );
+  if (!record || !hashesEqual(record.codeHash, codeHash)) {
     throw new MarketplaceError(400, "invalid_grant", "Authorization code is invalid");
   }
   let normalizedRedirect;
@@ -404,23 +425,32 @@ async function exchangeAuthorizationCode({ code, redirectUri, clientId, clientSe
   if (normalizedRedirect !== record.redirectUri || !pkceMatches(codeVerifier, record.codeChallenge)) {
     throw new MarketplaceError(400, "invalid_grant", "Authorization code is invalid");
   }
-  record.usedAt = new Date();
-  await record.save();
 
   let installation = await Installation.findOne({
     appId: app._id,
     siteId: record.siteId,
     status: "installed",
   });
-  const created = !installation;
+  let created = false;
   if (!installation) {
-    installation = await Installation.create({
-      appId: app._id,
-      userId: record.userId,
-      siteId: record.siteId,
-      scopes: record.scopes,
-      status: "installed",
-    });
+    try {
+      installation = await Installation.create({
+        appId: app._id,
+        userId: record.userId,
+        siteId: record.siteId,
+        scopes: record.scopes,
+        status: "installed",
+      });
+      created = true;
+    } catch (err) {
+      if (!err || err.code !== 11000) throw err;
+      installation = await Installation.findOne({
+        appId: app._id,
+        siteId: record.siteId,
+        status: "installed",
+      });
+      if (!installation) throw err;
+    }
   } else {
     installation.scopes = record.scopes;
     installation.userId = record.userId;
@@ -447,14 +477,29 @@ async function exchangeAuthorizationCode({ code, redirectUri, clientId, clientSe
 
 async function refreshAccessToken({ refreshToken, clientId, clientSecret }) {
   const app = await PlatformApp.findOne({ clientId });
-  if (!app || hashKey(clientSecret || "") !== app.clientSecretHash) {
+  if (!clientAuthenticated(app, clientSecret)) {
     throw new MarketplaceError(401, "invalid_client", "Client authentication failed");
   }
-  const record = await OAuthToken.findOne({
-    refreshTokenHash: hashKey(refreshToken || ""),
-    revokedAt: null,
-  });
-  if (!record || record.refreshExpiresAt < new Date() || String(record.appId) !== String(app._id)) {
+  const digest = hashKey(presentedSecret(refreshToken));
+  const record = await OAuthToken.findOne({ refreshTokenHash: digest });
+  if (!record || !hashesEqual(record.refreshTokenHash, digest) || String(record.appId) !== String(app._id)) {
+    throw new MarketplaceError(400, "invalid_grant", "Refresh token is invalid");
+  }
+  if (record.revokedAt) {
+    await OAuthToken.updateMany(
+      { installationId: record.installationId, revokedAt: null },
+      { $set: { revokedAt: new Date() } }
+    );
+    throw new MarketplaceError(400, "invalid_grant", "Refresh token is invalid");
+  }
+  if (record.refreshExpiresAt < new Date()) {
+    throw new MarketplaceError(400, "invalid_grant", "Refresh token is invalid");
+  }
+  const consumed = await OAuthToken.findOneAndUpdate(
+    { _id: record._id, revokedAt: null },
+    { $set: { revokedAt: new Date() } }
+  );
+  if (!consumed) {
     throw new MarketplaceError(400, "invalid_grant", "Refresh token is invalid");
   }
   const installation = await Installation.findById(record.installationId);
@@ -495,10 +540,15 @@ async function uninstallInstallation({ userId, installationId }) {
 
 async function authenticateAccessToken(secret) {
   if (typeof secret !== "string" || !secret.startsWith("fvm_at_")) return null;
-  const record = await OAuthToken.findOne({ accessTokenHash: hashKey(secret), revokedAt: null });
-  if (!record || record.accessExpiresAt < new Date()) return null;
+  const digest = hashKey(secret);
+  const record = await OAuthToken.findOne({ accessTokenHash: digest, revokedAt: null });
+  if (!record || !hashesEqual(record.accessTokenHash, digest) || record.accessExpiresAt < new Date()) {
+    return null;
+  }
   const installation = await Installation.findById(record.installationId).lean();
   if (!installation || installation.status !== "installed") return null;
+  const app = await PlatformApp.findById(record.appId).select("reviewStatus").lean();
+  if (!app || app.reviewStatus !== "approved") return null;
   const user = await User.findById(record.userId).select("_id username role createdAt isActive");
   if (!user) return null;
   return { user, installation, scopes: record.scopes };

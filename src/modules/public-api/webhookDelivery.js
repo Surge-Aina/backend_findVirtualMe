@@ -1,5 +1,6 @@
 const { WebhookEndpoint, WebhookDelivery } = require("./webhookEndpoint.model");
 const Installation = require("../marketplace/installation.model");
+const PlatformApp = require("../marketplace/app.model");
 const { signingSecretFor } = require("./webhook.service");
 const { API_VERSION, API_VERSION_HEADER } = require("./webhookContract");
 const { eventForSubscription } = require("./webhookEvents");
@@ -24,28 +25,15 @@ async function installationAllows(endpoint, event) {
 }
 
 async function appStillApproved(installationId) {
-  let PlatformApp;
-  let Installation;
-  try {
-    PlatformApp = require("../marketplace/app.model");
-    Installation = require("../marketplace/installation.model");
-  } catch (err) {
-    if (err && err.code === "MODULE_NOT_FOUND") return true;
-    throw err;
-  }
   const installation = await Installation.findById(installationId).select("appId").lean();
-  if (!installation) return false;
+  if (!installation || !installation.appId) return false;
   const app = await PlatformApp.findById(installation.appId).select("reviewStatus").lean();
   return Boolean(app && app.reviewStatus === "approved");
 }
 
 async function installationStillActive(endpoint) {
   if (!endpoint.installationId) return true;
-  const Installation = loadInstallationModel();
-  if (!Installation) return false;
-  const installation = await Installation.findById(endpoint.installationId)
-    .select("status")
-    .lean();
+  const installation = await Installation.findById(endpoint.installationId).select("status").lean();
   if (!installation || installation.status !== "installed") return false;
   return appStillApproved(endpoint.installationId);
 }

@@ -5,6 +5,8 @@ const jwt = require("jsonwebtoken");
 const User = require("../../../shared/models/User");
 const Portfolio = require("../../portfolios/models/Portfolio");
 const { mountPublicApi } = require("../../public-api/mount");
+const { mountMcp } = require("../../public-api/mcp");
+const { setWebhookTransport, resetWebhookTransport } = require("../../public-api/webhookUrls");
 const { signWebhookPayload } = require("../../public-api/webhookSignature");
 const { dispatchLeadCaptured, flushLifecycleEvents } = require("../../public-api/lifecycleEvents");
 const ContactMeForm = require("../../contact/contactMeForm.model");
@@ -22,6 +24,7 @@ app.use("/api/developer/apps", developerApps);
 app.use("/api/admin/apps", adminApps);
 app.use("/api/oauth", oauth);
 mountPublicApi(app);
+mountMcp(app);
 
 function nonce() {
   return `${Date.now().toString(36)}${Math.random().toString(16).slice(2, 8)}`;
@@ -44,16 +47,20 @@ async function createUser(tag, role = "customer") {
 }
 
 describe("marketplace standards", () => {
-  const originalFetch = global.fetch;
+  const calls = [];
 
   beforeEach(() => {
     process.env.PARTNER_CREDENTIALS_KEY = ENCRYPTION_KEY;
     process.env.PARTNER_CREDENTIALS_KEY_VERSION = "1";
-    global.fetch = jest.fn(async () => ({ status: 200, text: async () => "{\"ok\":true}" }));
+    calls.length = 0;
+    setWebhookTransport(async (url, init) => {
+      calls.push([url, init]);
+      return { status: 200 };
+    });
   });
 
   afterEach(() => {
-    global.fetch = originalFetch;
+    resetWebhookTransport();
   });
 
   it("installs per site and signs the app.installed event", async () => {
@@ -138,7 +145,7 @@ describe("marketplace standards", () => {
     expect(token.body.expires_in).toBe(3600);
 
     await flushLifecycleEvents();
-    const installCall = global.fetch.mock.calls.find((call) => String(call[1].body).includes("app.installed"));
+    const installCall = calls.find((call) => String(call[1].body).includes("app.installed"));
     expect(installCall[0]).toBe("https://hooks.example.test/app");
     const installBody = installCall[1].body;
     const timestamp = installCall[1].headers["X-FindVirtualMe-Timestamp"];
@@ -216,6 +223,51 @@ describe("marketplace standards", () => {
       .get(`/api/public/v1/sites/${other._id}`)
       .set("Authorization", bearer);
     expect(foreign.status).toBe(404);
+
+    const profile = await request(app)
+      .get("/api/public/v1/business-profile")
+      .set("Authorization", bearer);
+    expect(profile.status).toBe(200);
+    expect(profile.body.data.siteId).toBe(site._id.toString());
+
+    const mcpSites = await request(app)
+      .post("/api/mcp")
+      .set("Authorization", bearer)
+      .set("Accept", "application/json, text/event-stream")
+      .send({
+        jsonrpc: "2.0",
+        id: 4,
+        method: "tools/call",
+        params: { name: "list_sites", arguments: {} },
+      });
+    const mcpText = JSON.stringify(mcpSites.body);
+    expect(mcpText).toContain(site._id.toString());
+    expect(mcpText).not.toContain(other._id.toString());
+
+    const mcpForeign = await request(app)
+      .post("/api/mcp")
+      .set("Authorization", bearer)
+      .set("Accept", "application/json, text/event-stream")
+      .send({
+        jsonrpc: "2.0",
+        id: 5,
+        method: "tools/call",
+        params: { name: "get_site", arguments: { siteId: other._id.toString() } },
+      });
+    expect(JSON.stringify(mcpForeign.body)).toContain("not_found");
+    expect(JSON.stringify(mcpForeign.body)).not.toContain(other._id.toString());
+
+    const mcpHooks = await request(app)
+      .post("/api/mcp")
+      .set("Authorization", bearer)
+      .set("Accept", "application/json, text/event-stream")
+      .send({
+        jsonrpc: "2.0",
+        id: 6,
+        method: "tools/call",
+        params: { name: "list_webhooks", arguments: {} },
+      });
+    expect(JSON.stringify(mcpHooks.body)).toContain("insufficient_scope");
     expect(JSON.stringify(installBody)).not.toContain(owner.email);
   });
 });

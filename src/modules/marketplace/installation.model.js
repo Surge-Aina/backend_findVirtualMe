@@ -14,6 +14,10 @@ const installationSchema = new mongoose.Schema(
 );
 
 installationSchema.index({ appId: 1, siteId: 1, status: 1 });
+installationSchema.index(
+  { appId: 1, siteId: 1 },
+  { unique: true, partialFilterExpression: { status: "installed" } }
+);
 
 const Installation =
   mongoose.models.Installation ||
