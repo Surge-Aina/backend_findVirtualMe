@@ -20,6 +20,7 @@ const contactRoutes = require("../../contact/contactMeForm.routes");
 const ContactMeForm = require("../../contact/contactMeForm.model");
 const portfolioService = require("../../portfolios/portfolio.service");
 const { resetPublicApiRateLimits } = require("../rateLimit");
+const { setWebhookTransport, resetWebhookTransport } = require("../webhookUrls");
 
 jest.mock("../../../shared/services/emailService", () => ({
   sendGenericContactEmails: jest.fn().mockResolvedValue(true),
@@ -54,17 +55,15 @@ async function createUser(tag) {
 }
 
 describe("signed event catalog", () => {
-  const originalFetch = global.fetch;
-
   beforeEach(async () => {
     process.env.PARTNER_CREDENTIALS_KEY = ENCRYPTION_KEY;
     process.env.PARTNER_CREDENTIALS_KEY_VERSION = "1";
     await resetPublicApiRateLimits();
-    global.fetch = jest.fn();
+    setWebhookTransport(async () => ({ status: 200 }));
   });
 
   afterEach(() => {
-    global.fetch = originalFetch;
+    resetWebhookTransport();
   });
 
   it("encrypts webhook secrets and signs lead.captured", async () => {
@@ -86,7 +85,7 @@ describe("signed event catalog", () => {
     expect(JSON.stringify(stored)).not.toContain(secret);
 
     const calls = [];
-    global.fetch.mockImplementation(async (_url, init) => {
+    setWebhookTransport(async (_url, init) => {
       calls.push(init);
       return { status: 200 };
     });
@@ -174,7 +173,7 @@ describe("signed event catalog", () => {
     expect(rotated.body.secret.startsWith("whsec_")).toBe(true);
     expect(rotated.body.secret).not.toBe(secret);
 
-    global.fetch.mockImplementation(async () => ({ status: 204 }));
+    setWebhookTransport(async () => ({ status: 204 }));
     const tested = await request(app)
       .post(`/api/developer/webhooks/${created.body.data.id}/test`)
       .set("Authorization", sessionFor(user));
@@ -253,7 +252,7 @@ describe("signed event catalog", () => {
     expect(created.status).toBe(201);
 
     const calls = [];
-    global.fetch.mockImplementation(async (_url, init) => {
+    setWebhookTransport(async (_url, init) => {
       calls.push(init);
       return { status: 200 };
     });
@@ -284,5 +283,27 @@ describe("signed event catalog", () => {
     expect(form.data.consent).toEqual({ contact: false });
     expect(lead.appId).toBeNull();
     expect(lead.installationId).toBeNull();
+  });
+
+  it("rejects private, metadata, and credential webhook URLs", async () => {
+    const user = await createUser("ssrf");
+    const urls = [
+      "https://127.0.0.1/hook",
+      "https://[::1]/hook",
+      "https://[::ffff:169.254.169.254]/hook",
+      "https://169.254.169.254/latest",
+      "http://hooks.example.test/hook",
+      "https://metadata.google.internal./computeMetadata/v1/",
+      "https://user:pass@hooks.example.test/hook",
+      "https://10.1.2.3/hook",
+    ];
+    for (const url of urls) {
+      const res = await request(app)
+        .post("/api/developer/webhooks")
+        .set("Authorization", sessionFor(user))
+        .send({ url, events: ["lead.captured"] });
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe("validation_error");
+    }
   });
 });

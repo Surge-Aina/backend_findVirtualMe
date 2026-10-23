@@ -101,6 +101,7 @@ function renderDocsPage() {
     <p>Account owners use <code>/api/developer/webhooks</code> with a session token. Apps use the same actions on <code>/api/public/v1/webhooks</code> with scope <code>webhooks:write</code>. Create, list, and delete subscriptions. <code>POST /:id/rotate</code> returns a new signing secret once. <code>POST /:id/test</code> sends one signed test event. <code>GET /:id/deliveries</code> is the delivery log and does not include the request body.</p>
     <p>Catalog: <code>lead.captured</code>, <code>form.submitted</code>, <code>site.published</code>, <code>business_profile.updated</code>, <code>app.installed</code>, <code>app.uninstalled</code>.</p>
     <p>Every attempt sends <code>X-FindVirtualMe-Timestamp</code> (unix seconds), <code>X-FindVirtualMe-Signature: v1=&lt;hex&gt;</code>, <code>X-FindVirtualMe-Event</code> (the event id), and <code>X-FindVirtualMe-Api-Version</code> (<code>2026-10-23</code>). The hex is HMAC-SHA256 of the timestamp, a period, and the exact JSON body, using the endpoint signing secret. Reject timestamps more than 300 seconds from your clock and compare the hex in constant time. The event id stays the same across retries. A new timestamp is used for each attempt. Retries wait 5 seconds, 30 seconds, 2 minutes, 10 minutes, and 1 hour, then stop after 6 attempts.</p>
+    <p>Subscriber URLs must be public https. Private, link-local, and metadata addresses are rejected, including names that resolve to those addresses. Redirects are not followed.</p>
   </main>
 </body>
 </html>`;

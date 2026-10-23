@@ -12,6 +12,7 @@ function loadInstallationModel() {
   }
 }
 const { signatureHeader, nextBackoffMs, MAX_ATTEMPTS } = require("./webhookSignature");
+const { postWebhook } = require("./webhookUrls");
 
 let sweeper = null;
 
@@ -28,8 +29,35 @@ async function installationAllows(endpoint, event) {
     .lean();
   if (!installation || installation.status !== "installed") return false;
   const siteId = event && event.data && event.data.siteId;
-  if (siteId && String(installation.siteId) !== String(siteId)) return false;
-  return true;
+  if (!siteId || String(installation.siteId) !== String(siteId)) return false;
+  return appStillApproved(endpoint.installationId);
+}
+
+async function appStillApproved(installationId) {
+  let PlatformApp;
+  let Installation;
+  try {
+    PlatformApp = require("../marketplace/app.model");
+    Installation = require("../marketplace/installation.model");
+  } catch (err) {
+    if (err && err.code === "MODULE_NOT_FOUND") return true;
+    throw err;
+  }
+  const installation = await Installation.findById(installationId).select("appId").lean();
+  if (!installation) return false;
+  const app = await PlatformApp.findById(installation.appId).select("reviewStatus").lean();
+  return Boolean(app && app.reviewStatus === "approved");
+}
+
+async function installationStillActive(endpoint) {
+  if (!endpoint.installationId) return true;
+  const Installation = loadInstallationModel();
+  if (!Installation) return false;
+  const installation = await Installation.findById(endpoint.installationId)
+    .select("status")
+    .lean();
+  if (!installation || installation.status !== "installed") return false;
+  return appStillApproved(endpoint.installationId);
 }
 
 async function enqueueEvent(userId, event) {
@@ -67,7 +95,7 @@ async function enqueueEvent(userId, event) {
 
 async function attemptDelivery(delivery) {
   const endpoint = await WebhookEndpoint.findById(delivery.endpointId);
-  if (!endpoint) {
+  if (!endpoint || !(await installationStillActive(endpoint))) {
     delivery.status = "failed";
     delivery.rawBody = "";
     delivery.lockedUntil = null;
@@ -95,9 +123,9 @@ async function attemptDelivery(delivery) {
   delivery.attempts += 1;
 
   let statusCode = 0;
+  let blockedDelivery = false;
   try {
-    const response = await fetch(endpoint.url, {
-      method: "POST",
+    const response = await postWebhook(endpoint.url, {
       headers: {
         "Content-Type": "application/json",
         "X-FindVirtualMe-Timestamp": timestamp,
@@ -106,11 +134,20 @@ async function attemptDelivery(delivery) {
         [API_VERSION_HEADER]: API_VERSION,
       },
       body: rawBody,
-      signal: AbortSignal.timeout(10000),
     });
     statusCode = response.status;
-  } catch (_err) {
+  } catch (err) {
+    blockedDelivery = Boolean(err && err.code === "ssrf_blocked");
     statusCode = 0;
+  }
+
+  if (blockedDelivery) {
+    delivery.lastStatusCode = 0;
+    delivery.status = "failed";
+    delivery.rawBody = "";
+    delivery.lockedUntil = null;
+    await delivery.save();
+    return delivery;
   }
 
   delivery.lastStatusCode = statusCode;
