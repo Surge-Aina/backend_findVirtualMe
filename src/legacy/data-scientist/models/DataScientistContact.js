@@ -31,6 +31,7 @@ const DataScientistContactSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    consentContact: { type: Boolean },
     status: {
       type: String,
       enum: ["new", "read", "replied"],

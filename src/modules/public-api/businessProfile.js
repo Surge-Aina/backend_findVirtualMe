@@ -171,6 +171,31 @@ function address(portfolio) {
   return null;
 }
 
+function publishedEmail(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 254) return null;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return null;
+  return trimmed;
+}
+
+function publishedPhone(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 40 || /[\u0000-\u001F\u007F]/.test(trimmed)) return null;
+  return trimmed;
+}
+
+function publishedContact(portfolio) {
+  const section = visibleSections(portfolio, "contact")[0];
+  const data = section && section.data ? section.data : {};
+  const email = publishedEmail(data.email);
+  const phone = publishedPhone(data.phone);
+  const website = isPublicHttpUrl(data.website) ? data.website.trim() : null;
+  if (!email && !phone && !website) return null;
+  return { email, phone, website };
+}
+
 function buildBusinessProfile(portfolio) {
   return {
     siteId: portfolio._id.toString(),
@@ -183,6 +208,7 @@ function buildBusinessProfile(portfolio) {
 
 module.exports = {
   buildBusinessProfile,
+  publishedContact,
   isPublicHttpUrl,
   isColor,
 };

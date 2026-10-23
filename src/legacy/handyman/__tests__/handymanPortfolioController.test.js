@@ -10,7 +10,6 @@
         })),
         deleteFromS3: jest.fn(async (_key) => ({ ok: true })),
     }),
-    { virtual: true },
     );
 
     const s3 = require('../../../shared/services/s3Service');

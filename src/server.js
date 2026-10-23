@@ -6,11 +6,13 @@ if (process.env.DNS_FIX === 'true') {
 const connectDB = require("./shared/utils/db");
 const app = require("./index");
 const { startOrphanImageGcCron } = require("./modules/media/gcOrphanImages");
+const { startWebhookSweeper } = require("./modules/public-api/webhookDelivery");
 
 const PORT = process.env.PORT;
 connectDB()
   .then(() => {
     startOrphanImageGcCron();
+    startWebhookSweeper();
     app.listen(PORT, () => {
       console.log(`listening on PORT:${PORT}`);
     });

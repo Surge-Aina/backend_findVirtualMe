@@ -3,6 +3,7 @@ const request = require("supertest");
 const jwt = require("jsonwebtoken");
 const User = require("../../../shared/models/User");
 const Portfolio = require("../../portfolios/models/Portfolio");
+const ContactMeForm = require("../../contact/contactMeForm.model");
 const DomainRoute = require("../../domains/DomainRouter/DomainRouter.model");
 const ApiKey = require("../apiKey.model");
 const developerKeys = require("../developerKeys.routes");
@@ -501,5 +502,69 @@ describe("public API v1", () => {
     expect(docs.text).toContain("sites:read");
     expect(docs.text).toContain("/api/public/v1/openapi.json");
     expect(docs.text).toContain("lead.captured");
+    expect(docs.text).toContain("leads:read");
+    expect(docs.text).toContain("2026-10-23");
+    expect(docs.text).toContain("X-FindVirtualMe-Api-Version");
+    expect(spec.body.paths["/leads/{leadId}"]).toBeDefined();
+    expect(spec.body.components.schemas.LeadCapturedEvent.properties.apiVersion.const).toBe("2026-10-23");
+  });
+
+  it("reads one owned lead and hides another account's lead", async () => {
+    const user = await createUser("leads");
+    const other = await createUser("leads-other");
+    const site = await Portfolio.create({
+      owner: user._id,
+      slug: `lead${nonce()}`,
+      title: "Lead Clinic",
+      template: "healthcare",
+      visibility: "public",
+    });
+    const foreignSite = await Portfolio.create({
+      owner: other._id,
+      slug: `foreign${nonce()}`,
+      title: "Foreign Clinic",
+      template: "healthcare",
+      visibility: "public",
+    });
+    const submittedEmail = "Visitor@Example.TEST";
+    const lead = await ContactMeForm.create({
+      portfolioId: site._id,
+      ownerEmail: "owner@example.test",
+      ownerName: "Owner Example",
+      name: "Visitor Example",
+      email: submittedEmail,
+      message: "Hello",
+      consentContact: true,
+    });
+    const foreignLead = await ContactMeForm.create({
+      portfolioId: foreignSite._id,
+      ownerEmail: "other-owner@example.test",
+      ownerName: "Other Owner",
+      name: "Other Visitor",
+      email: "other@example.test",
+      message: "Nope",
+    });
+
+    const key = await issueKey(user, ["leads:read"], "Leads");
+    const found = await publicGet(`/api/public/v1/leads/${lead._id}`, key.secret);
+    expect(found.status).toBe(200);
+    expect(found.body.data.id).toBe(lead._id.toString());
+    expect(found.body.data.siteId).toBe(site._id.toString());
+    expect(found.body.data.email).toBe(submittedEmail);
+    expect(found.body.data.consent).toEqual({ contact: true });
+    expect(JSON.stringify(found.body)).not.toContain("owner@example.test");
+    expect(JSON.stringify(found.body)).not.toContain("Owner Example");
+
+    const missingScope = await issueKey(user, ["sites:read"], "Sites only");
+    const denied = await publicGet(`/api/public/v1/leads/${lead._id}`, missingScope.secret);
+    expect(denied.status).toBe(403);
+    expect(denied.body.error.code).toBe("insufficient_scope");
+
+    const hidden = await publicGet(`/api/public/v1/leads/${foreignLead._id}`, key.secret);
+    expect(hidden.status).toBe(404);
+    expect(hidden.body.error.code).toBe("not_found");
+
+    const absent = await publicGet("/api/public/v1/leads/not-an-id", key.secret);
+    expect(absent.status).toBe(404);
   });
 });

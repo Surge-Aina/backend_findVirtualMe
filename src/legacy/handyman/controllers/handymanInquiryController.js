@@ -3,6 +3,8 @@ const HandymanTemplate = require('../models/HandymanTemplate');
 const UnifiedPortfolio = require("../../../modules/portfolios/models/Portfolio");
 const UserModel = require("../../../shared/models/User");
 const nodemailer = require('nodemailer');
+const { notifyLeadCaptured, notifyFormSubmitted } = require('../../../modules/public-api/lifecycleEvents');
+const { consentContactFromBody } = require('../../../modules/public-api/leadConsent');
 
 function buildTransporter() {
   return nodemailer.createTransport({
@@ -71,14 +73,41 @@ const createInquiry = async (req, res) => {
     }
 
     // Save inquiry with snapshot
-    await HandymanInquiry.create({
+    const consentContact = consentContactFromBody(req.body);
+    const inquiry = await HandymanInquiry.create({
       templateId: saveTemplateId,
       portfolioId: savePortfolioId,
       name, email, phone, message,
       selectedServiceTitles,
       selectedServicePrices: selectedPrices,
-      selectedServiceTotal: total
+      selectedServiceTotal: total,
+      ...(consentContact === undefined ? {} : { consentContact }),
     });
+
+    if (savePortfolioId) {
+      const leadId = inquiry?._id ? inquiry._id.toString() : null;
+      const consent = consentContact === undefined ? null : { contact: consentContact };
+      notifyLeadCaptured({
+        siteId: savePortfolioId,
+        leadId,
+        email,
+        name,
+        phone,
+        consent,
+        createdAt: inquiry?.createdAt,
+      });
+      notifyFormSubmitted({
+        siteId: savePortfolioId,
+        leadId,
+        form: "handymanInquiry",
+        email,
+        name,
+        phone,
+        message,
+        consent,
+        submittedAt: inquiry?.createdAt,
+      });
+    }
 
     const transporter = buildTransporter();
     const from = process.env.SMTP_FROM || (process.env.SMTP_USER || 'no-reply@example.com');

@@ -1,4 +1,5 @@
 const sitesService = require("./sites.service");
+const leadsService = require("./leads.service");
 const { parseLimit, decodeCursor } = require("./cursor");
 const { sendError } = require("./errors");
 
@@ -77,6 +78,21 @@ exports.businessProfile = async (req, res) => {
     });
     if (!profile) return sendError(res, 404, "not_found", "Business profile not found");
     return res.status(200).json({ data: profile });
+  } catch (_err) {
+    console.error("public_api_request_error");
+    return sendError(res, 500, "internal_error", "Internal server error");
+  }
+};
+
+exports.getLead = async (req, res) => {
+  try {
+    const lead = await leadsService.getLead({
+      ownerId: ownerId(req),
+      leadId: req.params.leadId,
+      siteId: req.publicApi.siteId || null,
+    });
+    if (!lead) return sendError(res, 404, "not_found", "Lead not found");
+    return res.status(200).json({ data: lead });
   } catch (_err) {
     console.error("public_api_request_error");
     return sendError(res, 500, "internal_error", "Internal server error");
