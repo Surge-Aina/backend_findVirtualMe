@@ -34,6 +34,7 @@ const privacyPolicyRoutes = require("./privacy-policy/privacyPolicy.routes");
 const termsOfServiceRoutes = require("./terms-of-service/termsOfService.routes");
 const developerApiKeyRoutes = require("./public-api/developerKeys.routes");
 const developerWebhookRoutes = require("./public-api/webhooks.routes");
+const { publicRouter: walletPassPublic, ownerRouter: walletPassOwner } = require("./public-api/walletPass.routes");
 const { mountPublicApi } = require("./public-api/mount");
 const { mountMcp } = require("./public-api/mcp");
 const {
@@ -87,6 +88,8 @@ function mountModules(app) {
   app.use("/api/contact", contactMeRoutes);
   app.use("/api/domains/router", domainRouterRoutes);
   app.use("/api/media/s3-upload-url", s3UploadRoutes);
+  app.use(walletPassPublic);
+  app.use("/api/portfolios", walletPassOwner);
   app.use("/api/portfolios", portfolioRoutes);
   app.use("/api/vouchers", voucherRoutes);
   app.use("/api/qr-codes", qrCodeRoutes);
