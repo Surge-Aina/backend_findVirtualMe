@@ -131,9 +131,16 @@ describe("portfolio owner access", () => {
     const res = await request(app)
       .put("/dashboard")
       .set(auth(second))
-      .send({ chartTitle: "Nope" });
+      .send({ chartTitle: "Nope", portfolioId: String(second._id) });
+
+    const ownPortfolio = await UnifiedPortfolio.findOne({ owner: second._id });
+    const byOwnId = await request(app)
+      .put("/dashboard")
+      .set(auth(second))
+      .send({ chartTitle: "Nope", portfolioId: String(ownPortfolio._id) });
 
     expect(res.status).toBe(403);
+    expect(byOwnId.status).toBe(403);
   });
 
   test("testimonial moderation is owner or admin", async () => {
@@ -244,6 +251,37 @@ describe("portfolio owner access", () => {
       .set(auth(owner))
       .send({ value: "folder-2", portfolioId: "default" });
     expect(denied.status).toBe(403);
+  });
+
+  test("the sole photographer owner cannot write an arbitrary portfolio key or claim an unbound photo", async () => {
+    const owner = await makeUser("customer", `solo_claim_${Date.now()}@example.com`);
+    await UnifiedPortfolio.create({ owner: owner._id, template: "photographer", title: "Solo" });
+    const loose = await Photo.create({
+      url: "https://example.com/shared.jpg",
+      endpoint: "highlights",
+      position: 0,
+    });
+
+    const arbitrary = await request(app)
+      .put("/settings/galleryDriveFolderId")
+      .set(auth(owner))
+      .send({ value: "stolen", portfolioId: "studio-live" });
+    expect(arbitrary.status).toBe(403);
+
+    const other = await makeUser("customer", `other_claim_${Date.now()}@example.com`);
+    const otherPortfolio = await UnifiedPortfolio.create({
+      owner: other._id,
+      template: "photographer",
+      title: "Other",
+    });
+    const claim = await request(app)
+      .put(`/photo/highlights/${loose._id}`)
+      .set(auth(other))
+      .send({ url: "https://example.com/mine.jpg", portfolioId: String(otherPortfolio._id) });
+    expect(claim.status).toBe(403);
+    const stored = await Photo.findById(loose._id);
+    expect(stored.url).toBe("https://example.com/shared.jpg");
+    expect(stored.portfolioId == null || stored.portfolioId === "").toBe(true);
   });
 
   test("drive status hides credential configuration from non-admins", async () => {

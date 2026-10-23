@@ -10,6 +10,7 @@ const Photo = require("./photographer/models/photoModel");
 const { templateToPortfolioType } = require("../shared/utils/templateToPortfolioType");
 
 const SEEDED_DATA_SCIENTIST_EMAIL = "datascientist@example.com";
+const LEGACY_PORTFOLIO_KEY = "default";
 
 function isAdmin(user) {
   return user?.role === "admin";
@@ -98,13 +99,16 @@ async function callerMayUsePortfolioId(user, portfolioId, template) {
   if (!id) {
     return { ok: false, status: 400, message: "portfolioId is required" };
   }
-  if (await userOwnsConcretePortfolio(user, id)) {
-    return { ok: true, portfolioId: id };
-  }
   if (mongoose.Types.ObjectId.isValid(id)) {
+    const owns = template
+      ? await ownedPortfolioMatchesTemplate(user, id, template)
+      : await userOwnsConcretePortfolio(user, id);
+    if (owns) return { ok: true, portfolioId: id };
     return { ok: false, status: 403, message: "Forbidden" };
   }
-  if (template && (await isSoleTemplateOwner(user, template))) {
+  // Only the literal legacy bucket. Any other string would let the sole
+  // template owner write a key that belongs to a different site.
+  if (id === LEGACY_PORTFOLIO_KEY && template && (await isSoleTemplateOwner(user, template))) {
     return { ok: true, portfolioId: id };
   }
   return { ok: false, status: 403, message: "Forbidden" };
@@ -122,14 +126,10 @@ async function requireDataScientistOwner(req, res, next) {
     if (!req.user) return deny(res, 401);
     if (isAdmin(req.user)) return next();
 
-    const explicit = portfolioIdFromRequest(req);
-    if (explicit && (await ownedPortfolioMatchesTemplate(req.user, explicit, "dataScientist"))) {
-      return next();
-    }
-
     const doc = await DataScientistPortfolio.findOne().select("email").lean();
     if (!doc) {
-      if (await userOwnsAnyTemplate(req.user, "dataScientist")) return next();
+      // No document yet: only the single template owner may create it.
+      if (await isSoleTemplateOwner(req.user, "dataScientist")) return next();
       return deny(res, 403, "Forbidden");
     }
     if (emailsMatch(doc.email, req.user.email)) return next();
@@ -138,11 +138,16 @@ async function requireDataScientistOwner(req, res, next) {
     if (fresh?.portfolios?.some((entry) => String(entry.portfolioId) === String(doc._id))) {
       return next();
     }
+    // The seed email is unclaimed. Owning some other data-scientist template
+    // is not enough: a second owner must not write this document by sending
+    // their own portfolio id. The sole template owner may edit it only while
+    // no account is registered for the seed address.
     if (
       emailsMatch(doc.email, SEEDED_DATA_SCIENTIST_EMAIL) &&
       (await isSoleTemplateOwner(req.user, "dataScientist"))
     ) {
-      return next();
+      const seedAccount = await User.exists({ email: SEEDED_DATA_SCIENTIST_EMAIL });
+      if (!seedAccount) return next();
     }
     return deny(res, 403, "Forbidden");
   } catch (err) {
@@ -165,7 +170,9 @@ async function requirePhotographerPortfolioOwner(req, res, next) {
     if (req.params?.id && mongoose.Types.ObjectId.isValid(req.params.id)) {
       const photo = await Photo.findById(req.params.id).select("portfolioId");
       if (!photo) return res.status(404).json({ message: "Photo not found" });
-      if (photo.portfolioId) portfolioId = String(photo.portfolioId);
+      // Unbound photos are the shared legacy gallery, not whichever
+      // portfolio id the caller sends.
+      portfolioId = photo.portfolioId ? String(photo.portfolioId) : LEGACY_PORTFOLIO_KEY;
     } else if (Array.isArray(req.body) && req.body.length) {
       const ids = req.body
         .map((photo) => photo && photo._id)
@@ -173,8 +180,13 @@ async function requirePhotographerPortfolioOwner(req, res, next) {
       if (ids.length) {
         const photos = await Photo.find({ _id: { $in: ids } }).select("portfolioId");
         const bound = [...new Set(photos.map((photo) => photo.portfolioId).filter(Boolean).map(String))];
+        const unbound = photos.some((photo) => !photo.portfolioId);
         if (bound.length > 1) return deny(res, 403, "Forbidden");
-        if (bound.length === 1) portfolioId = bound[0];
+        if (unbound && bound.length === 1 && bound[0] !== LEGACY_PORTFOLIO_KEY) {
+          return deny(res, 403, "Forbidden");
+        }
+        if (unbound) portfolioId = LEGACY_PORTFOLIO_KEY;
+        else if (bound.length === 1) portfolioId = bound[0];
       }
     }
 
@@ -196,4 +208,5 @@ module.exports = {
   requireDataScientistOwner,
   requirePhotographerPortfolioOwner,
   SEEDED_DATA_SCIENTIST_EMAIL,
+  LEGACY_PORTFOLIO_KEY,
 };

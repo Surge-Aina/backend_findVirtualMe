@@ -43,7 +43,9 @@ async function amountForPlan(body) {
   if (!priceId) return null;
   const price = await stripe.prices.retrieve(priceId);
   const amount = price?.unit_amount;
+  const currency = String(price?.currency || "").toLowerCase();
   if (!Number.isInteger(amount) || amount <= 0) return null;
+  if (currency !== "usd" || price.active === false) return null;
   return { plan, amount, priceId };
 }
 

@@ -51,8 +51,8 @@ router.put('/:endpoint/reorder', ...photographerWrite, async (req, res) => {
         return res.status(403).json({ message: "Forbidden" });
       }
       const $set = { position: photo.position };
-      if (!existing.portfolioId && req.ownedPortfolioId) {
-        $set.portfolioId = req.ownedPortfolioId;
+      if (!existing.portfolioId && req.ownedPortfolioId === "default") {
+        $set.portfolioId = "default";
       }
       await Photo.findByIdAndUpdate(photo._id, { $set });
     }
@@ -73,8 +73,8 @@ router.put('/:endpoint/:id', ...photographerWrite, async (req, res) => {
     }
     const existing = await Photo.findById(req.params.id).select("portfolioId");
     if (!existing) return res.status(404).json({ error: 'Photo not found' });
-    if (!existing.portfolioId && req.ownedPortfolioId) {
-      updates.portfolioId = req.ownedPortfolioId;
+    if (!existing.portfolioId && req.ownedPortfolioId === "default") {
+      updates.portfolioId = "default";
     }
     const updatedPhoto = await Photo.findByIdAndUpdate(req.params.id, updates, { new: true });
     res.json(updatedPhoto);

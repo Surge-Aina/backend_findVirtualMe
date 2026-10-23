@@ -3,8 +3,8 @@ const pdfParse = require("pdf-parse");
 const { generatePortfolioJSON, generateMatchSummary } = require("../../../shared/services/openAiService");
 const { uploadToS3, deleteFromS3 } = require("../../../shared/services/s3Service");
 const User = require("../../../shared/models/User");
+const { onboardingSessionId } = require("../onboardingSession");
 
-const SESSION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ONBOARDING_EMAIL_DOMAIN = "onboarding.invalid";
 const MAX_JOB_TEXT = 20000;
 const MAX_RESUME_JSON = 100000;
@@ -14,7 +14,7 @@ function onboardingEmail(sessionId) {
 }
 
 function validSessionId(value) {
-  return SESSION_ID_RE.test(String(value || "").trim()) ? String(value).trim() : "";
+  return onboardingSessionId(value);
 }
 
 function isPdfBuffer(buffer) {
@@ -201,12 +201,16 @@ exports.addPDF = async(req, res) => {
         }
 
         const data = await pdfParse(req.file.buffer);
+        const text = String(data.text || "");
+        if (text.length > MAX_RESUME_JSON) {
+            return res.status(400).json({ error: "PDF text is too large" });
+        }
         const jsonResponse = {
             numPages: data.numpages,
             numRenderedPages: data.numrender,
             info: data.info,
             metadata: data.metadata,
-            text: data.text,
+            text,
         };
 
         const jsonPortfolio = await generatePortfolioJSON(jsonResponse.text, email);

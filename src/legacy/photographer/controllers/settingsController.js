@@ -1,5 +1,11 @@
 const Settings = require('../models/settingsModel');
 
+function writePortfolioId(req) {
+  if (req.ownedPortfolioId) return String(req.ownedPortfolioId);
+  const fromBody = req.body && !Array.isArray(req.body) ? req.body.portfolioId : "";
+  return String(fromBody || req.query?.portfolioId || "");
+}
+
 // Get a setting by key
 const getSetting = async (req, res) => {
   try {
@@ -23,7 +29,8 @@ const getSetting = async (req, res) => {
 const updateSetting = async (req, res) => {
   try {
     const { key } = req.params;
-    const { value, portfolioId } = req.body;
+    const { value } = req.body;
+    const portfolioId = writePortfolioId(req);
     if (!portfolioId) {
       return res.status(400).json({ error: 'portfolioId is required' });
     }
@@ -63,7 +70,8 @@ const getAllSettings = async (req, res) => {
 
 const addSettings = async (req, res) => {
   try {
-    const { portfolioId, templateData } = req.body;
+    const portfolioId = writePortfolioId(req);
+    const { templateData } = req.body;
     
     if (!portfolioId) {
       return res.status(400).json({ error: 'portfolioId is required' });
@@ -111,7 +119,7 @@ const addSettings = async (req, res) => {
 
 const deleteSettings = async (req, res) => {
   try {
-    const { portfolioId } = req.query;
+    const portfolioId = writePortfolioId(req);
     
     if (!portfolioId) {
       return res.status(400).json({ error: 'portfolioId is required' });

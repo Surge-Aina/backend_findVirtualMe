@@ -39,7 +39,7 @@ describe("POST /checkout/payment-intent", () => {
   });
 
   test("charges the Stripe price for the plan and ignores the client amount", async () => {
-    mockRetrieve.mockResolvedValue({ unit_amount: 900 });
+    mockRetrieve.mockResolvedValue({ unit_amount: 900, currency: "usd", active: true });
 
     const res = await request(app).post("/checkout/payment-intent").send({
       plan: "basic",
@@ -62,7 +62,7 @@ describe("POST /checkout/payment-intent", () => {
   });
 
   test("accepts a known price id and still ignores the client amount", async () => {
-    mockRetrieve.mockResolvedValue({ unit_amount: 2900 });
+    mockRetrieve.mockResolvedValue({ unit_amount: 2900, currency: "usd", active: true });
 
     const res = await request(app).post("/checkout/payment-intent").send({
       priceId: "price_pro_test",
@@ -80,6 +80,15 @@ describe("POST /checkout/payment-intent", () => {
       plan: "enterprise",
       amount: 5000,
     });
+
+    expect(res.status).toBe(400);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test("rejects a whitelisted price that is not an active usd amount", async () => {
+    mockRetrieve.mockResolvedValue({ unit_amount: 900, currency: "eur", active: true });
+
+    const res = await request(app).post("/checkout/payment-intent").send({ plan: "basic" });
 
     expect(res.status).toBe(400);
     expect(mockCreate).not.toHaveBeenCalled();

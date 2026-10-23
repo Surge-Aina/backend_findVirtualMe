@@ -38,8 +38,8 @@ function sign(user) {
 }
 
 describe("pre-login resume upload", () => {
-  beforeEach(() => {
-    portfolioRoutes.resetOnboardingLimits();
+  beforeEach(async () => {
+    await portfolioRoutes.resetOnboardingLimits();
   });
 
   afterEach(async () => {
@@ -99,6 +99,41 @@ describe("pre-login resume upload", () => {
     expect(claimed.email).toBe(email);
     expect(String(claimed.userId)).toBe(String(signup.body.user._id));
     expect(claimed.sessionId).toBeNull();
+  });
+
+  test("rejects a guessable session id and does not let signup claim with one", async () => {
+    const weak = await request(app)
+      .post("/portfolio/upload-pdf")
+      .field("sessionId", "11111111-1111-1111-1111-111111111111")
+      .attach("resume", pdf, { filename: "resume.pdf", contentType: "application/pdf" });
+    expect(weak.status).toBe(401);
+
+    const uploaded = await request(app)
+      .post("/portfolio/upload-pdf")
+      .field("sessionId", SESSION)
+      .attach("resume", pdf, { filename: "resume.pdf", contentType: "application/pdf" });
+    expect(uploaded.status).toBe(201);
+
+    const signup = await request(app).post("/api/users").send({
+      data: {
+        userInfo: {
+          firstName: "New",
+          lastName: "User",
+          username: `weak_user_${Date.now()}`,
+          email: `weak_user_${Date.now()}@example.com`,
+          password: "password123",
+        },
+        goal: "job",
+        industry: "tech",
+        experience: "junior",
+        skills: ["javascript"],
+        sessionId: "not-a-uuid",
+      },
+    });
+    expect(signup.status).toBe(201);
+    const draft = await Portfolio.findById(uploaded.body._id);
+    expect(draft.email).toBe(`onboarding+${SESSION}@onboarding.invalid`);
+    expect(draft.userId == null).toBe(true);
   });
 
   test("does not overwrite a resume that already belongs to an account", async () => {

@@ -9,6 +9,7 @@ const Subscriptions = require("../../shared/models/Subscriptions");
 const bcrypt = require("bcrypt");
 const Stripe = require("stripe");
 const Portfolio = require("../../legacy/project-manager/models/portfolioModel");
+const { onboardingSessionId } = require("../../legacy/project-manager/onboardingSession");
 const UnifiedPortfolio = require("../portfolios/models/Portfolio");
 const { assertPortfolioOwner } = require("../portfolios/portfolio.service");
 const { templateToPortfolioType } = require("../../shared/utils/templateToPortfolioType");
@@ -131,8 +132,8 @@ exports.addUser = async (req, res) => {
       onboardingUser = new User(userObj);
       await onboardingUser.save();
 
-      const sessionId = data.sessionId || req.body.sessionId;
-      if (sessionId && typeof sessionId === "string") {
+      const sessionId = onboardingSessionId(data.sessionId || req.body.sessionId);
+      if (sessionId) {
         try {
           await Portfolio.updateMany(
             {
