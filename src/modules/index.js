@@ -36,6 +36,13 @@ const developerApiKeyRoutes = require("./public-api/developerKeys.routes");
 const developerWebhookRoutes = require("./public-api/webhooks.routes");
 const { mountPublicApi } = require("./public-api/mount");
 const { mountMcp } = require("./public-api/mcp");
+const {
+  developerApps,
+  developerInstallations,
+  adminApps,
+  catalog,
+  oauth,
+} = require("./marketplace/marketplace.routes");
 const config = require("../shared/config/app.config.js");
 const { loginUser, signupUser } = require("./auth/auth.controller");
 
@@ -99,6 +106,11 @@ function mountModules(app) {
   app.use("/terms-of-service", termsOfServiceRoutes);
   app.use("/api/developer/api-keys", developerApiKeyRoutes);
   app.use("/api/developer/webhooks", developerWebhookRoutes);
+  app.use("/api/developer/apps", developerApps);
+  app.use("/api/developer/installations", developerInstallations);
+  app.use("/api/admin/apps", adminApps);
+  app.use("/api/marketplace/apps", catalog);
+  app.use("/api/oauth", oauth);
   mountPublicApi(app);
   mountMcp(app);
 

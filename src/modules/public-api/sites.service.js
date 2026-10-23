@@ -51,9 +51,14 @@ async function loadDomains(ownerId, portfolioIds) {
   return map;
 }
 
-async function listSites({ ownerId, limit, cursor }) {
+async function listSites({ ownerId, limit, cursor, onlySiteId }) {
   const filter = { owner: ownerId };
-  if (cursor) filter._id = { $gt: cursor };
+  if (onlySiteId) {
+    if (!mongoose.isValidObjectId(onlySiteId)) {
+      return { sites: [], hasMore: false, nextCursor: null };
+    }
+    filter._id = onlySiteId;
+  } else if (cursor) filter._id = { $gt: cursor };
 
   const docs = await Portfolio.find(filter)
     .sort({ _id: 1 })

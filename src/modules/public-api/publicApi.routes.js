@@ -21,6 +21,7 @@ router.get("/sites", requireScope("sites:read"), controller.listSites);
 router.get("/sites/:id", requireScope("sites:read"), controller.getSite);
 router.get("/business-profile", requireScope("profile:read"), controller.businessProfile);
 router.get("/leads/:leadId", requireScope("leads:read"), controller.getLead);
+router.delete("/installation", controller.uninstall);
 router.post("/webhooks", requireScope("webhooks:write"), webhooks.create);
 router.get("/webhooks", requireScope("webhooks:write"), webhooks.list);
 router.post("/webhooks/:id/rotate", requireScope("webhooks:write"), webhooks.rotate);

@@ -228,7 +228,12 @@ async function touchLastUsed(keyId) {
  * The plaintext secret is not logged and is not attached to the result.
  */
 async function authenticate(secret) {
-  if (typeof secret !== "string" || !secret.startsWith(KEY_PREFIX) || secret.length > 200) {
+  if (
+    typeof secret !== "string" ||
+    !secret.startsWith(KEY_PREFIX) ||
+    secret.startsWith("fvm_at_") ||
+    secret.length > 200
+  ) {
     return null;
   }
   const digest = hashKey(secret);
