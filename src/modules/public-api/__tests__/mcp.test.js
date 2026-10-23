@@ -60,6 +60,59 @@ describe("MCP server", () => {
     expect(text).toContain("list_webhooks");
     expect(text).not.toContain("list_leads");
     expect(text).not.toContain(key.secret);
+
+    const stranger = await createUser();
+    const foreign = await Portfolio.create({
+      owner: stranger._id,
+      slug: `other${nonce()}`,
+      title: "Foreign Clinic",
+      template: "healthcare",
+      visibility: "public",
+    });
+
+    const denied = await request(app)
+      .post("/api/mcp")
+      .set("Authorization", `Bearer ${key.secret}`)
+      .set("Accept", "application/json, text/event-stream")
+      .send({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "tools/call",
+        params: { name: "get_business_profile", arguments: {} },
+      });
+    expect(denied.status).toBe(200);
+    const deniedText = JSON.stringify(denied.body);
+    expect(deniedText).toContain("insufficient_scope");
+    expect(deniedText).toContain("profile:read");
+    expect(deniedText).not.toContain("MCP Clinic");
+    expect(deniedText).not.toContain(key.secret);
+
+    const cross = await request(app)
+      .post("/api/mcp")
+      .set("Authorization", `Bearer ${key.secret}`)
+      .set("Accept", "application/json, text/event-stream")
+      .send({
+        jsonrpc: "2.0",
+        id: 3,
+        method: "tools/call",
+        params: { name: "get_site", arguments: { siteId: foreign._id.toString() } },
+      });
+    expect(JSON.stringify(cross.body)).toContain("not_found");
+    expect(JSON.stringify(cross.body)).not.toContain("Foreign Clinic");
+
+    const own = await request(app)
+      .post("/api/mcp")
+      .set("Authorization", `Bearer ${key.secret}`)
+      .set("Accept", "application/json, text/event-stream")
+      .send({
+        jsonrpc: "2.0",
+        id: 4,
+        method: "tools/call",
+        params: { name: "list_sites", arguments: {} },
+      });
+    const ownText = JSON.stringify(own.body);
+    expect(ownText).toContain("MCP Clinic");
+    expect(ownText).not.toContain("Foreign Clinic");
   });
 
   it("reads an owned lead and rejects a key without leads:read", async () => {

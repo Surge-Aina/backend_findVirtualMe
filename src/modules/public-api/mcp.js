@@ -23,8 +23,14 @@ function hasScope(auth, scope) {
   return (auth.key?.scopes || []).includes(scope);
 }
 
+function installedSiteId(auth) {
+  if (auth?.authType !== "oauth" || !auth.siteId) return null;
+  return String(auth.siteId);
+}
+
 function registerTools(server, auth) {
   const ownerId = auth.user._id;
+  const onlySiteId = installedSiteId(auth);
 
   server.registerTool(
     "list_sites",
@@ -34,7 +40,12 @@ function registerTools(server, auth) {
     },
     async ({ limit }) => {
       if (!hasScope(auth, "sites:read")) return scopeError("sites:read");
-      const page = await sitesService.listSites({ ownerId, limit: limit || 20, cursor: null });
+      const page = await sitesService.listSites({
+        ownerId,
+        limit: limit || 20,
+        cursor: null,
+        onlySiteId,
+      });
       return textResult({ sites: page.sites, hasMore: page.hasMore, nextCursor: page.nextCursor });
     }
   );
@@ -47,6 +58,9 @@ function registerTools(server, auth) {
     },
     async ({ siteId }) => {
       if (!hasScope(auth, "sites:read")) return scopeError("sites:read");
+      if (onlySiteId && onlySiteId !== String(siteId)) {
+        return { isError: true, content: [{ type: "text", text: "not_found" }] };
+      }
       const site = await sitesService.getSite({ ownerId, siteId });
       if (!site) return { isError: true, content: [{ type: "text", text: "not_found" }] };
       return textResult(site);
@@ -61,7 +75,13 @@ function registerTools(server, auth) {
     },
     async ({ siteId }) => {
       if (!hasScope(auth, "profile:read")) return scopeError("profile:read");
-      const profile = await sitesService.getBusinessProfile({ ownerId, siteId });
+      if (onlySiteId && siteId && String(siteId) !== onlySiteId) {
+        return { isError: true, content: [{ type: "text", text: "not_found" }] };
+      }
+      const profile = await sitesService.getBusinessProfile({
+        ownerId,
+        siteId: onlySiteId || siteId,
+      });
       if (!profile) return { isError: true, content: [{ type: "text", text: "not_found" }] };
       return textResult(profile);
     }
