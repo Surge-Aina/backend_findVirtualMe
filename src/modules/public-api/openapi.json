@@ -4,7 +4,7 @@
     "title": "FindVirtualMe Public API",
     "version": "1.0.0",
     "summary": "Read a FindVirtualMe account's own sites and published business profile.",
-    "description": "Authenticate with a developer API key (`Authorization: Bearer fvm_...`). A key can read only the account that created it. Human docs: `/api/public/docs`. Outbound webhooks are not part of this version."
+    "description": "Authenticate with a developer API key (`Authorization: Bearer fvm_...`). A key can read only the account that created it, and can manage webhook subscriptions when it has `webhooks:write`. Human docs: `/api/public/docs`."
   },
   "servers": [
     {
@@ -13,16 +13,38 @@
     }
   ],
   "tags": [
-    { "name": "Account", "description": "Identity of the key owner" },
-    { "name": "Sites", "description": "Websites owned by the key's account" },
-    { "name": "Profile", "description": "Published business profile" },
-    { "name": "Discovery", "description": "Unauthenticated API description" }
+    {
+      "name": "Account",
+      "description": "Identity of the key owner"
+    },
+    {
+      "name": "Sites",
+      "description": "Websites owned by the key's account"
+    },
+    {
+      "name": "Profile",
+      "description": "Published business profile"
+    },
+    {
+      "name": "Discovery",
+      "description": "Unauthenticated API description"
+    },
+    {
+      "name": "Webhooks",
+      "description": "Signed outbound event subscriptions"
+    }
   ],
-  "security": [{ "bearerAuth": [] }],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
   "paths": {
     "/openapi.json": {
       "get": {
-        "tags": ["Discovery"],
+        "tags": [
+          "Discovery"
+        ],
         "summary": "OpenAPI document",
         "operationId": "getOpenApi",
         "security": [],
@@ -31,7 +53,10 @@
             "description": "This document",
             "content": {
               "application/json": {
-                "schema": { "type": "object", "additionalProperties": true }
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
               }
             }
           }
@@ -40,7 +65,9 @@
     },
     "/me": {
       "get": {
-        "tags": ["Account"],
+        "tags": [
+          "Account"
+        ],
         "summary": "Key owner",
         "description": "Non-sensitive account fields for the key owner. Any valid key may call this. Email, personal name, and phone are omitted.",
         "operationId": "getMe",
@@ -48,29 +75,49 @@
           "200": {
             "description": "Owning account",
             "headers": {
-              "RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data"],
-                  "properties": { "data": { "$ref": "#/components/schemas/Account" } }
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Account"
+                    }
+                  }
                 }
               }
             }
           },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
         }
       }
     },
     "/sites": {
       "get": {
-        "tags": ["Sites"],
+        "tags": [
+          "Sites"
+        ],
         "summary": "List sites",
         "description": "Websites for the key owner, oldest first. Requires `sites:read`.",
         "operationId": "listSites",
@@ -80,50 +127,80 @@
             "in": "query",
             "required": false,
             "description": "Page size from 1 to 100. Default 20.",
-            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
           },
           {
             "name": "cursor",
             "in": "query",
             "required": false,
             "description": "Opaque cursor from a previous page's nextCursor.",
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "One page of sites",
             "headers": {
-              "RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "page"],
+                  "required": [
+                    "data",
+                    "page"
+                  ],
                   "properties": {
                     "data": {
                       "type": "array",
-                      "items": { "$ref": "#/components/schemas/Site" }
+                      "items": {
+                        "$ref": "#/components/schemas/Site"
+                      }
                     },
-                    "page": { "$ref": "#/components/schemas/CursorPage" }
+                    "page": {
+                      "$ref": "#/components/schemas/CursorPage"
+                    }
                   }
                 }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
         }
       }
     },
     "/sites/{id}": {
       "get": {
-        "tags": ["Sites"],
+        "tags": [
+          "Sites"
+        ],
         "summary": "Get a site",
         "description": "One website owned by the key's account. Another account's id is `not_found`. Requires `sites:read`.",
         "operationId": "getSite",
@@ -132,37 +209,61 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Site",
             "headers": {
-              "RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data"],
-                  "properties": { "data": { "$ref": "#/components/schemas/Site" } }
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Site"
+                    }
+                  }
                 }
               }
             }
           },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
         }
       }
     },
     "/business-profile": {
       "get": {
-        "tags": ["Profile"],
+        "tags": [
+          "Profile"
+        ],
         "summary": "Published business profile",
         "description": "Business name, logo URL, brand colors, and address taken from the caller's site. Requires `profile:read`. Without `siteId`, the newest published site is used, then the newest site. The response omits private contact data.",
         "operationId": "getBusinessProfile",
@@ -172,31 +273,211 @@
             "in": "query",
             "required": false,
             "description": "Owned site to read. Another account's id is `not_found`.",
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Business profile",
             "headers": {
-              "RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data"],
-                  "properties": { "data": { "$ref": "#/components/schemas/BusinessProfile" } }
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/BusinessProfile"
+                    }
+                  }
                 }
               }
             }
           },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/webhooks": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created. The signing secret is returned once."
+          },
+          "401": {
+            "description": "Invalid key"
+          },
+          "403": {
+            "description": "Missing webhooks:write"
+          }
+        },
+        "summary": "Create a webhook subscription",
+        "operationId": "createWebhook",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url",
+                  "events"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "events": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "List webhook subscriptions",
+        "operationId": "listWebhooks",
+        "responses": {
+          "200": {
+            "description": "Subscriptions. Secrets are omitted."
+          }
+        }
+      }
+    },
+    "/webhooks/{id}/rotate": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Rotate the signing secret",
+        "operationId": "rotateWebhookSecret",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "New secret, returned once."
+          }
+        }
+      }
+    },
+    "/webhooks/{id}/test": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Send one signed test event",
+        "operationId": "testWebhook",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Test accepted. The delivery log records the result."
+          }
+        }
+      }
+    },
+    "/webhooks/{id}/deliveries": {
+      "get": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "List delivery attempts",
+        "operationId": "listWebhookDeliveries",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delivery log without request bodies."
+          }
+        }
+      }
+    },
+    "/webhooks/{id}": {
+      "delete": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Delete a webhook subscription",
+        "operationId": "deleteWebhook",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          }
         }
       }
     }
@@ -212,15 +493,21 @@
     "headers": {
       "RateLimitLimit": {
         "description": "Maximum requests in the current window for this key.",
-        "schema": { "type": "integer" }
+        "schema": {
+          "type": "integer"
+        }
       },
       "RateLimitRemaining": {
         "description": "Remaining requests in the current window for this key.",
-        "schema": { "type": "integer" }
+        "schema": {
+          "type": "integer"
+        }
       },
       "RateLimitReset": {
         "description": "Seconds until this key's window resets.",
-        "schema": { "type": "integer" }
+        "schema": {
+          "type": "integer"
+        }
       }
     },
     "responses": {
@@ -228,7 +515,9 @@
         "description": "Missing, unknown, or revoked API key",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
             "example": {
               "error": {
                 "code": "invalid_api_key",
@@ -242,14 +531,18 @@
         "description": "The key is missing a scope, or the account is inactive",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
             "examples": {
               "scope": {
                 "value": {
                   "error": {
                     "code": "insufficient_scope",
                     "message": "API key is missing a required scope",
-                    "details": { "requiredScope": "sites:read" }
+                    "details": {
+                      "requiredScope": "sites:read"
+                    }
                   }
                 }
               },
@@ -269,7 +562,9 @@
         "description": "The resource does not exist for this account",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -277,7 +572,9 @@
         "description": "A query parameter is invalid",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -286,12 +583,16 @@
         "headers": {
           "Retry-After": {
             "description": "Seconds to wait before retrying.",
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
             "example": {
               "error": {
                 "code": "rate_limited",
@@ -305,95 +606,398 @@
     "schemas": {
       "ErrorEnvelope": {
         "type": "object",
-        "required": ["error"],
+        "required": [
+          "error"
+        ],
         "properties": {
           "error": {
             "type": "object",
-            "required": ["code", "message"],
+            "required": [
+              "code",
+              "message"
+            ],
             "properties": {
-              "code": { "type": "string" },
-              "message": { "type": "string" },
-              "details": { "type": "object", "additionalProperties": true }
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": true
+              }
             }
           }
         }
       },
       "Account": {
         "type": "object",
-        "required": ["id", "username", "role", "active", "createdAt"],
+        "required": [
+          "id",
+          "username",
+          "role",
+          "active",
+          "createdAt"
+        ],
         "properties": {
-          "id": { "type": "string" },
-          "username": { "type": "string" },
-          "role": { "type": "string" },
-          "active": { "type": "boolean" },
-          "createdAt": { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "Domain": {
         "type": "object",
-        "required": ["domain", "status"],
+        "required": [
+          "domain",
+          "status"
+        ],
         "properties": {
-          "domain": { "type": "string" },
-          "status": { "type": "string" }
+          "domain": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
         }
       },
       "Site": {
         "type": "object",
-        "required": ["id", "title", "subdomain", "hostname", "published", "domains"],
+        "required": [
+          "id",
+          "title",
+          "subdomain",
+          "hostname",
+          "published",
+          "domains"
+        ],
         "properties": {
-          "id": { "type": "string" },
-          "title": { "type": "string" },
-          "template": { "type": ["string", "null"] },
-          "subdomain": { "type": ["string", "null"] },
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "template": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "subdomain": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "hostname": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "Platform hostname formed from the subdomain and PUBLIC_SITE_HOST."
           },
-          "published": { "type": "boolean" },
+          "published": {
+            "type": "boolean"
+          },
           "domains": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/Domain" }
+            "items": {
+              "$ref": "#/components/schemas/Domain"
+            }
           }
         }
       },
       "CursorPage": {
         "type": "object",
-        "required": ["limit", "hasMore", "nextCursor"],
+        "required": [
+          "limit",
+          "hasMore",
+          "nextCursor"
+        ],
         "properties": {
-          "limit": { "type": "integer" },
-          "hasMore": { "type": "boolean" },
-          "nextCursor": { "type": ["string", "null"] }
+          "limit": {
+            "type": "integer"
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
         }
       },
       "Address": {
         "type": "object",
-        "required": ["line1", "city", "region", "postalCode", "country", "formatted"],
+        "required": [
+          "line1",
+          "city",
+          "region",
+          "postalCode",
+          "country",
+          "formatted"
+        ],
         "properties": {
-          "line1": { "type": ["string", "null"] },
-          "city": { "type": ["string", "null"] },
-          "region": { "type": ["string", "null"] },
-          "postalCode": { "type": ["string", "null"] },
-          "country": { "type": ["string", "null"] },
-          "formatted": { "type": "string" }
+          "line1": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "city": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "region": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "postalCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "formatted": {
+            "type": "string"
+          }
         }
       },
       "BusinessProfile": {
         "type": "object",
-        "required": ["siteId", "businessName", "logoUrl", "brandColors", "address"],
+        "required": [
+          "siteId",
+          "businessName",
+          "logoUrl",
+          "brandColors",
+          "address"
+        ],
         "properties": {
-          "siteId": { "type": "string" },
-          "businessName": { "type": ["string", "null"] },
-          "logoUrl": { "type": ["string", "null"] },
+          "siteId": {
+            "type": "string"
+          },
+          "businessName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "logoUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "brandColors": {
             "type": "object",
-            "additionalProperties": { "type": "string" },
+            "additionalProperties": {
+              "type": "string"
+            },
             "description": "Color tokens published on the site, such as accent, accentStrong, page, and text."
           },
           "address": {
             "oneOf": [
-              { "$ref": "#/components/schemas/Address" },
-              { "type": "null" }
+              {
+                "$ref": "#/components/schemas/Address"
+              },
+              {
+                "type": "null"
+              }
             ]
+          }
+        }
+      },
+      "WebhookEndpoint": {
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "events",
+          "secretLast4"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "secretLast4": {
+            "type": "string"
+          },
+          "appId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "installationId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WebhookDelivery": {
+        "type": "object",
+        "required": [
+          "id",
+          "eventId",
+          "type",
+          "status",
+          "attempts"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "delivered",
+              "failed"
+            ]
+          },
+          "attempts": {
+            "type": "integer"
+          },
+          "lastStatusCode": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "nextAttemptAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "LeadCapturedEvent": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "createdAt",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "evt_example"
+          },
+          "type": {
+            "type": "string",
+            "const": "lead.captured"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "siteId",
+              "email",
+              "name",
+              "phone",
+              "createdAt"
+            ],
+            "properties": {
+              "siteId": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "phone": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {
+    "leadCaptured": {
+      "post": {
+        "summary": "lead.captured",
+        "operationId": "leadCaptured",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeadCapturedEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Receiver accepted the event"
           }
         }
       }

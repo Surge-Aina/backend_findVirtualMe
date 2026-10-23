@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const Portfolio = require("./models/Portfolio");
 const { readLegacyPortfolioById } = require("../../../scripts/migratePortfolios");
+const { notifySitePublished, notifyBusinessProfileUpdated } = require("../public-api/lifecycleEvents");
+const { buildBusinessProfile, publishedContact } = require("../public-api/businessProfile");
 const DomainRoute = require("../domains/DomainRouter/DomainRouter.model");
 const { normalizeDomain } = require("../domains/DomainRouter/utils/domainHelpers");
 const { deleteManyByPrefix } = require("../../shared/services/s3Service");
@@ -435,6 +437,35 @@ async function getPublicPortfolios(template) {
   return Portfolio.find(filter).sort({ updatedAt: -1 }).lean();
 }
 
+function plainPortfolio(doc) {
+  if (!doc) return null;
+  return typeof doc.toObject === "function" ? doc.toObject() : doc;
+}
+
+function profileSnapshot(doc) {
+  const plain = plainPortfolio(doc);
+  if (!plain || !plain._id) return null;
+  return {
+    profile: buildBusinessProfile(plain),
+    contact: publishedContact(plain),
+  };
+}
+
+function emitProfileChange(before, after) {
+  const nextDoc = plainPortfolio(after);
+  if (!nextDoc || !nextDoc.owner) return;
+  const prev = profileSnapshot(before);
+  const next = profileSnapshot(nextDoc);
+  if (JSON.stringify(prev) === JSON.stringify(next)) return;
+  notifyBusinessProfileUpdated({
+    ownerId: nextDoc.owner,
+    siteId: nextDoc._id,
+    profile: next.profile,
+    contact: next.contact,
+    updatedAt: new Date(),
+  });
+}
+
 /**
  * Ensure the authenticated user owns the portfolio. Used for all mutating routes.
  * @returns {{ ok: true } | { ok: false, status: number, error: string }}
@@ -527,7 +558,13 @@ async function updatePortfolio(id, updates) {
     sanitized.navBrand = normalizeNavBrand(sanitized.navBrand);
   }
 
-  return Portfolio.findByIdAndUpdate(id, { $set: sanitized }, { new: true });
+  const touchesProfile = ["title", "sections", "themeTokens", "pageBannerDefaults"].some(
+    (key) => sanitized[key] !== undefined
+  );
+  const before = touchesProfile ? await Portfolio.findById(id).lean() : null;
+  const updated = await Portfolio.findByIdAndUpdate(id, { $set: sanitized }, { new: true });
+  if (before && updated) emitProfileChange(before, updated);
+  return updated;
 }
 
 // ─── Section-level operations ────────────────────────────────────────────────
@@ -540,7 +577,10 @@ async function updateSection(portfolioId, sectionId, data) {
   if (!section) return null;
 
   section.data = validateSectionData(section.type, data);
-  return portfolio.save();
+  const before = portfolio.toObject();
+  const saved = await portfolio.save();
+  emitProfileChange(before, saved);
+  return saved;
 }
 
 async function addSection(portfolioId, blockType, data, order, options = {}) {
@@ -561,20 +601,26 @@ async function addSection(portfolioId, blockType, data, order, options = {}) {
     }
   );
 
+  const before = portfolio.toObject();
   portfolio.sections.push(section);
   portfolio.sections = normalizeSections(portfolio.sections, {
     template: portfolio.template,
     allowEmpty: true,
   });
-  return portfolio.save();
+  const saved = await portfolio.save();
+  emitProfileChange(before, saved);
+  return saved;
 }
 
 async function removeSection(portfolioId, sectionId) {
-  return Portfolio.findByIdAndUpdate(
+  const before = await Portfolio.findById(portfolioId).lean();
+  const updated = await Portfolio.findByIdAndUpdate(
     portfolioId,
     { $pull: { sections: { _id: sectionId } } },
     { new: true }
   );
+  if (before && updated) emitProfileChange(before, updated);
+  return updated;
 }
 
 async function reorderSections(portfolioId, orderedIds) {
@@ -598,11 +644,14 @@ async function reorderSections(portfolioId, orderedIds) {
 // ─── Toggle helpers ──────────────────────────────────────────────────────────
 
 async function toggleVisibility(id) {
-  const doc = await Portfolio.findById(id).select("visibility");
+  const doc = await Portfolio.findById(id).select("visibility owner template");
   if (!doc) return null;
 
   doc.visibility = doc.visibility === "public" ? "private" : "public";
   await doc.save();
+  if (doc.visibility === "public" && doc.owner) {
+    notifySitePublished({ ownerId: doc.owner, siteId: doc._id, publishedAt: new Date() });
+  }
   return { _id: doc._id, visibility: doc.visibility };
 }
 

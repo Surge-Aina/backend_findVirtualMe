@@ -5,6 +5,7 @@ const { sendGenericContactEmails } = require("../../shared/services/emailService
 const contactMeFormDB = require("./contactMeForm.model");
 const portfolioService = require("../portfolios/portfolio.service");
 const User = require("../../shared/models/User");
+const { notifyLeadCaptured, notifyFormSubmitted } = require("../public-api/lifecycleEvents");
 
 exports.submitContact = async (req, res) => {
   try {
@@ -44,6 +45,20 @@ exports.submitContact = async (req, res) => {
     });
 
     console.log("✅ Contact saved to database:", contact._id);
+    notifyLeadCaptured({
+      siteId: portfolioId,
+      email,
+      name,
+      createdAt: contact.createdAt,
+    });
+    notifyFormSubmitted({
+      siteId: portfolioId,
+      form: "contact",
+      email,
+      name,
+      message,
+      submittedAt: contact.createdAt,
+    });
 
     // Prepare form data for emails
     const formData = {
