@@ -3,8 +3,8 @@
   "info": {
     "title": "FindVirtualMe Public API",
     "version": "1.0.0",
-    "summary": "Read a FindVirtualMe account's own sites and published business profile.",
-    "description": "Authenticate with a developer API key (`Authorization: Bearer fvm_...`). A key can read only the account that created it. Human docs: `/api/public/docs`. Outbound webhooks are not part of this version."
+    "summary": "Read and update a FindVirtualMe account's own sites, leads, and published business profile.",
+    "description": "Authenticate with a developer API key (`Authorization: Bearer fvm_...`) or an installed app access token (`fvm_at_...`). A credential can access only the account that authorized it. Human docs: `/api/public/docs`. Outbound events are documented under `webhooks`."
   },
   "servers": [
     {
@@ -13,16 +13,42 @@
     }
   ],
   "tags": [
-    { "name": "Account", "description": "Identity of the key owner" },
-    { "name": "Sites", "description": "Websites owned by the key's account" },
-    { "name": "Profile", "description": "Published business profile" },
-    { "name": "Discovery", "description": "Unauthenticated API description" }
+    {
+      "name": "Account",
+      "description": "Identity of the key owner"
+    },
+    {
+      "name": "Sites",
+      "description": "Websites owned by the key's account"
+    },
+    {
+      "name": "Profile",
+      "description": "Published business profile"
+    },
+    {
+      "name": "Leads",
+      "description": "Contact-form leads saved for the caller's sites"
+    },
+    {
+      "name": "Discovery",
+      "description": "Unauthenticated API description"
+    },
+    {
+      "name": "Webhooks",
+      "description": "Register endpoints that receive signed events"
+    }
   ],
-  "security": [{ "bearerAuth": [] }],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
   "paths": {
     "/openapi.json": {
       "get": {
-        "tags": ["Discovery"],
+        "tags": [
+          "Discovery"
+        ],
         "summary": "OpenAPI document",
         "operationId": "getOpenApi",
         "security": [],
@@ -31,7 +57,10 @@
             "description": "This document",
             "content": {
               "application/json": {
-                "schema": { "type": "object", "additionalProperties": true }
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
               }
             }
           }
@@ -40,7 +69,9 @@
     },
     "/me": {
       "get": {
-        "tags": ["Account"],
+        "tags": [
+          "Account"
+        ],
         "summary": "Key owner",
         "description": "Non-sensitive account fields for the key owner. Any valid key may call this. Email, personal name, and phone are omitted.",
         "operationId": "getMe",
@@ -48,29 +79,49 @@
           "200": {
             "description": "Owning account",
             "headers": {
-              "RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data"],
-                  "properties": { "data": { "$ref": "#/components/schemas/Account" } }
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Account"
+                    }
+                  }
                 }
               }
             }
           },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
         }
       }
     },
     "/sites": {
       "get": {
-        "tags": ["Sites"],
+        "tags": [
+          "Sites"
+        ],
         "summary": "List sites",
         "description": "Websites for the key owner, oldest first. Requires `sites:read`.",
         "operationId": "listSites",
@@ -80,50 +131,80 @@
             "in": "query",
             "required": false,
             "description": "Page size from 1 to 100. Default 20.",
-            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
           },
           {
             "name": "cursor",
             "in": "query",
             "required": false,
             "description": "Opaque cursor from a previous page's nextCursor.",
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "One page of sites",
             "headers": {
-              "RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data", "page"],
+                  "required": [
+                    "data",
+                    "page"
+                  ],
                   "properties": {
                     "data": {
                       "type": "array",
-                      "items": { "$ref": "#/components/schemas/Site" }
+                      "items": {
+                        "$ref": "#/components/schemas/Site"
+                      }
                     },
-                    "page": { "$ref": "#/components/schemas/CursorPage" }
+                    "page": {
+                      "$ref": "#/components/schemas/CursorPage"
+                    }
                   }
                 }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/ValidationError" },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
         }
       }
     },
     "/sites/{id}": {
       "get": {
-        "tags": ["Sites"],
+        "tags": [
+          "Sites"
+        ],
         "summary": "Get a site",
         "description": "One website owned by the key's account. Another account's id is `not_found`. Requires `sites:read`.",
         "operationId": "getSite",
@@ -132,37 +213,61 @@
             "name": "id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Site",
             "headers": {
-              "RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data"],
-                  "properties": { "data": { "$ref": "#/components/schemas/Site" } }
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Site"
+                    }
+                  }
                 }
               }
             }
           },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
         }
       }
     },
     "/business-profile": {
       "get": {
-        "tags": ["Profile"],
+        "tags": [
+          "Profile"
+        ],
         "summary": "Published business profile",
         "description": "Business name, logo URL, brand colors, and address taken from the caller's site. Requires `profile:read`. Without `siteId`, the newest published site is used, then the newest site. The response omits private contact data.",
         "operationId": "getBusinessProfile",
@@ -172,31 +277,374 @@
             "in": "query",
             "required": false,
             "description": "Owned site to read. Another account's id is `not_found`.",
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
             "description": "Business profile",
             "headers": {
-              "RateLimit-Limit": { "$ref": "#/components/headers/RateLimitLimit" },
-              "RateLimit-Remaining": { "$ref": "#/components/headers/RateLimitRemaining" },
-              "RateLimit-Reset": { "$ref": "#/components/headers/RateLimitReset" }
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
             },
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": ["data"],
-                  "properties": { "data": { "$ref": "#/components/schemas/BusinessProfile" } }
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/BusinessProfile"
+                    }
+                  }
                 }
               }
             }
           },
-          "401": { "$ref": "#/components/responses/Unauthorized" },
-          "403": { "$ref": "#/components/responses/Forbidden" },
-          "404": { "$ref": "#/components/responses/NotFound" },
-          "429": { "$ref": "#/components/responses/RateLimited" }
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/webhooks": {
+      "post": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Register a webhook endpoint",
+        "description": "Requires webhooks:write. The signing secret is returned once.",
+        "operationId": "createWebhook",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url",
+                  "events"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "events": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "lead.captured",
+                        "site.published",
+                        "business_profile.updated",
+                        "form.submitted",
+                        "app.installed",
+                        "app.uninstalled"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Endpoint plus one-time signing secret"
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "List webhook endpoints",
+        "operationId": "listWebhooks",
+        "responses": {
+          "200": {
+            "description": "Endpoints without signing secrets"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/webhooks/{id}": {
+      "delete": {
+        "tags": [
+          "Webhooks"
+        ],
+        "summary": "Delete a webhook endpoint",
+        "operationId": "deleteWebhook",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/sites/{id}/content": {
+      "patch": {
+        "tags": [
+          "Sites"
+        ],
+        "summary": "Update safe site copy",
+        "description": "Requires `sites:write`. `field` of `title` updates the site title. Other fields require `sectionId` and must be a hero or summary text field. The value is plain text of at most 200 characters and cannot include contact details or links. Another account's site id is `not_found`. A change that alters the published profile emits `business_profile.updated`.",
+        "operationId": "updateSiteContent",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SiteContentUpdate"
+              },
+              "example": {
+                "field": "title",
+                "value": "North Clinic"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated field",
+            "headers": {
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "siteId",
+                        "field",
+                        "value"
+                      ],
+                      "properties": {
+                        "siteId": {
+                          "type": "string"
+                        },
+                        "field": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/leads": {
+      "get": {
+        "tags": [
+          "Leads"
+        ],
+        "summary": "List contact-form leads",
+        "description": "Requires `leads:read`. Returns leads for sites the caller owns, newest first. Owner account email and name are omitted.",
+        "operationId": "listLeads",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lead page",
+            "headers": {
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "page"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Lead"
+                      }
+                    },
+                    "page": {
+                      "$ref": "#/components/schemas/Page"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        }
+      }
+    },
+    "/installation": {
+      "delete": {
+        "tags": [
+          "Account"
+        ],
+        "summary": "Uninstall the calling app",
+        "description": "Revokes the access token's installation and emits `app.uninstalled`. An account API key has no installation and receives `not_found`.",
+        "operationId": "uninstallInstallation",
+        "responses": {
+          "200": {
+            "description": "Installation removed",
+            "headers": {
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimitLimit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimitRemaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimitReset"
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
         }
       }
     }
@@ -206,21 +654,27 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Developer API key issued by FindVirtualMe. The secret starts with fvm_ and is shown only once."
+        "description": "Developer API key (`fvm_...`) or installed-app access token (`fvm_at_...`). Secrets are shown only once."
       }
     },
     "headers": {
       "RateLimitLimit": {
         "description": "Maximum requests in the current window for this key.",
-        "schema": { "type": "integer" }
+        "schema": {
+          "type": "integer"
+        }
       },
       "RateLimitRemaining": {
         "description": "Remaining requests in the current window for this key.",
-        "schema": { "type": "integer" }
+        "schema": {
+          "type": "integer"
+        }
       },
       "RateLimitReset": {
         "description": "Seconds until this key's window resets.",
-        "schema": { "type": "integer" }
+        "schema": {
+          "type": "integer"
+        }
       }
     },
     "responses": {
@@ -228,7 +682,9 @@
         "description": "Missing, unknown, or revoked API key",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
             "example": {
               "error": {
                 "code": "invalid_api_key",
@@ -242,14 +698,18 @@
         "description": "The key is missing a scope, or the account is inactive",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
             "examples": {
               "scope": {
                 "value": {
                   "error": {
                     "code": "insufficient_scope",
                     "message": "API key is missing a required scope",
-                    "details": { "requiredScope": "sites:read" }
+                    "details": {
+                      "requiredScope": "sites:read"
+                    }
                   }
                 }
               },
@@ -269,7 +729,9 @@
         "description": "The resource does not exist for this account",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -277,7 +739,9 @@
         "description": "A query parameter is invalid",
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" }
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            }
           }
         }
       },
@@ -286,12 +750,16 @@
         "headers": {
           "Retry-After": {
             "description": "Seconds to wait before retrying.",
-            "schema": { "type": "integer" }
+            "schema": {
+              "type": "integer"
+            }
           }
         },
         "content": {
           "application/json": {
-            "schema": { "$ref": "#/components/schemas/ErrorEnvelope" },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorEnvelope"
+            },
             "example": {
               "error": {
                 "code": "rate_limited",
@@ -305,95 +773,871 @@
     "schemas": {
       "ErrorEnvelope": {
         "type": "object",
-        "required": ["error"],
+        "required": [
+          "error"
+        ],
         "properties": {
           "error": {
             "type": "object",
-            "required": ["code", "message"],
+            "required": [
+              "code",
+              "message"
+            ],
             "properties": {
-              "code": { "type": "string" },
-              "message": { "type": "string" },
-              "details": { "type": "object", "additionalProperties": true }
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": true
+              }
             }
           }
         }
       },
       "Account": {
         "type": "object",
-        "required": ["id", "username", "role", "active", "createdAt"],
+        "required": [
+          "id",
+          "username",
+          "role",
+          "active",
+          "createdAt"
+        ],
         "properties": {
-          "id": { "type": "string" },
-          "username": { "type": "string" },
-          "role": { "type": "string" },
-          "active": { "type": "boolean" },
-          "createdAt": { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "Domain": {
         "type": "object",
-        "required": ["domain", "status"],
+        "required": [
+          "domain",
+          "status"
+        ],
         "properties": {
-          "domain": { "type": "string" },
-          "status": { "type": "string" }
+          "domain": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
         }
       },
       "Site": {
         "type": "object",
-        "required": ["id", "title", "subdomain", "hostname", "published", "domains"],
+        "required": [
+          "id",
+          "title",
+          "subdomain",
+          "hostname",
+          "published",
+          "domains"
+        ],
         "properties": {
-          "id": { "type": "string" },
-          "title": { "type": "string" },
-          "template": { "type": ["string", "null"] },
-          "subdomain": { "type": ["string", "null"] },
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "template": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "subdomain": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "hostname": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "Platform hostname formed from the subdomain and PUBLIC_SITE_HOST."
           },
-          "published": { "type": "boolean" },
+          "published": {
+            "type": "boolean"
+          },
           "domains": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/Domain" }
+            "items": {
+              "$ref": "#/components/schemas/Domain"
+            }
           }
         }
       },
       "CursorPage": {
         "type": "object",
-        "required": ["limit", "hasMore", "nextCursor"],
+        "required": [
+          "limit",
+          "hasMore",
+          "nextCursor"
+        ],
         "properties": {
-          "limit": { "type": "integer" },
-          "hasMore": { "type": "boolean" },
-          "nextCursor": { "type": ["string", "null"] }
+          "limit": {
+            "type": "integer"
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
         }
       },
       "Address": {
         "type": "object",
-        "required": ["line1", "city", "region", "postalCode", "country", "formatted"],
+        "required": [
+          "line1",
+          "city",
+          "region",
+          "postalCode",
+          "country",
+          "formatted"
+        ],
         "properties": {
-          "line1": { "type": ["string", "null"] },
-          "city": { "type": ["string", "null"] },
-          "region": { "type": ["string", "null"] },
-          "postalCode": { "type": ["string", "null"] },
-          "country": { "type": ["string", "null"] },
-          "formatted": { "type": "string" }
+          "line1": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "city": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "region": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "postalCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "formatted": {
+            "type": "string"
+          }
         }
       },
       "BusinessProfile": {
         "type": "object",
-        "required": ["siteId", "businessName", "logoUrl", "brandColors", "address"],
+        "required": [
+          "siteId",
+          "businessName",
+          "logoUrl",
+          "brandColors",
+          "address"
+        ],
         "properties": {
-          "siteId": { "type": "string" },
-          "businessName": { "type": ["string", "null"] },
-          "logoUrl": { "type": ["string", "null"] },
+          "siteId": {
+            "type": "string"
+          },
+          "businessName": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "logoUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "brandColors": {
             "type": "object",
-            "additionalProperties": { "type": "string" },
+            "additionalProperties": {
+              "type": "string"
+            },
             "description": "Color tokens published on the site, such as accent, accentStrong, page, and text."
           },
           "address": {
             "oneOf": [
-              { "$ref": "#/components/schemas/Address" },
-              { "type": "null" }
+              {
+                "$ref": "#/components/schemas/Address"
+              },
+              {
+                "type": "null"
+              }
             ]
+          }
+        }
+      },
+      "LeadCapturedEvent": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "createdAt",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable event id for dedupe across retries."
+          },
+          "type": {
+            "type": "string",
+            "const": "lead.captured"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "siteId",
+              "email",
+              "name",
+              "phone",
+              "createdAt"
+            ],
+            "properties": {
+              "siteId": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "phone": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "When the lead was captured."
+              }
+            }
+          }
+        }
+      },
+      "SitePublishedEvent": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "createdAt",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "const": "site.published"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "siteId",
+              "publishedAt"
+            ],
+            "properties": {
+              "siteId": {
+                "type": "string"
+              },
+              "publishedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      },
+      "BusinessProfileUpdatedEvent": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "createdAt",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "const": "business_profile.updated"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "siteId",
+              "updatedAt"
+            ],
+            "properties": {
+              "siteId": {
+                "type": "string"
+              },
+              "businessName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "logoUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "brandColors": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "address": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "contact": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      },
+      "FormSubmittedEvent": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "createdAt",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "const": "form.submitted"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "siteId",
+              "form",
+              "submittedAt"
+            ],
+            "properties": {
+              "siteId": {
+                "type": "string"
+              },
+              "form": {
+                "type": "string"
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "phone": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "message": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "submittedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      },
+      "SiteContentUpdate": {
+        "type": "object",
+        "required": [
+          "field",
+          "value"
+        ],
+        "properties": {
+          "field": {
+            "type": "string",
+            "description": "title, or a hero/summary text field name"
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "sectionId": {
+            "type": "string",
+            "description": "Required unless field is title"
+          }
+        }
+      },
+      "Lead": {
+        "type": "object",
+        "required": [
+          "id",
+          "siteId",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "siteId": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Page": {
+        "type": "object",
+        "required": [
+          "limit",
+          "hasMore"
+        ],
+        "properties": {
+          "limit": {
+            "type": "integer"
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "AppLifecycleEvent": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "createdAt",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "app.installed",
+              "app.uninstalled"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "siteId",
+              "appId",
+              "installationId",
+              "scopes"
+            ],
+            "properties": {
+              "siteId": {
+                "type": "string"
+              },
+              "appId": {
+                "type": "string"
+              },
+              "installationId": {
+                "type": "string"
+              },
+              "scopes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {
+    "leadCaptured": {
+      "post": {
+        "operationId": "leadCaptured",
+        "summary": "lead.captured",
+        "description": "Sent when a site contact form or inquiry is saved.\nHeaders:\nX-FindVirtualMe-Timestamp is unix seconds.\nX-FindVirtualMe-Signature is v1=<lowercase hex HMAC-SHA256>.\nX-FindVirtualMe-Event is the event id.\nThe HMAC key is the endpoint signing secret.\nThe HMAC message is the UTF-8 string `${timestamp}.${rawBody}` where rawBody is the exact request body.\nReject timestamps more than 300 seconds from the receiver clock.\nCompare the hex digest in constant time.\nDedupe with the JSON id. Retries reuse that id and send a new timestamp.\nDeliveries that are not 2xx are retried with backoff: 5s, 30s, 2m, 10m, 1h, then the delivery stops after 6 attempts.",
+        "parameters": [
+          {
+            "name": "X-FindVirtualMe-Timestamp",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1760000000"
+            }
+          },
+          {
+            "name": "X-FindVirtualMe-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "v1=0123456789abcdef"
+            }
+          },
+          {
+            "name": "X-FindVirtualMe-Event",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "evt_example"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeadCapturedEvent"
+              },
+              "example": {
+                "id": "evt_example",
+                "type": "lead.captured",
+                "createdAt": "2026-10-23T12:00:00.000Z",
+                "data": {
+                  "siteId": "507f1f77bcf86cd799439011",
+                  "email": "visitor@example.test",
+                  "name": "Visitor Example",
+                  "phone": null,
+                  "createdAt": "2026-10-23T12:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Any 2xx acknowledges the event. Other statuses are retried."
+          }
+        }
+      }
+    },
+    "sitePublished": {
+      "post": {
+        "operationId": "sitePublished",
+        "summary": "site.published",
+        "description": "Sent when a site visibility changes to public. Signature and retry rules match lead.captured.",
+        "parameters": [
+          {
+            "name": "X-FindVirtualMe-Timestamp",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-FindVirtualMe-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-FindVirtualMe-Event",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SitePublishedEvent"
+              },
+              "example": {
+                "id": "evt_example",
+                "type": "site.published",
+                "createdAt": "2026-10-23T12:00:00.000Z",
+                "data": {
+                  "siteId": "507f1f77bcf86cd799439011",
+                  "publishedAt": "2026-10-23T12:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Any 2xx acknowledges the event."
+          }
+        }
+      }
+    },
+    "businessProfileUpdated": {
+      "post": {
+        "operationId": "businessProfileUpdated",
+        "summary": "business_profile.updated",
+        "description": "Sent when a site published business profile changes. Signature and retry rules match lead.captured. FindVirtualMe does not call a third-party API for this change.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BusinessProfileUpdatedEvent"
+              },
+              "example": {
+                "id": "evt_example",
+                "createdAt": "2026-10-23T12:00:00.000Z",
+                "type": "business_profile.updated",
+                "data": {
+                  "siteId": "507f1f77bcf86cd799439011",
+                  "businessName": "North Clinic",
+                  "logoUrl": "https://cdn.example.test/logo.png",
+                  "brandColors": {
+                    "primary": "#1c1917"
+                  },
+                  "address": {
+                    "line1": "1 Example Street",
+                    "city": "Austin",
+                    "region": "TX",
+                    "postalCode": "78701",
+                    "country": "US",
+                    "formatted": "1 Example Street, Austin, TX, 78701, US"
+                  },
+                  "contact": {
+                    "email": "desk@example.test",
+                    "phone": null,
+                    "website": "https://north.example.test"
+                  },
+                  "updatedAt": "2026-10-23T12:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Any 2xx acknowledges the event."
+          }
+        }
+      }
+    },
+    "formSubmitted": {
+      "post": {
+        "operationId": "formSubmitted",
+        "summary": "form.submitted",
+        "description": "Sent when a site form is saved. Signature and retry rules match lead.captured.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FormSubmittedEvent"
+              },
+              "example": {
+                "id": "evt_example",
+                "createdAt": "2026-10-23T12:00:00.000Z",
+                "type": "form.submitted",
+                "data": {
+                  "siteId": "507f1f77bcf86cd799439011",
+                  "form": "contact",
+                  "email": "visitor@example.test",
+                  "name": "Visitor Example",
+                  "phone": null,
+                  "message": "Please call the desk.",
+                  "submittedAt": "2026-10-23T12:00:00.000Z"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Any 2xx acknowledges the event."
+          }
+        }
+      }
+    },
+    "appInstalled": {
+      "post": {
+        "operationId": "appInstalled",
+        "summary": "app.installed",
+        "description": "Sent when an approved app completes an OAuth install on a site.",
+        "responses": {
+          "200": {
+            "description": "Any 2xx acknowledges the event."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppLifecycleEvent"
+              },
+              "example": {
+                "id": "evt_example",
+                "createdAt": "2026-10-23T12:00:00.000Z",
+                "type": "app.installed",
+                "data": {
+                  "siteId": "507f1f77bcf86cd799439011",
+                  "appId": "507f1f77bcf86cd799439012",
+                  "installationId": "507f1f77bcf86cd799439013",
+                  "scopes": [
+                    "sites:read",
+                    "profile:read",
+                    "webhooks:write"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "appUninstalled": {
+      "post": {
+        "operationId": "appUninstalled",
+        "summary": "app.uninstalled",
+        "description": "Sent when an installation is removed and its tokens are revoked.",
+        "responses": {
+          "200": {
+            "description": "Any 2xx acknowledges the event."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppLifecycleEvent"
+              },
+              "example": {
+                "id": "evt_example",
+                "createdAt": "2026-10-23T12:00:00.000Z",
+                "type": "app.uninstalled",
+                "data": {
+                  "siteId": "507f1f77bcf86cd799439011",
+                  "appId": "507f1f77bcf86cd799439012",
+                  "installationId": "507f1f77bcf86cd799439013",
+                  "scopes": [
+                    "sites:read",
+                    "profile:read",
+                    "webhooks:write"
+                  ]
+                }
+              }
+            }
           }
         }
       }

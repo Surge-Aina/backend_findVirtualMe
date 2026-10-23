@@ -33,7 +33,16 @@ const qrCodeRoutes = require("./qr-code/qrCode.routes.js");
 const privacyPolicyRoutes = require("./privacy-policy/privacyPolicy.routes");
 const termsOfServiceRoutes = require("./terms-of-service/termsOfService.routes");
 const developerApiKeyRoutes = require("./public-api/developerKeys.routes");
+const developerWebhookRoutes = require("./public-api/webhooks.routes");
 const { mountPublicApi } = require("./public-api/mount");
+const { mountMcp } = require("./public-api/mcp");
+const {
+  developerApps,
+  developerInstallations,
+  adminApps,
+  catalog,
+  oauth,
+} = require("./marketplace/marketplace.routes");
 const config = require("../shared/config/app.config.js");
 
 const nowIso = () => new Date().toISOString();
@@ -84,7 +93,14 @@ function mountModules(app) {
   app.use("/api/legal/privacy-policy", privacyPolicyRoutes);
   app.use("/api/legal/terms-of-service", termsOfServiceRoutes);
   app.use("/api/developer/api-keys", developerApiKeyRoutes);
+  app.use("/api/developer/webhooks", developerWebhookRoutes);
+  app.use("/api/developer/apps", developerApps);
+  app.use("/api/developer/installations", developerInstallations);
+  app.use("/api/admin/apps", adminApps);
+  app.use("/api/marketplace/apps", catalog);
+  app.use("/api/oauth", oauth);
   mountPublicApi(app);
+  mountMcp(app);
 
   app.use("/api/mvp", emailMvpRoutes);
 

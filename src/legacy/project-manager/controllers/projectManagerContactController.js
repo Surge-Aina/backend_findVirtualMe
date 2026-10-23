@@ -2,6 +2,7 @@ const ProjectManagerContact = require('../models/ProjectManagerContact');
 const Portfolio = require('../models/portfolioModel');
 const UnifiedPortfolio = require("../../../modules/portfolios/models/Portfolio");
 const { sendProjectManagerContactEmails } = require('../../../shared/services/emailService');
+const { notifyLeadCaptured, notifyFormSubmitted } = require('../../../modules/public-api/lifecycleEvents');
 
 exports.submitContact = async (req, res) => {
   try {
@@ -60,6 +61,20 @@ exports.submitContact = async (req, res) => {
     });
     
     console.log('✅ Contact saved to database:', contact._id);
+    notifyLeadCaptured({
+      siteId: portfolioId,
+      email,
+      name,
+      createdAt: contact.createdAt,
+    });
+    notifyFormSubmitted({
+      siteId: portfolioId,
+      form: "projectManagerContact",
+      email,
+      name,
+      message,
+      submittedAt: contact.createdAt,
+    });
     
     // Prepare form data for emails
     const formData = {

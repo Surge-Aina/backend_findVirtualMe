@@ -1,6 +1,11 @@
 const sitesService = require("./sites.service");
 const { parseLimit, decodeCursor } = require("./cursor");
 const { sendError } = require("./errors");
+const { listLeads } = require("./leads.service");
+const { updateSiteContent, SiteContentError } = require("./siteContent");
+const { uninstallInstallation, MarketplaceError } = require("../marketplace/oauth.service");
+const { listEndpoints } = require("./webhook.service");
+const { listInstallations } = require("../marketplace/oauth.service");
 
 function ownerId(req) {
   return req.publicApi.user._id;
@@ -82,3 +87,83 @@ exports.businessProfile = async (req, res) => {
     return sendError(res, 500, "internal_error", "Internal server error");
   }
 };
+
+exports.listLeads = async (req, res) => {
+  try {
+    const limit = parseLimit(req.query.limit);
+    const cursor = decodeCursor(req.query.cursor);
+    const page = await listLeads({ ownerId: ownerId(req), limit, cursor });
+    return res.status(200).json({
+      data: page.leads,
+      page: { limit, hasMore: page.hasMore, nextCursor: page.nextCursor },
+    });
+  } catch (err) {
+    return sendQueryError(res, err);
+  }
+};
+
+exports.updateContent = async (req, res) => {
+  try {
+    const data = await updateSiteContent({
+      ownerId: ownerId(req),
+      siteId: req.params.id,
+      field: req.body?.field,
+      value: req.body?.value,
+      sectionId: req.body?.sectionId,
+    });
+    return res.status(200).json({ data });
+  } catch (err) {
+    if (err instanceof SiteContentError) {
+      return sendError(res, err.status, err.code, err.message, err.details);
+    }
+    console.error("public_api_request_error");
+    return sendError(res, 500, "internal_error", "Internal server error");
+  }
+};
+
+exports.uninstall = async (req, res) => {
+  try {
+    if (!req.publicApi.installationId) {
+      return sendError(res, 404, "not_found", "Installation not found");
+    }
+    const data = await uninstallInstallation({
+      userId: ownerId(req),
+      installationId: req.publicApi.installationId,
+    });
+    return res.status(200).json({ data });
+  } catch (err) {
+    if (err instanceof MarketplaceError) {
+      return sendError(res, err.status, err.code, err.message, err.details);
+    }
+    console.error("public_api_request_error");
+    return sendError(res, 500, "internal_error", "Internal server error");
+  }
+};
+
+async function listIntegrations(userId) {
+  const [installations, webhooks] = await Promise.all([
+    listInstallations(userId),
+    listEndpoints(userId),
+  ]);
+  return {
+    installations: installations.map((item) => ({
+      id: item.id,
+      appId: item.appId,
+      appName: item.appName,
+      slug: item.slug,
+      siteId: item.siteId,
+      scopes: item.scopes,
+      status: item.status,
+    })),
+    webhooks: webhooks.map((item) => ({
+      id: item.id,
+      url: item.url,
+      events: item.events,
+      secretLast4: item.secretLast4,
+      appId: item.appId,
+      installationId: item.installationId,
+    })),
+  };
+}
+
+exports.listIntegrations = listIntegrations;

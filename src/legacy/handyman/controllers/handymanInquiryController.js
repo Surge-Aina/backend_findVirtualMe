@@ -3,6 +3,7 @@ const HandymanTemplate = require('../models/HandymanTemplate');
 const UnifiedPortfolio = require("../../../modules/portfolios/models/Portfolio");
 const UserModel = require("../../../shared/models/User");
 const nodemailer = require('nodemailer');
+const { notifyLeadCaptured, notifyFormSubmitted } = require('../../../modules/public-api/lifecycleEvents');
 
 function buildTransporter() {
   return nodemailer.createTransport({
@@ -71,7 +72,7 @@ const createInquiry = async (req, res) => {
     }
 
     // Save inquiry with snapshot
-    await HandymanInquiry.create({
+    const inquiry = await HandymanInquiry.create({
       templateId: saveTemplateId,
       portfolioId: savePortfolioId,
       name, email, phone, message,
@@ -79,6 +80,25 @@ const createInquiry = async (req, res) => {
       selectedServicePrices: selectedPrices,
       selectedServiceTotal: total
     });
+
+    if (savePortfolioId) {
+      notifyLeadCaptured({
+        siteId: savePortfolioId,
+        email,
+        name,
+        phone,
+        createdAt: inquiry?.createdAt,
+      });
+      notifyFormSubmitted({
+        siteId: savePortfolioId,
+        form: "handymanInquiry",
+        email,
+        name,
+        phone,
+        message,
+        submittedAt: inquiry?.createdAt,
+      });
+    }
 
     const transporter = buildTransporter();
     const from = process.env.SMTP_FROM || (process.env.SMTP_USER || 'no-reply@example.com');

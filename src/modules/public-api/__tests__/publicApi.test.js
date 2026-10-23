@@ -60,12 +60,12 @@ function publicGet(path, secret) {
 }
 
 describe("public API v1", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     delete process.env.PUBLIC_API_KEY_PEPPER;
     delete process.env.PUBLIC_API_RATE_LIMIT_MAX;
     delete process.env.PUBLIC_API_MAX_ACTIVE_KEYS;
     delete process.env.PUBLIC_SITE_HOST;
-    resetPublicApiRateLimits();
+    await resetPublicApiRateLimits();
   });
 
   afterAll(() => {
@@ -119,7 +119,7 @@ describe("public API v1", () => {
     const bad = await request(app)
       .post("/api/developer/api-keys")
       .set("Authorization", sessionFor(user))
-      .send({ scopes: ["sites:write"] });
+      .send({ scopes: ["account:delete"] });
     expect(bad.status).toBe(400);
     expect(bad.body.error.code).toBe("validation_error");
   });
@@ -407,7 +407,7 @@ describe("public API v1", () => {
 
   it("rate limits one key without blocking a different key", async () => {
     process.env.PUBLIC_API_RATE_LIMIT_MAX = "2";
-    resetPublicApiRateLimits();
+    await resetPublicApiRateLimits();
     const user = await createUser("rate");
     const first = await issueKey(user, ["sites:read"], "One");
     const second = await issueKey(user, ["sites:read"], "Two");

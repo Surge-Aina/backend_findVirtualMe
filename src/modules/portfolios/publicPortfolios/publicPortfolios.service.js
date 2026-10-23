@@ -1,5 +1,6 @@
 const Portfolio = require("../models/Portfolio");
 const portfolioService = require("../portfolio.service");
+const { notifySitePublished } = require("../../public-api/lifecycleEvents");
 
 exports.getPublicPortfolios = async () => {
   try {
@@ -22,11 +23,14 @@ exports.getMyPortfolio = async (type, id, viewerUserId) => {
 
 exports.togglePublicPortfolio = async (portfolioId) => {
   try {
-    const doc = await Portfolio.findById(portfolioId).select("visibility template");
+    const doc = await Portfolio.findById(portfolioId).select("visibility template owner");
     if (!doc) return null;
 
     doc.visibility = doc.visibility === "public" ? "private" : "public";
     await doc.save();
+    if (doc.visibility === "public" && doc.owner) {
+      notifySitePublished({ ownerId: doc.owner, siteId: doc._id, publishedAt: new Date() });
+    }
 
     return {
       _id: doc._id,

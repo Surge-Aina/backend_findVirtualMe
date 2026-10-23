@@ -1,11 +1,6 @@
+const mongoose = require("mongoose");
+const RateBucket = require("./rateBucket.model");
 const { sendError } = require("./errors");
-
-/**
- * In-process fixed window, keyed by API key id.
- * A later slice can replace this map with a shared store. No external service
- * is used here, so each app process enforces its own window.
- */
-const buckets = new Map();
 
 function readPositiveInt(name, fallback, max) {
   const raw = process.env[name];
@@ -16,52 +11,87 @@ function readPositiveInt(name, fallback, max) {
   return parsed;
 }
 
-function limits() {
+function publicApiLimits() {
   return {
     max: readPositiveInt("PUBLIC_API_RATE_LIMIT_MAX", 60, 10000),
     windowMs: readPositiveInt("PUBLIC_API_RATE_LIMIT_WINDOW_MS", 60000, 24 * 60 * 60 * 1000),
   };
 }
 
-function sweep(now) {
-  if (buckets.size < 5000) return;
-  for (const [key, bucket] of buckets) {
-    if (now >= bucket.resetAt) buckets.delete(key);
+/**
+ * Fixed window aligned to the epoch so every instance shares the boundary.
+ * The counter lives in MongoDB.
+ */
+async function consumeRateLimit({ bucketKey, max, windowMs, now = Date.now() }) {
+  const windowStartMs = Math.floor(now / windowMs) * windowMs;
+  const windowStart = new Date(windowStartMs);
+  const expireAt = new Date(windowStartMs + windowMs * 2);
+  const update = {
+    $inc: { count: 1 },
+    $setOnInsert: { bucketKey, windowStart, expireAt },
+  };
+  const options = { upsert: true, new: true, setDefaultsOnInsert: true };
+
+  let doc;
+  try {
+    doc = await RateBucket.findOneAndUpdate({ bucketKey, windowStart }, update, options);
+  } catch (err) {
+    if (!err || err.code !== 11000) throw err;
+    doc = await RateBucket.findOneAndUpdate(
+      { bucketKey, windowStart },
+      { $inc: { count: 1 } },
+      { new: true }
+    );
+  }
+
+  const count = doc?.count || 1;
+  const resetAt = windowStartMs + windowMs;
+  return {
+    allowed: count <= max,
+    limit: max,
+    remaining: Math.max(0, max - count),
+    resetSeconds: Math.max(1, Math.ceil((resetAt - now) / 1000)),
+    count,
+  };
+}
+
+function applyRateHeaders(res, result) {
+  res.set("RateLimit-Limit", String(result.limit));
+  res.set("RateLimit-Remaining", String(result.remaining));
+  res.set("RateLimit-Reset", String(result.resetSeconds));
+  if (!result.allowed) res.set("Retry-After", String(result.resetSeconds));
+}
+
+async function publicApiRateLimit(req, res, next) {
+  try {
+    const keyId = req.publicApi?.key?._id?.toString();
+    if (!keyId) return next();
+    const { max, windowMs } = publicApiLimits();
+    const result = await consumeRateLimit({
+      bucketKey: `public-api:${keyId}`,
+      max,
+      windowMs,
+    });
+    applyRateHeaders(res, result);
+    if (!result.allowed) {
+      return sendError(res, 429, "rate_limited", "API key rate limit exceeded");
+    }
+    return next();
+  } catch (_err) {
+    console.error("public_api_rate_limit_error");
+    return sendError(res, 500, "internal_error", "Internal server error");
   }
 }
 
-function publicApiRateLimit(req, res, next) {
-  const keyId = req.publicApi?.key?._id?.toString();
-  if (!keyId) return next();
-
-  const { max, windowMs } = limits();
-  const now = Date.now();
-  sweep(now);
-
-  let bucket = buckets.get(keyId);
-  if (!bucket || now >= bucket.resetAt) {
-    bucket = { count: 0, resetAt: now + windowMs };
-    buckets.set(keyId, bucket);
-  }
-
-  bucket.count += 1;
-  const resetSeconds = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
-  res.set("RateLimit-Limit", String(max));
-  res.set("RateLimit-Remaining", String(Math.max(0, max - bucket.count)));
-  res.set("RateLimit-Reset", String(resetSeconds));
-
-  if (bucket.count > max) {
-    res.set("Retry-After", String(resetSeconds));
-    return sendError(res, 429, "rate_limited", "API key rate limit exceeded");
-  }
-  return next();
-}
-
-function resetPublicApiRateLimits() {
-  buckets.clear();
+async function resetPublicApiRateLimits() {
+  if (mongoose.connection.readyState !== 1) return;
+  await RateBucket.deleteMany({});
 }
 
 module.exports = {
+  consumeRateLimit,
+  applyRateHeaders,
   publicApiRateLimit,
   resetPublicApiRateLimits,
+  publicApiLimits,
 };

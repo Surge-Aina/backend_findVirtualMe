@@ -24,12 +24,12 @@ function renderDocsPage() {
 <body>
   <main>
     <h1>FindVirtualMe Public API</h1>
-    <p class="lede">Version 1 is a read API for a customer's own sites and published business profile. The machine-readable contract is the <a href="/api/public/v1/openapi.json">OpenAPI 3.1 document</a>.</p>
+    <p class="lede">Version 1 lets an account key or an installed app read that account's sites and published business profile, list leads, update safe site copy, and subscribe to signed events. The machine-readable contract is the <a href="/api/public/v1/openapi.json">OpenAPI 3.1 document</a>.</p>
 
     <h2>Authentication</h2>
-    <p>Send the developer API key on every data request:</p>
+    <p>Send a developer API key or an installed-app access token on every data request:</p>
     <pre>Authorization: Bearer fvm_...</pre>
-    <p>Keys are created by the account owner with their FindVirtualMe session. The full secret is returned once at creation and stored only as a hash. A key can read only that owner's data.</p>
+    <p>Account keys are created by the account owner with their FindVirtualMe session. The full secret is returned once at creation and stored only as a hash. Installed apps receive an access token that starts with <code>fvm_at_</code>. Either credential can access only the account that authorized it.</p>
 
     <h2>Account key lifecycle</h2>
     <p>These routes use the existing session token, not an API key.</p>
@@ -47,6 +47,9 @@ function renderDocsPage() {
     <ul>
       <li><code>sites:read</code> — list and fetch the caller's websites.</li>
       <li><code>profile:read</code> — read the published business profile.</li>
+      <li><code>leads:read</code> — list form leads saved for the caller's sites.</li>
+      <li><code>sites:write</code> — update safe text fields on an owned site.</li>
+      <li><code>webhooks:write</code> — register and remove signed webhook subscriptions.</li>
     </ul>
     <p><code>GET /me</code> identifies the key's account and does not require a resource scope. It returns the account id, username, role, active flag, and creation time.</p>
 
@@ -57,18 +60,46 @@ function renderDocsPage() {
         <tr><td>GET</td><td><code>/api/public/v1/me</code></td><td>any valid key</td></tr>
         <tr><td>GET</td><td><code>/api/public/v1/sites</code></td><td><code>sites:read</code></td></tr>
         <tr><td>GET</td><td><code>/api/public/v1/sites/:id</code></td><td><code>sites:read</code></td></tr>
+        <tr><td>PATCH</td><td><code>/api/public/v1/sites/:id/content</code></td><td><code>sites:write</code></td></tr>
         <tr><td>GET</td><td><code>/api/public/v1/business-profile</code></td><td><code>profile:read</code></td></tr>
+        <tr><td>GET</td><td><code>/api/public/v1/leads</code></td><td><code>leads:read</code></td></tr>
+        <tr><td>DELETE</td><td><code>/api/public/v1/installation</code></td><td>installed app token</td></tr>
+        <tr><td>POST, GET</td><td><code>/api/public/v1/webhooks</code></td><td><code>webhooks:write</code></td></tr>
+        <tr><td>DELETE</td><td><code>/api/public/v1/webhooks/:id</code></td><td><code>webhooks:write</code></td></tr>
       </tbody>
     </table>
+    <p><code>PATCH /sites/:id/content</code> accepts <code>field</code> and <code>value</code>. <code>field=title</code> updates the site title. Other fields require <code>sectionId</code> and must be a published hero or summary text field. Values are plain text of at most 200 characters and cannot include contact details or links.</p>
+    <p><code>GET /leads</code> returns id, site id, name, email, message, and created time for contact forms on sites the caller owns. It uses the same cursor pagination as <code>GET /sites</code>.</p>
     <p>Sites include subdomain, platform hostname, custom domains, and published status. <code>GET /sites</code> accepts <code>limit</code> (1–100, default 20) and an opaque <code>cursor</code>. The page object includes <code>nextCursor</code> and <code>hasMore</code>.</p>
     <p><code>GET /business-profile</code> reads the caller's published site (or <code>?siteId=</code>). It returns business name, logo URL, brand colors, and address taken from the site. It does not return account email, phone, or other private contact fields. Pass <code>siteId</code> to choose a specific owned site.</p>
 
     <h2>Errors and limits</h2>
     <p>Errors use <code>{ "error": { "code": "...", "message": "..." } }</code>. Unknown and revoked keys both return <code>invalid_api_key</code>. A missing scope returns <code>insufficient_scope</code>. Another customer's site id returns <code>not_found</code>.</p>
-    <p>Each key is limited per process. Defaults are 60 requests per 60 seconds. <code>429</code> responses use code <code>rate_limited</code> and include <code>Retry-After</code>. Successful responses include <code>RateLimit-Limit</code>, <code>RateLimit-Remaining</code>, and <code>RateLimit-Reset</code>.</p>
+    <p>Each key has a fixed window stored in MongoDB, so the limit is shared by every app instance. Defaults are 60 requests per 60 seconds. <code>429</code> responses use code <code>rate_limited</code> and include <code>Retry-After</code>. Successful responses include <code>RateLimit-Limit</code>, <code>RateLimit-Remaining</code>, and <code>RateLimit-Reset</code>.</p>
 
-    <h2>Not in this version</h2>
-    <p>HMAC-signed outbound webhooks, including <code>lead.captured</code>, are not served by this version. The event name is reserved for the event catalog.</p>
+    <h2>Webhooks</h2>
+    <p>Register an https endpoint with a session, with an API key that has <code>webhooks:write</code>, or with an installed app access token that has <code>webhooks:write</code>. The signing secret is returned once. Event catalog: <code>lead.captured</code>, <code>site.published</code>, <code>business_profile.updated</code>, <code>form.submitted</code>, <code>app.installed</code>, and <code>app.uninstalled</code>.</p>
+    <p>Each delivery sends the raw JSON body and these headers:</p>
+    <pre>X-FindVirtualMe-Timestamp: &lt;unix seconds&gt;
+X-FindVirtualMe-Signature: v1=&lt;hex&gt;
+X-FindVirtualMe-Event: &lt;event id&gt;</pre>
+    <p><code>v1</code> is HMAC-SHA256 of the UTF-8 string <code>&#36;{timestamp}.&#36;{rawBody}</code> using the signing secret. <code>timestamp</code> is the header value and <code>rawBody</code> is the exact JSON body. Compare in constant time. Reject timestamps more than 300 seconds from your clock. Dedupe on <code>id</code> in the JSON. Retries send the same <code>id</code> and a new timestamp. Failed deliveries wait 5 seconds, 30 seconds, 2 minutes, 10 minutes, then 1 hour, and stop after 6 attempts. The OpenAPI document's <code>webhooks</code> section is the payload contract.</p>
+
+    <h2>Marketplace</h2>
+    <p>A developer registers an app with <code>POST /api/developer/apps</code>. An admin approves it with <code>POST /api/admin/apps/:id/review</code>. Approved apps are listed at <code>GET /api/marketplace/apps</code>. The site owner consents with <code>POST /api/oauth/authorize</code> using <code>code_challenge_method=S256</code>. The app exchanges the code at <code>POST /api/oauth/token</code> and can refresh it. The access token calls this public API with the granted scopes, including webhook registration. <code>DELETE /api/developer/installations/:id</code> or <code>DELETE /api/public/v1/installation</code> revokes tokens and emits <code>app.uninstalled</code>.</p>
+
+    <h2>MCP</h2>
+    <p>Streamable HTTP is at <code>POST /api/mcp</code>. Send the same bearer API key. Tools: <code>list_sites</code>, <code>get_site</code>, <code>get_business_profile</code>, <code>list_leads</code>, <code>update_site_content</code>, and <code>list_integrations</code>. Each tool uses the key's scopes.</p>
+    <pre>{
+  "mcpServers": {
+    "findvirtualme": {
+      "url": "https://findvirtual.me/api/mcp",
+      "headers": {
+        "Authorization": "Bearer fvm_..."
+      }
+    }
+  }
+}</pre>
   </main>
 </body>
 </html>`;
