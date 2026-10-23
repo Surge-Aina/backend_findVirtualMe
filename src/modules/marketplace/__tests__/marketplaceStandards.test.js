@@ -176,7 +176,7 @@ describe("marketplace standards", () => {
       createdAt: saved.createdAt,
     });
     await flushLifecycleEvents();
-    const leadCall = global.fetch.mock.calls.find((call) => String(call[1].body).includes("lead.captured"));
+    const leadCall = calls.find((call) => String(call[1].body).includes("lead.captured"));
     expect(leadCall[0]).toBe("https://hooks.example.test/app");
     const leadBody = JSON.parse(leadCall[1].body);
     const leadTimestamp = leadCall[1].headers["X-FindVirtualMe-Timestamp"];
@@ -268,6 +268,20 @@ describe("marketplace standards", () => {
         params: { name: "list_webhooks", arguments: {} },
       });
     expect(JSON.stringify(mcpHooks.body)).toContain("insufficient_scope");
+
+    const mcpOtherLead = await request(app)
+      .post("/api/mcp")
+      .set("Authorization", bearer)
+      .set("Accept", "application/json, text/event-stream")
+      .send({
+        jsonrpc: "2.0",
+        id: 7,
+        method: "tools/call",
+        params: { name: "get_lead", arguments: { leadId: otherLead._id.toString() } },
+      });
+    const mcpLeadText = JSON.stringify(mcpOtherLead.body);
+    expect(mcpLeadText).toContain("not_found");
+    expect(mcpLeadText).not.toContain("other@example.test");
     expect(JSON.stringify(installBody)).not.toContain(owner.email);
   });
 });
