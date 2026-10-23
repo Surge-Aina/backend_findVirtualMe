@@ -69,6 +69,7 @@ const PortfolioSchema = new mongoose.Schema(
       website: { type: String },
     },
     sessionId: { type: String, default: null },
+    aiParsed: { type: Boolean },
   },
   { timestamps: true }
 );
