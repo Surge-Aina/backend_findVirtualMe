@@ -32,6 +32,8 @@ const voucherRoutes = require("./vouchers/voucher.routes.js");
 const qrCodeRoutes = require("./qr-code/qrCode.routes.js");
 const privacyPolicyRoutes = require("./privacy-policy/privacyPolicy.routes");
 const termsOfServiceRoutes = require("./terms-of-service/termsOfService.routes");
+const developerApiKeyRoutes = require("./public-api/developerKeys.routes");
+const { mountPublicApi } = require("./public-api/mount");
 const config = require("../shared/config/app.config.js");
 const { loginUser, signupUser } = require("./auth/auth.controller");
 
@@ -93,6 +95,8 @@ function mountModules(app) {
   app.use("/privacy-policy", privacyPolicyRoutes);
   app.use("/api/legal/terms-of-service", termsOfServiceRoutes);
   app.use("/terms-of-service", termsOfServiceRoutes);
+  app.use("/api/developer/api-keys", developerApiKeyRoutes);
+  mountPublicApi(app);
 
   app.use("/api/mvp", emailMvpRoutes);
 
