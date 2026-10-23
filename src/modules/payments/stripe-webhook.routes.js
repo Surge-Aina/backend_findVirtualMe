@@ -5,6 +5,7 @@ const Subscription = require("../../shared/models/Subscriptions");
 const User = require("../../shared/models/User");
 const stripeController = require("./domain-payment/stripe/stripe.controller");
 const voucherService = require("../vouchers/voucher.service");
+const { acceptStripeSitePayment } = require("../public-api/sitePayment");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
@@ -257,6 +258,12 @@ router.post("/stripe", express.raw({ type: "application/json" }), async (req, re
       case "payment_intent.succeeded": {
         const paymentIntent = event.data.object;
 
+        try {
+          await acceptStripeSitePayment({ kind: "payment_intent", object: paymentIntent });
+        } catch (_err) {
+          console.error("site_payment_event_failed");
+        }
+
         // Only log subscription payments
         if (
           paymentIntent.customer &&
@@ -468,6 +475,11 @@ router.post("/stripe", express.raw({ type: "application/json" }), async (req, re
       //save stripe subscription id after user finishes checking out
       case "checkout.session.completed": {
         const session = event.data.object;
+        try {
+          await acceptStripeSitePayment({ kind: "checkout_session", object: session });
+        } catch (_err) {
+          console.error("site_payment_event_failed");
+        }
         const stripeSubscriptionId = session.subscription;
         const customerId = session.customer;
 

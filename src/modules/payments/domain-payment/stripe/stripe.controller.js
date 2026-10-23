@@ -7,6 +7,7 @@ const stripeSecretkey =
 const stripe = require("stripe")(stripeSecretkey);
 const { checkDomainAndGetPrice } = require("../services/pricing.service");
 const { handleFulfillment } = require("../services/fulfillment.service");
+const { acceptStripeSitePayment } = require("../../../public-api/sitePayment");
 
 /**
  * Handles POST /api/payment/checkout
@@ -105,6 +106,12 @@ exports.handleStripeWebhook = async (req, res) => {
     const { domain, userId, voucherId } = session.metadata;
     console.log("Metadata extracted from session:", { domain, userId, voucherId });
     const paymentIntentId = session.payment_intent; // Charge ID for potential refund
+
+    try {
+      await acceptStripeSitePayment({ kind: "checkout_session", object: session });
+    } catch (_err) {
+      console.error("site_payment_event_failed");
+    }
 
     // 3. Trigger the asynchronous fulfillment service
     // NOTE: We don't wait for fulfillment here. We respond 200 immediately to Stripe.

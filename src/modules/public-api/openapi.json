@@ -361,7 +361,8 @@
                         "form.submitted",
                         "app.installed",
                         "app.uninstalled",
-                        "workflow.trigger.fired"
+                        "workflow.trigger.fired",
+                        "payment.completed"
                       ]
                     }
                   }
@@ -1327,7 +1328,8 @@
             "enum": [
               "app.installed",
               "app.uninstalled",
-              "workflow.trigger.fired"
+              "workflow.trigger.fired",
+              "payment.completed"
             ]
           },
           "createdAt": {
@@ -1402,6 +1404,71 @@
               "payload": {
                 "type": "object",
                 "additionalProperties": true
+              }
+            }
+          }
+        }
+      },
+      "PaymentCompletedEvent": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "createdAt",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "const": "payment.completed"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "siteId",
+              "amount",
+              "currency",
+              "occurredAt",
+              "idempotencyKey"
+            ],
+            "properties": {
+              "siteId": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Minor currency units."
+              },
+              "currency": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "phone": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "occurredAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "idempotencyKey": {
+                "type": "string"
               }
             }
           }
@@ -1712,6 +1779,42 @@
                   "payload": {
                     "reference": "example"
                   }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Any 2xx acknowledges the event."
+          }
+        }
+      }
+    },
+    "paymentCompleted": {
+      "post": {
+        "operationId": "paymentCompleted",
+        "summary": "payment.completed",
+        "description": "Sent when an end customer pays through a site. amount is minor units. Signature and retry rules match lead.captured. The idempotencyKey is stable for the Stripe payment.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentCompletedEvent"
+              },
+              "example": {
+                "id": "evt_example",
+                "type": "payment.completed",
+                "createdAt": "2026-10-23T12:00:00.000Z",
+                "data": {
+                  "siteId": "507f1f77bcf86cd799439011",
+                  "amount": 2500,
+                  "currency": "usd",
+                  "email": "payer@example.test",
+                  "phone": null,
+                  "occurredAt": "2026-10-23T12:00:00.000Z",
+                  "idempotencyKey": "stripe:pi_example"
                 }
               }
             }

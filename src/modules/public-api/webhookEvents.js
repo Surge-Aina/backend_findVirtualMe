@@ -7,12 +7,14 @@ const {
   APP_INSTALLED,
   APP_UNINSTALLED,
   WORKFLOW_TRIGGER_FIRED,
+  PAYMENT_COMPLETED,
   leadCapturedFields,
   sitePublishedFields,
   businessProfileFields,
   formSubmittedFields,
   appLifecycleFields,
   workflowTriggerFields,
+  paymentCompletedFields,
 } = require("./webhookContract");
 
 function iso(value) {
@@ -134,6 +136,34 @@ function buildWorkflowTriggerFiredEvent({ siteId, triggerId, triggerKey, payload
   };
 }
 
+function buildPaymentCompletedEvent({
+  siteId,
+  amount,
+  currency,
+  email,
+  phone,
+  occurredAt,
+  idempotencyKey,
+  id,
+}) {
+  const at = iso(occurredAt);
+  const fields = paymentCompletedFields;
+  return {
+    [fields.id]: id || newEventId(),
+    [fields.type]: PAYMENT_COMPLETED,
+    [fields.createdAt]: at,
+    [fields.data]: {
+      [fields.siteId]: String(siteId),
+      [fields.amount]: amount,
+      [fields.currency]: currency,
+      [fields.email]: optionalText(email),
+      [fields.phone]: optionalText(phone),
+      [fields.occurredAt]: at,
+      [fields.idempotencyKey]: idempotencyKey,
+    },
+  };
+}
+
 function buildAppInstalledEvent(fields) {
   return buildAppLifecycleEvent(APP_INSTALLED, fields);
 }
@@ -150,4 +180,5 @@ module.exports = {
   buildAppInstalledEvent,
   buildAppUninstalledEvent,
   buildWorkflowTriggerFiredEvent,
+  buildPaymentCompletedEvent,
 };

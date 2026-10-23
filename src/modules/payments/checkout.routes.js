@@ -1,7 +1,9 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const router = express.Router();
 const Stripe = require("stripe");
 const User = require("../../shared/models/User");
+const Portfolio = require("../portfolios/models/Portfolio");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
@@ -11,17 +13,37 @@ const stripe = new Stripe(stripeSecretkey);
 
 //payment intent
 router.post("/payment-intent", async (req, res) => {
-  const { userId, amount } = req.body;
+  const { amount, siteId, email, phone } = req.body;
 
   if (!amount || amount <= 0) {
     return res.status(400).json({ error: "Invalid order" });
   }
 
   try {
+    const metadata = {};
+    if (siteId !== undefined && siteId !== null && siteId !== "") {
+      if (!mongoose.isValidObjectId(siteId)) {
+        return res.status(400).json({ error: "Invalid site" });
+      }
+      const site = await Portfolio.findOne({ _id: siteId, owner: req.user?._id || req.user?.id })
+        .select("_id")
+        .lean();
+      if (!site) return res.status(404).json({ error: "Site not found" });
+      metadata.siteId = site._id.toString();
+    }
+    if (typeof email === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      metadata.email = email.trim().slice(0, 254);
+    }
+    if (typeof phone === "string" && phone.trim()) {
+      metadata.phone = phone.trim().slice(0, 40);
+    }
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency: "usd",
       automatic_payment_methods: { enabled: true },
+      metadata,
+      ...(metadata.email ? { receipt_email: metadata.email } : {}),
     });
 
     res.json({
