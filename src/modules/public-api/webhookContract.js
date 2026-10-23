@@ -9,6 +9,7 @@ const BUSINESS_PROFILE_UPDATED = "business_profile.updated";
 const FORM_SUBMITTED = "form.submitted";
 const APP_INSTALLED = "app.installed";
 const APP_UNINSTALLED = "app.uninstalled";
+const WORKFLOW_TRIGGER_FIRED = "workflow.trigger.fired";
 
 const EVENT_CATALOG = Object.freeze([
   LEAD_CAPTURED,
@@ -17,6 +18,7 @@ const EVENT_CATALOG = Object.freeze([
   FORM_SUBMITTED,
   APP_INSTALLED,
   APP_UNINSTALLED,
+  WORKFLOW_TRIGGER_FIRED,
 ]);
 
 const leadCapturedFields = Object.freeze({
@@ -88,6 +90,17 @@ const formSubmittedFields = Object.freeze({
   submittedAt: "submittedAt",
 });
 
+const workflowTriggerFields = Object.freeze({
+  id: "id",
+  type: "type",
+  createdAt: "createdAt",
+  data: "data",
+  siteId: "siteId",
+  triggerId: "triggerId",
+  triggerKey: "triggerKey",
+  payload: "payload",
+});
+
 const appLifecycleFields = Object.freeze({
   id: "id",
   type: "type",
@@ -106,12 +119,14 @@ module.exports = {
   FORM_SUBMITTED,
   APP_INSTALLED,
   APP_UNINSTALLED,
+  WORKFLOW_TRIGGER_FIRED,
   EVENT_CATALOG,
   leadCapturedFields,
   sitePublishedFields,
   businessProfileFields,
   formSubmittedFields,
   appLifecycleFields,
+  workflowTriggerFields,
   LEAD_CAPTURED_ENVELOPE_FIELDS,
   LEAD_CAPTURED_DATA_FIELDS,
   SITE_PUBLISHED_DATA_FIELDS,

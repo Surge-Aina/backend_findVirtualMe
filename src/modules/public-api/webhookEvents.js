@@ -6,11 +6,13 @@ const {
   FORM_SUBMITTED,
   APP_INSTALLED,
   APP_UNINSTALLED,
+  WORKFLOW_TRIGGER_FIRED,
   leadCapturedFields,
   sitePublishedFields,
   businessProfileFields,
   formSubmittedFields,
   appLifecycleFields,
+  workflowTriggerFields,
 } = require("./webhookContract");
 
 function iso(value) {
@@ -116,6 +118,22 @@ function buildAppLifecycleEvent(type, { siteId, appId, installationId, scopes, c
   };
 }
 
+function buildWorkflowTriggerFiredEvent({ siteId, triggerId, triggerKey, payload, createdAt, id }) {
+  const at = iso(createdAt);
+  const fields = workflowTriggerFields;
+  return {
+    [fields.id]: id || newEventId(),
+    [fields.type]: WORKFLOW_TRIGGER_FIRED,
+    [fields.createdAt]: at,
+    [fields.data]: {
+      [fields.siteId]: String(siteId),
+      [fields.triggerId]: String(triggerId),
+      [fields.triggerKey]: triggerKey,
+      [fields.payload]: payload && typeof payload === "object" ? payload : {},
+    },
+  };
+}
+
 function buildAppInstalledEvent(fields) {
   return buildAppLifecycleEvent(APP_INSTALLED, fields);
 }
@@ -131,4 +149,5 @@ module.exports = {
   buildFormSubmittedEvent,
   buildAppInstalledEvent,
   buildAppUninstalledEvent,
+  buildWorkflowTriggerFiredEvent,
 };

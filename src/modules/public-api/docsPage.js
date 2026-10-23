@@ -27,6 +27,7 @@ function renderDocsPage() {
     <p class="lede">Version 1 lets an account key or an installed app read that account's sites and published business profile, list leads, update safe site copy, and subscribe to signed events. The machine-readable contract is the <a href="/api/public/v1/openapi.json">OpenAPI 3.1 document</a>.</p>
 
     <h2>Authentication</h2>
+    <p>Public API v1 is dated <code>2026-10-23</code>. Send that value in the <code>Version</code> header. A different value is rejected. The path <code>/api/public/v1</code> is the same version.</p>
     <p>Send a developer API key or an installed-app access token on every data request:</p>
     <pre>Authorization: Bearer fvm_...</pre>
     <p>Account keys are created by the account owner with their FindVirtualMe session. The full secret is returned once at creation and stored only as a hash. Installed apps receive an access token that starts with <code>fvm_at_</code>. Either credential can access only the account that authorized it.</p>
@@ -50,6 +51,8 @@ function renderDocsPage() {
       <li><code>leads:read</code> — list form leads saved for the caller's sites.</li>
       <li><code>sites:write</code> — update safe text fields on an owned site.</li>
       <li><code>webhooks:write</code> — register and remove signed webhook subscriptions.</li>
+      <li><code>custom_fields:read</code> and <code>custom_fields:write</code> — list or manage custom fields on an installed site.</li>
+      <li><code>workflows:read</code> and <code>workflows:write</code> — list or manage workflow actions and triggers on an installed site.</li>
     </ul>
     <p><code>GET /me</code> identifies the key's account and does not require a resource scope. It returns the account id, username, role, active flag, and creation time.</p>
 
@@ -78,7 +81,7 @@ function renderDocsPage() {
     <p>Each key has a fixed window stored in MongoDB, so the limit is shared by every app instance. Defaults are 60 requests per 60 seconds. <code>429</code> responses use code <code>rate_limited</code> and include <code>Retry-After</code>. Successful responses include <code>RateLimit-Limit</code>, <code>RateLimit-Remaining</code>, and <code>RateLimit-Reset</code>.</p>
 
     <h2>Webhooks</h2>
-    <p>Register an https endpoint with a session, with an API key that has <code>webhooks:write</code>, or with an installed app access token that has <code>webhooks:write</code>. The signing secret is returned once. Event catalog: <code>lead.captured</code>, <code>site.published</code>, <code>business_profile.updated</code>, <code>form.submitted</code>, <code>app.installed</code>, and <code>app.uninstalled</code>.</p>
+    <p>Register an https endpoint with a session, with an API key that has <code>webhooks:write</code>, or with an installed app access token that has <code>webhooks:write</code>. The signing secret is returned once. An app can also set <code>webhookUrl</code> when it is registered. Each install then subscribes that URL to the full event catalog and signs deliveries with the app signing secret returned once at registration. Event catalog: <code>lead.captured</code>, <code>site.published</code>, <code>business_profile.updated</code>, <code>form.submitted</code>, <code>app.installed</code>, <code>app.uninstalled</code>, and <code>workflow.trigger.fired</code>.</p>
     <p>Each delivery sends the raw JSON body and these headers:</p>
     <pre>X-FindVirtualMe-Timestamp: &lt;unix seconds&gt;
 X-FindVirtualMe-Signature: v1=&lt;hex&gt;
@@ -86,7 +89,8 @@ X-FindVirtualMe-Event: &lt;event id&gt;</pre>
     <p><code>v1</code> is HMAC-SHA256 of the UTF-8 string <code>&#36;{timestamp}.&#36;{rawBody}</code> using the signing secret. <code>timestamp</code> is the header value and <code>rawBody</code> is the exact JSON body. Compare in constant time. Reject timestamps more than 300 seconds from your clock. Dedupe on <code>id</code> in the JSON. Retries send the same <code>id</code> and a new timestamp. Failed deliveries wait 5 seconds, 30 seconds, 2 minutes, 10 minutes, then 1 hour, and stop after 6 attempts. The OpenAPI document's <code>webhooks</code> section is the payload contract.</p>
 
     <h2>Marketplace</h2>
-    <p>A developer registers an app with <code>POST /api/developer/apps</code>. An admin approves it with <code>POST /api/admin/apps/:id/review</code>. Approved apps are listed at <code>GET /api/marketplace/apps</code>. The site owner consents with <code>POST /api/oauth/authorize</code> using <code>code_challenge_method=S256</code>. The app exchanges the code at <code>POST /api/oauth/token</code> and can refresh it. The access token calls this public API with the granted scopes, including webhook registration. <code>DELETE /api/developer/installations/:id</code> or <code>DELETE /api/public/v1/installation</code> revokes tokens and emits <code>app.uninstalled</code>.</p>
+    <p>A developer registers an app with <code>POST /api/developer/apps</code>. Optional <code>webhookUrl</code> is the app-level https endpoint for install, uninstall, and resource events. An admin approves it with <code>POST /api/admin/apps/:id/review</code>. Approved apps are listed at <code>GET /api/marketplace/apps</code>. The site owner starts install at <code>GET /api/oauth/authorize?response_type=code</code>. Without <code>site_id</code> the response lists the owner's sites. With <code>site_id</code> the browser is redirected to the app with <code>code</code>. <code>POST /api/oauth/authorize</code> returns the same code as JSON. Both require <code>code_challenge_method=S256</code>. The app exchanges the code at <code>POST /api/oauth/token</code> using JSON or <code>application/x-www-form-urlencoded</code>, then refreshes it. Access tokens last one hour, are scoped to the installed site, and include <code>site_id</code>. <code>DELETE /api/developer/installations/:id</code> or <code>DELETE /api/public/v1/installation</code> revokes tokens and emits <code>app.uninstalled</code>.</p>
+    <p>An installed app with <code>custom_fields:write</code> registers fields on its site at <code>POST /api/public/v1/sites/:id/custom-fields</code>. With <code>workflows:write</code> it registers actions at <code>POST /api/public/v1/sites/:id/workflow-actions</code> and triggers at <code>POST /api/public/v1/sites/:id/workflow-triggers</code>. Firing a trigger emits <code>workflow.trigger.fired</code>. Executing an action POSTs a signed event to the action's <code>targetUrl</code>.</p>
 
     <h2>MCP</h2>
     <p>Streamable HTTP is at <code>POST /api/mcp</code>. Send the same bearer API key. Tools: <code>list_sites</code>, <code>get_site</code>, <code>get_business_profile</code>, <code>list_leads</code>, <code>update_site_content</code>, and <code>list_integrations</code>. Each tool uses the key's scopes.</p>

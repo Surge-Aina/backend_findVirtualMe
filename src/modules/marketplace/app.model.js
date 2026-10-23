@@ -11,6 +11,12 @@ const appSchema = new mongoose.Schema(
     secretLast4: { type: String, required: true },
     redirectUris: { type: [String], required: true },
     scopes: { type: [String], required: true },
+    webhookUrl: { type: String, default: "" },
+    webhookKeyVersion: { type: String, default: "" },
+    webhookCiphertext: { type: String, default: "" },
+    webhookIv: { type: String, default: "" },
+    webhookAuthTag: { type: String, default: "" },
+    webhookSecretLast4: { type: String, default: "" },
     reviewStatus: {
       type: String,
       enum: ["pending", "approved", "rejected"],

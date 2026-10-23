@@ -63,7 +63,7 @@ function newSigningSecret() {
   return `whsec_${crypto.randomBytes(24).toString("base64url")}`;
 }
 
-async function createEndpoint({ userId, url, events, appId, installationId }) {
+async function createEndpoint({ userId, url, events, appId, installationId, sealed, secretLast4 }) {
   assertUserId(userId);
   let normalizedUrl;
   try {
@@ -72,19 +72,20 @@ async function createEndpoint({ userId, url, events, appId, installationId }) {
     throw new WebhookError(400, "validation_error", err.message, { field: "url" });
   }
   const normalizedEvents = normalizeEvents(events);
-  const secret = newSigningSecret();
-  let sealed;
-  try {
-    sealed = encryptSecret(secret);
-  } catch (err) {
-    if (err.code === "credential_storage_unconfigured") {
-      throw new WebhookError(
-        503,
-        "credential_storage_unconfigured",
-        "Webhook signing secrets cannot be stored until credential encryption is configured"
-      );
+  const secret = sealed ? null : newSigningSecret();
+  if (!sealed) {
+    try {
+      sealed = encryptSecret(secret);
+    } catch (err) {
+      if (err.code === "credential_storage_unconfigured") {
+        throw new WebhookError(
+          503,
+          "credential_storage_unconfigured",
+          "Webhook signing secrets cannot be stored until credential encryption is configured"
+        );
+      }
+      throw err;
     }
-    throw err;
   }
 
   const doc = await WebhookEndpoint.create({
@@ -95,7 +96,7 @@ async function createEndpoint({ userId, url, events, appId, installationId }) {
     ciphertext: sealed.ciphertext,
     iv: sealed.iv,
     authTag: sealed.authTag,
-    secretLast4: secret.slice(-4),
+    secretLast4: secretLast4 || secret.slice(-4),
     appId: appId || null,
     installationId: installationId || null,
   });

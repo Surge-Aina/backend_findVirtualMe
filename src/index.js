@@ -15,6 +15,7 @@ app.set("trust proxy", true);
 app.use("/api/payments/webhooks", stripeWebhookRoutes);
 
 app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: false, limit: "1mb" }));
 
 mountModules(app);
 mountLegacy(app);

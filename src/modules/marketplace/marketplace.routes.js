@@ -9,6 +9,7 @@ const {
   listApprovedApps,
   reviewApp,
   listInstallations,
+  listConsentSites,
   authorizeInstall,
   exchangeAuthorizationCode,
   refreshAccessToken,
@@ -38,12 +39,17 @@ developerApps.post("/", async (req, res) => {
       description: req.body?.description,
       redirectUris: req.body?.redirectUris,
       scopes: req.body?.scopes,
+      webhookUrl: req.body?.webhookUrl,
     });
-    return res.status(201).json({
+    const payload = {
       data: result.app,
       clientSecret: result.clientSecret,
-      note: "Store this client secret now. It cannot be retrieved again.",
-    });
+      note: result.webhookSecret
+        ? "Store the client secret and webhook signing secret now. They cannot be retrieved again."
+        : "Store this client secret now. It cannot be retrieved again.",
+    };
+    if (result.webhookSecret) payload.webhookSecret = result.webhookSecret;
+    return res.status(201).json(payload);
   } catch (err) {
     return handle(err, res);
   }
@@ -102,20 +108,42 @@ catalog.get("/", async (_req, res) => {
 });
 
 const oauth = express.Router();
+oauth.use(express.urlencoded({ extended: false }));
+
+function authorizeFields(source) {
+  return {
+    clientId: source.client_id,
+    redirectUri: source.redirect_uri,
+    scope: source.scope,
+    state: source.state,
+    codeChallenge: source.code_challenge,
+    codeChallengeMethod: source.code_challenge_method,
+    siteId: source.site_id,
+  };
+}
+
+oauth.get("/authorize", auth, async (req, res) => {
+  try {
+    if (req.query.response_type !== "code") {
+      return sendError(res, 400, "validation_error", "response_type must be code", {
+        field: "response_type",
+      });
+    }
+    if (!req.query.site_id) {
+      const sites = await listConsentSites(userId(req));
+      return res.json({ data: sites });
+    }
+    const data = await authorizeInstall({ userId: userId(req), ...authorizeFields(req.query) });
+    return res.redirect(302, data.redirectUrl);
+  } catch (err) {
+    return handle(err, res);
+  }
+});
 
 oauth.post("/authorize", auth, async (req, res) => {
   try {
     const body = req.body || {};
-    const data = await authorizeInstall({
-      userId: userId(req),
-      clientId: body.client_id,
-      redirectUri: body.redirect_uri,
-      scope: body.scope,
-      state: body.state,
-      codeChallenge: body.code_challenge,
-      codeChallengeMethod: body.code_challenge_method,
-      siteId: body.site_id,
-    });
+    const data = await authorizeInstall({ userId: userId(req), ...authorizeFields(body) });
     return res.json({
       redirect_url: data.redirectUrl,
       code: data.code,

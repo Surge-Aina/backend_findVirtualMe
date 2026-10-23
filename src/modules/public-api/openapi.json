@@ -4,7 +4,7 @@
     "title": "FindVirtualMe Public API",
     "version": "1.0.0",
     "summary": "Read and update a FindVirtualMe account's own sites, leads, and published business profile.",
-    "description": "Authenticate with a developer API key (`Authorization: Bearer fvm_...`) or an installed app access token (`fvm_at_...`). A credential can access only the account that authorized it. Human docs: `/api/public/docs`. Outbound events are documented under `webhooks`."
+    "description": "Authenticate with a developer API key (`Authorization: Bearer fvm_...`) or an installed app access token (`fvm_at_...`). A credential can access only the account that authorized it. Human docs: `/api/public/docs`. Outbound events are documented under `webhooks`. Send header `Version: 2026-10-23` for this revision of v1. An installed app access token is limited to its site."
   },
   "servers": [
     {
@@ -360,7 +360,8 @@
                         "business_profile.updated",
                         "form.submitted",
                         "app.installed",
-                        "app.uninstalled"
+                        "app.uninstalled",
+                        "workflow.trigger.fired"
                       ]
                     }
                   }
@@ -1325,7 +1326,8 @@
             "type": "string",
             "enum": [
               "app.installed",
-              "app.uninstalled"
+              "app.uninstalled",
+              "workflow.trigger.fired"
             ]
           },
           "createdAt": {
@@ -1355,6 +1357,51 @@
                 "items": {
                   "type": "string"
                 }
+              }
+            }
+          }
+        }
+      },
+      "WorkflowTriggerFiredEvent": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "createdAt",
+          "data"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "const": "workflow.trigger.fired"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "siteId",
+              "triggerId",
+              "triggerKey",
+              "payload"
+            ],
+            "properties": {
+              "siteId": {
+                "type": "string"
+              },
+              "triggerId": {
+                "type": "string"
+              },
+              "triggerKey": {
+                "type": "string"
+              },
+              "payload": {
+                "type": "object",
+                "additionalProperties": true
               }
             }
           }
@@ -1638,6 +1685,41 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "workflowTriggerFired": {
+      "post": {
+        "operationId": "workflowTriggerFired",
+        "summary": "workflow.trigger.fired",
+        "description": "Sent when an installed app fires a workflow trigger registered on a site. Signature and retry rules match lead.captured.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowTriggerFiredEvent"
+              },
+              "example": {
+                "id": "evt_example",
+                "type": "workflow.trigger.fired",
+                "createdAt": "2026-10-23T12:00:00.000Z",
+                "data": {
+                  "siteId": "507f1f77bcf86cd799439011",
+                  "triggerId": "507f1f77bcf86cd799439014",
+                  "triggerKey": "pass_added",
+                  "payload": {
+                    "reference": "example"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Any 2xx acknowledges the event."
           }
         }
       }

@@ -6,6 +6,7 @@ const {
   buildFormSubmittedEvent,
   buildAppInstalledEvent,
   buildAppUninstalledEvent,
+  buildWorkflowTriggerFiredEvent,
 } = require("./webhookEvents");
 const { dispatchEvent } = require("./webhookDelivery");
 
@@ -126,6 +127,15 @@ function notifyAppUninstalled(fields) {
   schedule(() => dispatchAppUninstalled(fields), "app_uninstalled_webhook_dispatch_failed");
 }
 
+async function dispatchWorkflowTriggerFired(fields) {
+  if (!fields || !fields.ownerId || !fields.siteId || !fields.triggerId) return;
+  await dispatchEvent(fields.ownerId, buildWorkflowTriggerFiredEvent(fields));
+}
+
+function notifyWorkflowTriggerFired(fields) {
+  schedule(() => dispatchWorkflowTriggerFired(fields), "workflow_trigger_webhook_dispatch_failed");
+}
+
 module.exports = {
   dispatchLeadCaptured,
   dispatchSitePublished,
@@ -139,5 +149,6 @@ module.exports = {
   notifyFormSubmitted,
   notifyAppInstalled,
   notifyAppUninstalled,
+  notifyWorkflowTriggerFired,
   flushLifecycleEvents,
 };

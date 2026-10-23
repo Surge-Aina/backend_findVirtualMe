@@ -1,6 +1,7 @@
 const sitesService = require("./sites.service");
 const { parseLimit, decodeCursor } = require("./cursor");
 const { sendError } = require("./errors");
+const { installedSiteId } = require("./publicApi.auth");
 const { listLeads } = require("./leads.service");
 const { updateSiteContent, SiteContentError } = require("./siteContent");
 const { uninstallInstallation, MarketplaceError } = require("../marketplace/oauth.service");
@@ -29,6 +30,7 @@ exports.me = (req, res) => {
       role: user.role,
       active: user.isActive !== false,
       createdAt: user.createdAt,
+      ...(installedSiteId(req) ? { siteId: installedSiteId(req) } : {}),
     },
   });
 };
@@ -37,10 +39,12 @@ exports.listSites = async (req, res) => {
   try {
     const limit = parseLimit(req.query.limit);
     const cursor = decodeCursor(req.query.cursor);
+    const onlySiteId = installedSiteId(req);
     const page = await sitesService.listSites({
       ownerId: ownerId(req),
       limit,
-      cursor,
+      cursor: onlySiteId ? null : cursor,
+      onlySiteId,
     });
     return res.status(200).json({
       data: page.sites,
@@ -57,6 +61,10 @@ exports.listSites = async (req, res) => {
 
 exports.getSite = async (req, res) => {
   try {
+    const onlySiteId = installedSiteId(req);
+    if (onlySiteId && onlySiteId !== String(req.params.id)) {
+      return sendError(res, 404, "not_found", "Site not found");
+    }
     const site = await sitesService.getSite({
       ownerId: ownerId(req),
       siteId: req.params.id,
@@ -76,9 +84,13 @@ exports.businessProfile = async (req, res) => {
         field: "siteId",
       });
     }
+    const onlySiteId = installedSiteId(req);
+    if (onlySiteId && req.query.siteId && req.query.siteId !== onlySiteId) {
+      return sendError(res, 404, "not_found", "Business profile not found");
+    }
     const profile = await sitesService.getBusinessProfile({
       ownerId: ownerId(req),
-      siteId: req.query.siteId,
+      siteId: onlySiteId || req.query.siteId,
     });
     if (!profile) return sendError(res, 404, "not_found", "Business profile not found");
     return res.status(200).json({ data: profile });
@@ -92,7 +104,12 @@ exports.listLeads = async (req, res) => {
   try {
     const limit = parseLimit(req.query.limit);
     const cursor = decodeCursor(req.query.cursor);
-    const page = await listLeads({ ownerId: ownerId(req), limit, cursor });
+    const page = await listLeads({
+      ownerId: ownerId(req),
+      limit,
+      cursor,
+      onlySiteId: installedSiteId(req),
+    });
     return res.status(200).json({
       data: page.leads,
       page: { limit, hasMore: page.hasMore, nextCursor: page.nextCursor },
@@ -104,6 +121,10 @@ exports.listLeads = async (req, res) => {
 
 exports.updateContent = async (req, res) => {
   try {
+    const onlySiteId = installedSiteId(req);
+    if (onlySiteId && onlySiteId !== String(req.params.id)) {
+      return sendError(res, 404, "not_found", "Site not found");
+    }
     const data = await updateSiteContent({
       ownerId: ownerId(req),
       siteId: req.params.id,

@@ -3,9 +3,17 @@ const Portfolio = require("../portfolios/models/Portfolio");
 const Contact = require("../contact/contactMeForm.model");
 const { encodeCursor, decodeCursor } = require("./cursor");
 
-async function listLeads({ ownerId, limit, cursor }) {
-  const sites = await Portfolio.find({ owner: ownerId }).select("_id").lean();
-  const ids = sites.map((site) => site._id);
+async function listLeads({ ownerId, limit, cursor, onlySiteId }) {
+  let ids;
+  if (onlySiteId) {
+    if (!mongoose.isValidObjectId(onlySiteId)) return { leads: [], hasMore: false, nextCursor: null };
+    const site = await Portfolio.findOne({ _id: onlySiteId, owner: ownerId }).select("_id").lean();
+    if (!site) return { leads: [], hasMore: false, nextCursor: null };
+    ids = [site._id];
+  } else {
+    const sites = await Portfolio.find({ owner: ownerId }).select("_id").lean();
+    ids = sites.map((site) => site._id);
+  }
   const filter = { portfolioId: { $in: ids } };
   const cursorId = decodeCursor(cursor);
   if (cursor && !cursorId) return { leads: [], hasMore: false, nextCursor: null };

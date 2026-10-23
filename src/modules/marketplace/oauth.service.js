@@ -10,6 +10,9 @@ const { hashKey } = require("../public-api/apiKey.service");
 const { isPublicApiScope, PUBLIC_API_SCOPES } = require("../public-api/scopes");
 const { notifyAppInstalled, notifyAppUninstalled } = require("../public-api/lifecycleEvents");
 const { assertPublicHttpsUrl } = require("../public-api/webhookUrls");
+const { encryptSecret } = require("../public-api/secretBox");
+const { createEndpoint, WEBHOOK_EVENTS } = require("../public-api/webhook.service");
+const { WebhookEndpoint } = require("../public-api/webhookEndpoint.model");
 
 class MarketplaceError extends Error {
   constructor(status, code, message, details) {
@@ -115,12 +118,43 @@ function presentApp(doc, { includeReview = false } = {}) {
     redirectUris: [...doc.redirectUris],
     scopes: [...doc.scopes],
     reviewStatus: doc.reviewStatus,
+    webhookUrl: doc.webhookUrl || "",
   };
-  if (includeReview) view.secretLast4 = doc.secretLast4;
+  if (includeReview) {
+    view.secretLast4 = doc.secretLast4;
+    view.webhookSecretLast4 = doc.webhookSecretLast4 || "";
+  }
   return view;
 }
 
-async function registerApp({ ownerId, name, description, redirectUris, scopes }) {
+function sealWebhook(url) {
+  if (url === undefined || url === null || url === "") return null;
+  let normalized;
+  try {
+    normalized = assertPublicHttpsUrl(url);
+  } catch (_err) {
+    throw new MarketplaceError(400, "validation_error", "webhookUrl must be a public https URL", {
+      field: "webhookUrl",
+    });
+  }
+  const secret = `whsec_${crypto.randomBytes(24).toString("base64url")}`;
+  let sealed;
+  try {
+    sealed = encryptSecret(secret);
+  } catch (err) {
+    if (err.code === "credential_storage_unconfigured") {
+      throw new MarketplaceError(
+        503,
+        "credential_storage_unconfigured",
+        "Webhook signing secrets cannot be stored until credential encryption is configured"
+      );
+    }
+    throw err;
+  }
+  return { url: normalized, secret, sealed };
+}
+
+async function registerApp({ ownerId, name, description, redirectUris, scopes, webhookUrl }) {
   if (!mongoose.isValidObjectId(ownerId)) {
     throw new MarketplaceError(401, "unauthorized", "Authentication required");
   }
@@ -134,6 +168,7 @@ async function registerApp({ ownerId, name, description, redirectUris, scopes })
   }
   const clientSecret = `fvm_sec_${crypto.randomBytes(32).toString("base64url")}`;
   const clientId = `fvm_app_${crypto.randomBytes(12).toString("base64url")}`;
+  const webhook = sealWebhook(webhookUrl);
   const doc = await PlatformApp.create({
     ownerId,
     name: clean,
@@ -144,9 +179,44 @@ async function registerApp({ ownerId, name, description, redirectUris, scopes })
     secretLast4: clientSecret.slice(-4),
     redirectUris: normalizeRedirectUris(redirectUris),
     scopes: normalizeScopes(scopes),
+    webhookUrl: webhook ? webhook.url : "",
+    webhookKeyVersion: webhook ? webhook.sealed.keyVersion : "",
+    webhookCiphertext: webhook ? webhook.sealed.ciphertext : "",
+    webhookIv: webhook ? webhook.sealed.iv : "",
+    webhookAuthTag: webhook ? webhook.sealed.authTag : "",
+    webhookSecretLast4: webhook ? webhook.secret.slice(-4) : "",
     reviewStatus: "pending",
   });
-  return { app: presentApp(doc, { includeReview: true }), clientSecret };
+  return {
+    app: presentApp(doc, { includeReview: true }),
+    clientSecret,
+    webhookSecret: webhook ? webhook.secret : null,
+  };
+}
+
+async function subscribeAppWebhook({ app, installation }) {
+  if (!app.webhookUrl || !app.webhookCiphertext) return;
+  const existing = await WebhookEndpoint.findOne({
+    installationId: installation._id,
+    url: app.webhookUrl,
+  })
+    .select("_id")
+    .lean();
+  if (existing) return;
+  await createEndpoint({
+    userId: installation.userId,
+    url: app.webhookUrl,
+    events: [...WEBHOOK_EVENTS],
+    appId: app._id,
+    installationId: installation._id,
+    sealed: {
+      keyVersion: app.webhookKeyVersion,
+      ciphertext: app.webhookCiphertext,
+      iv: app.webhookIv,
+      authTag: app.webhookAuthTag,
+    },
+    secretLast4: app.webhookSecretLast4,
+  });
 }
 
 async function listOwnApps(ownerId) {
@@ -193,6 +263,15 @@ async function listInstallations(userId) {
     .lean();
   const byId = new Map(apps.map((app) => [String(app._id), app]));
   return docs.map((doc) => presentInstallation(doc, byId.get(String(doc.appId))));
+}
+
+async function listConsentSites(userId) {
+  const docs = await Portfolio.find({ owner: userId }).select("title slug").sort({ title: 1 }).limit(50).lean();
+  return docs.map((doc) => ({
+    id: doc._id.toString(),
+    title: doc.title,
+    slug: doc.slug,
+  }));
 }
 
 async function authorizeInstall({
@@ -301,6 +380,7 @@ async function issueTokenPair({ installation, appId, userId, siteId, scopes }) {
     refresh_token: refreshToken,
     token_type: "Bearer",
     expires_in: Math.floor(ACCESS_TTL_MS / 1000),
+    refresh_expires_in: Math.floor(REFRESH_TTL_MS / 1000),
     scope: scopes.join(" "),
     site_id: String(siteId),
   };
@@ -346,6 +426,7 @@ async function exchangeAuthorizationCode({ code, redirectUri, clientId, clientSe
     installation.userId = record.userId;
     await installation.save();
   }
+  await subscribeAppWebhook({ app, installation });
   if (created) {
     notifyAppInstalled({
       ownerId: record.userId,
@@ -431,6 +512,7 @@ module.exports = {
   listApprovedApps,
   reviewApp,
   listInstallations,
+  listConsentSites,
   authorizeInstall,
   exchangeAuthorizationCode,
   refreshAccessToken,

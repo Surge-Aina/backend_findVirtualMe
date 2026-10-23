@@ -29,6 +29,7 @@ async function authenticateApiKey(req, res, next) {
         key: { scopes: oauth.scopes, _id: oauth.installation._id },
         appId: oauth.installation.appId,
         installationId: oauth.installation._id,
+        siteId: oauth.installation.siteId,
         authType: "oauth",
       };
       return next();
@@ -50,6 +51,23 @@ async function authenticateApiKey(req, res, next) {
   }
 }
 
+function installedSiteId(req) {
+  if (req.publicApi?.authType !== "oauth" || !req.publicApi.siteId) return null;
+  return String(req.publicApi.siteId);
+}
+
+function requireAnyScope(...required) {
+  return function requireAnyScopeMiddleware(req, res, next) {
+    const scopes = req.publicApi?.key?.scopes || [];
+    if (!required.some((scope) => scopes.includes(scope))) {
+      return sendError(res, 403, "insufficient_scope", "API key is missing a required scope", {
+        requiredScope: required[0],
+      });
+    }
+    return next();
+  };
+}
+
 function requireScope(scope) {
   return function requireScopeMiddleware(req, res, next) {
     const scopes = req.publicApi?.key?.scopes || [];
@@ -65,4 +83,6 @@ function requireScope(scope) {
 module.exports = {
   authenticateApiKey,
   requireScope,
+  requireAnyScope,
+  installedSiteId,
 };
