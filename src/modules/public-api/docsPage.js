@@ -46,7 +46,7 @@ function renderDocsPage() {
     <h2>Scopes</h2>
     <ul>
       <li><code>sites:read</code> — list and fetch the caller's websites.</li>
-      <li><code>profile:read</code> — read the published business profile used to prefill a wallet card.</li>
+      <li><code>profile:read</code> — read the published business profile.</li>
     </ul>
     <p><code>GET /me</code> identifies the key's account and does not require a resource scope. It returns the account id, username, role, active flag, and creation time.</p>
 
@@ -68,12 +68,7 @@ function renderDocsPage() {
     <p>Each key is limited per process. Defaults are 60 requests per 60 seconds. <code>429</code> responses use code <code>rate_limited</code> and include <code>Retry-After</code>. Successful responses include <code>RateLimit-Limit</code>, <code>RateLimit-Remaining</code>, and <code>RateLimit-Reset</code>.</p>
 
     <h2>Not in this version</h2>
-    <p>These names are reserved and have no routes yet:</p>
-    <ul>
-      <li>HMAC-signed outbound <code>lead.captured</code> webhooks, with an event id for deduplication.</li>
-      <li>An <code>addToWallet</code> site block that calls WalletMe server-to-server.</li>
-      <li>Encrypted storage for a customer's pasted WalletMe API key.</li>
-    </ul>
+    <p>HMAC-signed outbound webhooks, including <code>lead.captured</code>, are not served by this version. The event name is reserved for the event catalog.</p>
   </main>
 </body>
 </html>`;

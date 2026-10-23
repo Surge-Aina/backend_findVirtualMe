@@ -4,7 +4,7 @@
     "title": "FindVirtualMe Public API",
     "version": "1.0.0",
     "summary": "Read a FindVirtualMe account's own sites and published business profile.",
-    "description": "Authenticate with a developer API key (`Authorization: Bearer fvm_...`). A key can read only the account that created it. Human docs: `/api/public/docs`. Outbound webhooks, the add-to-wallet block, and stored partner credentials are not part of this version."
+    "description": "Authenticate with a developer API key (`Authorization: Bearer fvm_...`). A key can read only the account that created it. Human docs: `/api/public/docs`. Outbound webhooks are not part of this version."
   },
   "servers": [
     {
@@ -15,7 +15,7 @@
   "tags": [
     { "name": "Account", "description": "Identity of the key owner" },
     { "name": "Sites", "description": "Websites owned by the key's account" },
-    { "name": "Profile", "description": "Published business profile for wallet-card prefill" },
+    { "name": "Profile", "description": "Published business profile" },
     { "name": "Discovery", "description": "Unauthenticated API description" }
   ],
   "security": [{ "bearerAuth": [] }],

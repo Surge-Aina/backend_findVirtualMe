@@ -1,5 +1,5 @@
 /**
- * Published business profile for wallet-card prefills.
+ * Published business profile.
  * Only fields the site itself shows are eligible. Account email, phone,
  * personal name, and private location are never read from the user record.
  */

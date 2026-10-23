@@ -75,12 +75,12 @@ describe("public API v1", () => {
 
   it("creates a key once, stores only a hash, and lists it without the secret", async () => {
     const user = await createUser("owner");
-    const created = await issueKey(user, ["sites:read", "profile:read", "sites:read"], "WalletMe");
+    const created = await issueKey(user, ["sites:read", "profile:read", "sites:read"], "Partner");
 
     expect(created.secret.startsWith("fvm_")).toBe(true);
     expect(created.data.prefix).toBe(created.secret.slice(0, 12));
     expect(created.data.scopes).toEqual(["sites:read", "profile:read"]);
-    expect(created.data.name).toBe("WalletMe");
+    expect(created.data.name).toBe("Partner");
     expect(created.data.lastUsedAt).toBeNull();
     expect(created.secret).not.toBe(created.data.prefix);
 
@@ -481,6 +481,5 @@ describe("public API v1", () => {
     expect(docs.text).toContain("sites:read");
     expect(docs.text).toContain("/api/public/v1/openapi.json");
     expect(docs.text).toContain("lead.captured");
-    expect(docs.text).toContain("addToWallet");
   });
 });
