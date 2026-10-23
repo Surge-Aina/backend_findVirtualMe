@@ -8,15 +8,14 @@ exports.createSupportForm = async (req, res) => {
 
     res.status(201).json(sf);
   } catch (err) {
-    console.log(err);
+    console.error("Failed to create support form");
     res.status(400).json({ error: "Failed to create support form" });
   }
 };
 
 exports.submitSupportFormWithEmail = async (req, res) => {
   try {
-    console.log("🔵 Support form with email submitted");
-    console.log("📥 Request body:", req.body);
+    console.log("Support form submitted");
 
     const { name, email, phone, requestType, portfolioId, message } = req.body;
 

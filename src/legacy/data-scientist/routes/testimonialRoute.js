@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Testimonial = require('../models/testimonialModel');
-const { adminOnly } = require('../../legacyWriteGuard');
+const { dataScientistWrite } = require('../../legacyWriteGuard');
 
 
 // Get all approved testimonials (public route)
@@ -60,8 +60,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Get all testimonials (admin only)
-router.get('/admin', ...adminOnly, async (req, res) => {
+// Unapproved testimonials include reviewer emails. Portfolio owner or admin.
+router.get('/admin', ...dataScientistWrite, async (req, res) => {
   try {
     const testimonials = await Testimonial.find()
       .sort({ createdAt: -1 });
@@ -71,8 +71,8 @@ router.get('/admin', ...adminOnly, async (req, res) => {
   }
 });
 
-// Approve/Reject testimonial (admin only)
-router.patch('/admin/:id', ...adminOnly, async (req, res) => {
+// Approve/Reject testimonial (portfolio owner or admin)
+router.patch('/admin/:id', ...dataScientistWrite, async (req, res) => {
   try {
     const { isApproved } = req.body;
     const testimonial = await Testimonial.findByIdAndUpdate(
@@ -91,8 +91,8 @@ router.patch('/admin/:id', ...adminOnly, async (req, res) => {
   }
 });
 
-// Delete testimonial (admin only)
-router.delete('/admin/:id', ...adminOnly, async (req, res) => {
+// Delete testimonial (portfolio owner or admin)
+router.delete('/admin/:id', ...dataScientistWrite, async (req, res) => {
   try {
     const testimonial = await Testimonial.findByIdAndDelete(req.params.id);
     

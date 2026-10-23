@@ -8,12 +8,24 @@ const roleCheck = require("../shared/middleware/roleCheck");
 const LocalVendorPortfolio = require("./local-vendor/models/LocalVendorPortfolio");
 const HandymanPortfolio = require("./handyman/models/handymanPortfolioModel");
 const HandymanTemplate = require("./handyman/models/HandymanTemplate");
+const {
+  requireDataScientistOwner,
+  requirePhotographerPortfolioOwner,
+} = require("./portfolioOwnership");
 
 function isAdmin(user) {
   return user?.role === "admin";
 }
 
 const adminOnly = [auth, roleCheck(["admin"])];
+const dataScientistWrite = [auth, requireDataScientistOwner];
+const photographerWrite = [auth, requirePhotographerPortfolioOwner];
+
+function optionalAuth(req, res, next) {
+  const header = req.headers.authorization || req.headers.Authorization;
+  if (!header) return next();
+  return auth(req, res, next);
+}
 
 function emailsMatch(left, right) {
   const a = String(left || "").trim().toLowerCase();
@@ -92,10 +104,15 @@ function requireSelfOrAdminEmail(paramName = "email") {
 
 module.exports = {
   auth,
+  optionalAuth,
   adminOnly,
+  dataScientistWrite,
+  photographerWrite,
   vendorWrite,
   requireVendorOwner,
   requireHandymanTemplateOwner,
+  requireDataScientistOwner,
+  requirePhotographerPortfolioOwner,
   requireSelfOrAdminEmail,
   isAdmin,
 };

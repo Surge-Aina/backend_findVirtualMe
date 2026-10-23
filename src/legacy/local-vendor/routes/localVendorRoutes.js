@@ -6,6 +6,7 @@ const { auth, adminOnly, vendorWrite } = require("../../legacyWriteGuard");
 const {
   createVendor,
   getAllVendors,
+  getMyVendors,
   getVendorById,
   updateVendor,
   deleteVendor,
@@ -15,6 +16,7 @@ const {
 
 router.post("/", auth, createVendor);
 router.get("/", ...adminOnly, getAllVendors);
+router.get("/mine", auth, getMyVendors);
 router.get("/:vendorId", getVendorById);
 router.put("/:vendorId", ...vendorWrite, updateVendor);
 router.delete("/:vendorId", ...vendorWrite, deleteVendor);

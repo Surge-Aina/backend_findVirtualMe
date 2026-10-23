@@ -100,10 +100,15 @@ describe("subscriptionAccess.service", () => {
       ],
     });
 
+    const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
     const result = await getAiEditingAccess({
       email: "user-no-mongo@example.com",
       stripeCustomerId: "cus_no_mongo",
     });
+    const logged = logSpy.mock.calls.flat().join(" ");
+    logSpy.mockRestore();
+    expect(logged).not.toMatch(/user-no-mongo@example.com/);
+    expect(logged).not.toMatch(/cus_no_mongo/);
 
     expect(result.hasAccess).toBe(true);
     expect(result.subscription).toMatchObject({

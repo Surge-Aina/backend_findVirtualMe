@@ -59,6 +59,24 @@ exports.getAllVendors = async (req, res) => {
   }
 };
 
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Vendors whose email matches the authenticated caller.
+exports.getMyVendors = async (req, res) => {
+  try {
+    const email = String(req.user?.email || "").trim();
+    if (!email) return res.json([]);
+    const vendors = await LocalVendorPortfolio.find({
+      email: new RegExp(`^${escapeRegex(email)}$`, "i"),
+    });
+    res.json(vendors);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch vendors" });
+  }
+};
+
 // Get one vendor
 exports.getVendorById = async (req, res) => {
   try {
