@@ -90,12 +90,11 @@ exports.applyDomainVoucher = async (userId, price) => {
 /**
  * Mark voucher redeemed
  */
-exports.redeemVoucher = async (userVoucherId) => {
+exports.redeemVoucher = async (userVoucherId, userId) => {
+  if (!userId) return null;
 
-  console.log("Redeeming voucher:", userVoucherId);
-
-  return UserVoucher.findByIdAndUpdate(
-    userVoucherId,
+  return UserVoucher.findOneAndUpdate(
+    { _id: userVoucherId, userId },
     {
       status: "redeemed",
       redeemedAt: new Date()

@@ -1,3 +1,8 @@
+jest.mock("../../../shared/middleware/auth", () => (req, _res, next) => {
+  req.user = { _id: "mockUserId", email: "admin@test.com", role: "admin" };
+  next();
+});
+
 const express = require("express");
 const request = require("supertest");
 const mongoose = require("mongoose");

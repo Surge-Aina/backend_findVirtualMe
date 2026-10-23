@@ -28,7 +28,11 @@ exports.getPortfoliosByList = async (req, res) => {
       return res.status(400).json({ message: "portfolio list is required" });
     }
 
-    const portfolios = await getPortfolioList(portfolioList);
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const portfolios = await getPortfolioList(portfolioList, req.user);
     res.status(200).json({ portfolios });
   } catch (err) {
     console.error("Error fetching portfolios:", err);

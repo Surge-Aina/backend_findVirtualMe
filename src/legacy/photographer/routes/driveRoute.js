@@ -1,6 +1,7 @@
 const express = require('express');
 const { google } = require('googleapis');
 const { oauth2Client, listFilesInFolder } = require('../oauth-handler');
+const { adminOnly } = require('../../legacyWriteGuard');
 const router = express.Router();
 const backendUrl = process.env.VITE_BACKEND_API;
 const dotenv = require('dotenv');
@@ -47,7 +48,7 @@ router.get('/file/:id', async (req, res) => {
 });
 
 // Test connection to any Google Drive folder
-router.get('/test/:folderId', async (req, res) => {
+router.get('/test/:folderId', ...adminOnly, async (req, res) => {
   try {
     const folderId = req.params.folderId;
     
@@ -113,7 +114,7 @@ router.get('/test/:folderId', async (req, res) => {
 });
 
 // Get photos from admin's Google Drive folder
-router.get('/admin/:folderId', async (req, res) => {
+router.get('/admin/:folderId', ...adminOnly, async (req, res) => {
   try {
     const folderId = req.params.folderId;
     const files = await listFilesInFolder(folderId);

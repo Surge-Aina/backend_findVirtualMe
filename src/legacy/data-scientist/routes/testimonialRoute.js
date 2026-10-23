@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Testimonial = require('../models/testimonialModel');
+const { adminOnly } = require('../../legacyWriteGuard');
 
 
 // Get all approved testimonials (public route)
@@ -60,7 +61,7 @@ router.post('/', async (req, res) => {
 });
 
 // Get all testimonials (admin only)
-router.get('/admin', async (req, res) => {
+router.get('/admin', ...adminOnly, async (req, res) => {
   try {
     const testimonials = await Testimonial.find()
       .sort({ createdAt: -1 });
@@ -71,7 +72,7 @@ router.get('/admin', async (req, res) => {
 });
 
 // Approve/Reject testimonial (admin only)
-router.patch('/admin/:id', async (req, res) => {
+router.patch('/admin/:id', ...adminOnly, async (req, res) => {
   try {
     const { isApproved } = req.body;
     const testimonial = await Testimonial.findByIdAndUpdate(
@@ -91,7 +92,7 @@ router.patch('/admin/:id', async (req, res) => {
 });
 
 // Delete testimonial (admin only)
-router.delete('/admin/:id', async (req, res) => {
+router.delete('/admin/:id', ...adminOnly, async (req, res) => {
   try {
     const testimonial = await Testimonial.findByIdAndDelete(req.params.id);
     

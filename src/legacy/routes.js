@@ -2,11 +2,11 @@
  * Legacy verticals: re-exports routers and photographer Drive OAuth wiring.
  * HTTP paths are unchanged (see unified refactoring plan Phase 1 Batch B2).
  */
-const fs = require("fs");
+const auth = require("../shared/middleware/auth");
+const roleCheck = require("../shared/middleware/roleCheck");
 const {
   setCredentialsFromEnv,
   getAuthUrl,
-  getTokensFromCode,
 } = require("./photographer/oauth-handler");
 
 function runOAuthEnvSetup() {
@@ -14,24 +14,14 @@ function runOAuthEnvSetup() {
 }
 
 function registerPhotographerOAuthRoutes(app) {
-  app.get("/auth-url", (req, res) => {
+  app.get("/auth-url", auth, roleCheck(["admin"]), (req, res) => {
     res.send(getAuthUrl());
   });
 
-  app.get("/oauth2callback", async (req, res) => {
-    const code = req.query.code;
-    try {
-      const tokens = await getTokensFromCode(code);
-
-      if (tokens.refresh_token) {
-        fs.appendFileSync(".env", `\nREFRESH_TOKEN=${tokens.refresh_token}`);
-      }
-
-      res.send("Authorization successful! You can close this tab.");
-    } catch (err) {
-      console.error("Error exchanging code:", err);
-      res.status(500).send("Auth failed");
-    }
+  // The browser redirect cannot carry our session. Exchanging the code here
+  // used to overwrite the process Drive credential and append it to .env.
+  app.get("/oauth2callback", (_req, res) => {
+    res.status(403).send("OAuth callback is disabled");
   });
 }
 

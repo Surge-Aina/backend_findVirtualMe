@@ -7,6 +7,7 @@ jest.mock("../userVoucher.model", () => ({
     create: jest.fn(),
     find: jest.fn(),
     findByIdAndUpdate: jest.fn(),
+    findOneAndUpdate: jest.fn(),
   },
 }));
 
@@ -136,13 +137,13 @@ describe("voucher.service", () => {
     expect(r.finalPrice).toBe(50);
   });
 
-  it("redeemVoucher updates status", async () => {
-    UserVoucher.findByIdAndUpdate.mockResolvedValue({ _id: "uv" });
+  it("redeemVoucher updates status only for the owner", async () => {
+    UserVoucher.findOneAndUpdate.mockResolvedValue({ _id: "uv" });
 
-    await voucherService.redeemVoucher("uv");
+    await voucherService.redeemVoucher("uv", "user1");
 
-    expect(UserVoucher.findByIdAndUpdate).toHaveBeenCalledWith(
-      "uv",
+    expect(UserVoucher.findOneAndUpdate).toHaveBeenCalledWith(
+      { _id: "uv", userId: "user1" },
       expect.objectContaining({ status: "redeemed" }),
       { new: true }
     );

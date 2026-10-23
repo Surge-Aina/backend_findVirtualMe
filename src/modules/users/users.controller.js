@@ -1,10 +1,91 @@
+const mongoose = require("mongoose");
 const User = require("../../shared/models/User");
-const { normalizeUserAppTheme } = require("../../shared/utils/userSerialize");
+const {
+  normalizeUserAppTheme,
+  serializeUser,
+  serializePublicUser,
+} = require("../../shared/utils/userSerialize");
 const Subscriptions = require("../../shared/models/Subscriptions");
 const bcrypt = require("bcrypt");
 const Stripe = require("stripe");
 const Portfolio = require("../../legacy/project-manager/models/portfolioModel");
+const UnifiedPortfolio = require("../portfolios/models/Portfolio");
+const { assertPortfolioOwner } = require("../portfolios/portfolio.service");
+const { templateToPortfolioType } = require("../../shared/utils/templateToPortfolioType");
 const subscriptionAccess = require("../payments/subscription-access.service");
+
+const SELF_UPDATE_FIELDS = [
+  "firstName",
+  "lastName",
+  "username",
+  "email",
+  "phone",
+  "location",
+  "bio",
+  "goal",
+  "industry",
+  "experienceLevel",
+  "skills",
+  "displayName",
+  "name",
+  "appTheme",
+];
+const ADMIN_UPDATE_FIELDS = [
+  ...SELF_UPDATE_FIELDS,
+  "role",
+  "isAdmin",
+  "isActive",
+  "password",
+];
+
+function actorId(user) {
+  return String(user?._id || user?.id || "");
+}
+
+function isAdmin(user) {
+  return user?.role === "admin";
+}
+
+async function sanitizeUserUpdate(body, actorIsAdmin) {
+  const source = body && typeof body === "object" && !Array.isArray(body) ? body : {};
+  const allowed = new Set(actorIsAdmin ? ADMIN_UPDATE_FIELDS : SELF_UPDATE_FIELDS);
+  const data = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (key.startsWith("$") || !allowed.has(key)) continue;
+    data[key] = value;
+  }
+  if (!actorIsAdmin) return data;
+  if (typeof data.password === "string" && data.password.length > 0) {
+    if (!data.password.startsWith("$2")) {
+      data.password = await bcrypt.hash(data.password, 10);
+    }
+  } else {
+    delete data.password;
+  }
+  return data;
+}
+
+async function linkablePortfolio(raw, user) {
+  const check = await assertPortfolioOwner(raw, user._id);
+  if (check.ok || (check.status === 403 && isAdmin(user))) {
+    const doc = await UnifiedPortfolio.findById(raw).select("template").lean();
+    return {
+      ok: true,
+      portfolioType: templateToPortfolioType(doc?.template) || "project_manager",
+    };
+  }
+  if (check.status !== 404) {
+    return { ok: false, status: check.status || 400, message: check.error || "Portfolio not found" };
+  }
+  const legacy = await Portfolio.findById(raw).select("email");
+  if (!legacy) return { ok: false, status: 404, message: "Portfolio not found" };
+  const ownerEmail = String(legacy.email || "").trim().toLowerCase();
+  const actorEmail = String(user.email || "").trim().toLowerCase();
+  if (!isAdmin(user) && (!actorEmail || ownerEmail !== actorEmail)) {
+    return { ok: false, status: 403, message: "Forbidden" };
+  }
+  return { ok: true, portfolioType: "project_manager" };
+}
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
@@ -42,6 +123,7 @@ exports.addUser = async (req, res) => {
       industry: data.industry,
       experienceLevel: data.experience,
       skills: data.skills,
+      role: "customer",
     };
 
     let onboardingUser;
@@ -64,7 +146,9 @@ exports.addUser = async (req, res) => {
       }
       throw error;
     }
-    res.status(201).json({ user: onboardingUser });
+    res.status(201).json({
+      user: serializeUser(onboardingUser, { includeEmail: true }),
+    });
   } catch (error) {
     console.error("AddUser error:", error);
     res.status(500).json({ message: error.message });
@@ -74,7 +158,9 @@ exports.addUser = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find();
-    res.status(200).json({ users });
+    res.status(200).json({
+      users: users.map((user) => serializeUser(user, { includeEmail: true })),
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -82,9 +168,33 @@ exports.getAllUsers = async (req, res) => {
 
 exports.getUserById = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ message: "User not found" });
+    }
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.status(200).json({ user });
+
+    const self = actorId(req.user) === String(user._id);
+    if (!self && !isAdmin(req.user)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    res.status(200).json({
+      user: serializeUser(user, { includeEmail: true }),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getPublicUser = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.status(200).json({ user: serializePublicUser(user) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -106,7 +216,16 @@ exports.getSubInfo = async (req, res) => {
     });
 
     console.log(`fetched subscription info for ${req.user.email} from stripe`);
-    res.status(200).json({ subscriptionList: subscriptions.data });
+    const subscriptionList = (subscriptions.data || []).map((sub) => ({
+      status: sub.status,
+      cancel_at_period_end: Boolean(sub.cancel_at_period_end),
+      plan: {
+        product: {
+          name: sub.plan?.product?.name || sub.plan?.nickname || null,
+        },
+      },
+    }));
+    res.status(200).json({ subscriptionList });
   } catch (error) {
     res.status(500).json({
       message: "error getting subscription info",
@@ -139,11 +258,7 @@ exports.getHasSubscription = async (req, res) => {
 
     console.log(`User ${email} does have a subscription`);
 
-    res.status(200).json({
-      hasSubscription: true,
-      subscriptionId: sub.subscriptionId,
-      customerId: sub.customerId,
-    });
+    res.status(200).json({ hasSubscription: true });
   } catch (error) {
     console.error("Error in getHasSubscription:", error);
     res.status(500).json({
@@ -181,10 +296,33 @@ exports.getAiEditAccess = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
   try {
-    const id = req.user._id;
-    const user = await User.findByIdAndUpdate(id, req.body, { new: true });
+    const selfId = actorId(req.user);
+    const targetId = req.params.id ? String(req.params.id) : selfId;
+    if (!mongoose.Types.ObjectId.isValid(targetId)) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const existing = await User.findById(targetId);
+    if (!existing) return res.status(404).json({ message: "User not found" });
+
+    const actorIsAdmin = isAdmin(req.user);
+    if (targetId !== selfId && !actorIsAdmin) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const updates = await sanitizeUserUpdate(req.body, actorIsAdmin);
+    const user = await User.findByIdAndUpdate(
+      targetId,
+      { $set: updates },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
     if (!user) return res.status(404).json({ message: "User not found" });
-    res.status(200).json({ user });
+    res.status(200).json({
+      user: serializeUser(user, { includeEmail: true }),
+    });
   } catch (error) {
     console.error("Update user error in users.controller.js:", error);
     res.status(500).json({ message: error.message });
@@ -296,19 +434,30 @@ exports.getMe = async (req, res) => {
 exports.addPortfolioID = async (req, res) => {
   try {
     const userID = req.user._id;
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const raw = body.portfolioId || body._id || body.id;
+    if (!raw || !mongoose.Types.ObjectId.isValid(String(raw))) {
+      return res.status(400).json({ message: "portfolioId is required" });
+    }
+
+    const link = await linkablePortfolio(String(raw), req.user);
+    if (!link.ok) {
+      return res.status(link.status).json({ message: link.message });
+    }
 
     const user = await User.findByIdAndUpdate(
       userID,
-      { $push: { portfolios: req.body } },
+      { $addToSet: { portfolios: { portfolioId: raw, portfolioType: link.portfolioType } } },
       { new: true, runValidators: true },
-      { $addToSet: { portfolios: req.body } },
     );
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json({ user });
+    res.status(200).json({
+      user: serializeUser(user, { includeEmail: true }),
+    });
   } catch (error) {
     console.error("addPortfolioID error in users.controller.js:", error);
     res.status(500).json({ message: error.message });

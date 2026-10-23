@@ -154,8 +154,23 @@ const userSchema = new mongoose.Schema({
 //remove password before sending back to front end
 userSchema.set("toJSON", {
   transform: (doc, ret) => {
-    delete ret.password; // remove password when converting to JSON
-    delete ret.__v; // remove __v version field
+    delete ret.password;
+    delete ret.passwordHash;
+    delete ret.resetPasswordToken;
+    delete ret.resetPasswordExpires;
+    delete ret.resetCode;
+    delete ret.stripeCustomerId;
+    delete ret.stripeSubscriptionId;
+    delete ret.googleId;
+    delete ret.__v;
+    if (Array.isArray(ret.domains)) {
+      ret.domains = ret.domains.map((domain) => {
+        if (!domain || typeof domain !== "object") return domain;
+        const copy = { ...domain };
+        delete copy.paymentIntentId;
+        return copy;
+      });
+    }
     return ret;
   },
 });

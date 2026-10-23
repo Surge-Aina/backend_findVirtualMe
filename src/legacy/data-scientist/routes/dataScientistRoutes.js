@@ -9,23 +9,24 @@ const {
   getTestimonials,
   submitTestimonial
 } = require('../controllers/dataScientistController');
-const { submitContact } = require('../controllers/dataScientistContactController'); 
+const { submitContact } = require('../controllers/dataScientistContactController');
+const { adminOnly } = require('../../legacyWriteGuard');
 
 
 // Main portfolio routes
 router.get('/', getPortfolio);
 router.post('/contact', submitContact);
 
-// Section-specific routes
-router.post('/:section', addPortfolioItem);
-router.patch('/:section/:id', updatePortfolioItem);
-router.delete('/:section/:id', deletePortfolioItem);
-
-// Update entire portfolio (must be last to avoid conflicts)
-router.patch('/update', updatePortfolio);
-
-// Testimonial routes
+// Visitor submissions. Registered before /:section so they stay public.
 router.get('/testimonials', getTestimonials);
 router.post('/testimonials', submitTestimonial);
+
+// Update entire portfolio (must be last to avoid conflicts)
+router.patch('/update', ...adminOnly, updatePortfolio);
+
+// Section-specific routes
+router.post('/:section', ...adminOnly, addPortfolioItem);
+router.patch('/:section/:id', ...adminOnly, updatePortfolioItem);
+router.delete('/:section/:id', ...adminOnly, deletePortfolioItem);
 
 module.exports = router;

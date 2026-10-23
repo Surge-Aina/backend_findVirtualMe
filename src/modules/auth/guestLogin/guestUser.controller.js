@@ -23,7 +23,13 @@ exports.loginUser = async (req, res) => {
 exports.editUser = async (req, res) => {
   try {
     const userId = req.user.id; //auth middleware adds user
-    const updatedInfo = req.body;
+    const source = req.body && typeof req.body === "object" ? req.body : {};
+    const allowed = new Set(["name", "username", "phone", "email"]);
+    const updatedInfo = {};
+    for (const [key, value] of Object.entries(source)) {
+      if (key.startsWith("$") || !allowed.has(key)) continue;
+      updatedInfo[key] = value;
+    }
 
     const updatedUser = await service.updateUser({ userId, updatedInfo });
 

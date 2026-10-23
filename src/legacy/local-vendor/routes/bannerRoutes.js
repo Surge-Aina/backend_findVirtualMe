@@ -9,10 +9,11 @@ const {
   updateBanner,
   deleteBanner,
 } = require("../controllers/bannerController");
+const { vendorWrite } = require("../../legacyWriteGuard");
 
 router.get("/:vendorId", getAllBanners);
-router.post("/:vendorId", upload.single("image"), createBanner);
-router.put("/:vendorId/:id", upload.single("image"), updateBanner);
-router.delete("/:vendorId/:id", deleteBanner);
+router.post("/:vendorId", ...vendorWrite, upload.single("image"), createBanner);
+router.put("/:vendorId/:id", ...vendorWrite, upload.single("image"), updateBanner);
+router.delete("/:vendorId/:id", ...vendorWrite, deleteBanner);
 
 module.exports = router;

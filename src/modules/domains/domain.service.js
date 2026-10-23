@@ -1,6 +1,7 @@
 const xml2js = require("xml2js");
 const parser = new xml2js.Parser();
 const User = require("../../shared/models/User");
+const { serializeUser } = require("../../shared/utils/userSerialize");
 const vercelService = require("./vercel.service");
 const { createDomainMapping } = require("./DomainRouter/DomainRouter.service");
 const DomainRoute = require("./DomainRouter/DomainRouter.model");
@@ -650,7 +651,7 @@ const domainService = {
 
       return res.status(200).json({
         message: "Domain successfully deleted.",
-        user: updatedUser,
+        user: serializeUser(updatedUser, { includeEmail: true }),
       });
     } catch (error) {
       console.error("deleteDomain Failed in domainService.js:", error.message);

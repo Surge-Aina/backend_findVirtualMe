@@ -76,19 +76,19 @@ describe("userPortfoliosArray.controller", () => {
 
     it("returns 200 with portfolios on success", async () => {
       const list = [{ portfolioId: "p1", portfolioType: "x" }];
-      mockReq = { body: { portfolios: list } };
+      mockReq = { body: { portfolios: list }, user: { _id: "u1", role: "customer" } };
       const found = [{ _id: "p1" }];
       service.getPortfolioList.mockResolvedValue(found);
 
       await getPortfoliosByList(mockReq, mockRes);
 
-      expect(service.getPortfolioList).toHaveBeenCalledWith(list);
+      expect(service.getPortfolioList).toHaveBeenCalledWith(list, mockReq.user);
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({ portfolios: found });
     });
 
     it("returns 500 when getPortfolioList throws", async () => {
-      mockReq = { body: { portfolios: [] } };
+      mockReq = { body: { portfolios: [] }, user: { _id: "u1", role: "customer" } };
       service.getPortfolioList.mockRejectedValue(new Error("db"));
 
       await getPortfoliosByList(mockReq, mockRes);

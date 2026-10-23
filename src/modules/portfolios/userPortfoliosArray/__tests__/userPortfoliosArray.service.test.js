@@ -75,9 +75,13 @@ describe("userPortfoliosArray.service", () => {
       Portfolio.find.mockReturnValue({ lean });
       const list = [{ portfolioId: "a" }, { portfolioId: null }];
 
-      const result = await getPortfolioList(list);
+      const actor = { _id: "owner1", role: "customer" };
+      const result = await getPortfolioList(list, actor);
 
-      expect(Portfolio.find).toHaveBeenCalledWith({ _id: { $in: ["a"] } });
+      expect(Portfolio.find).toHaveBeenCalledWith({
+        _id: { $in: ["a"] },
+        $or: [{ owner: "owner1" }, { visibility: "public" }],
+      });
       expect(result).toEqual([{ _id: "x" }]);
     });
   });

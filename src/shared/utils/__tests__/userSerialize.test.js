@@ -1,4 +1,8 @@
-const { normalizeUserAppTheme } = require("../userSerialize");
+const {
+  normalizeUserAppTheme,
+  serializeUser,
+  serializePublicUser,
+} = require("../userSerialize");
 
 describe("userSerialize", () => {
   it("returns undefined for falsy input", () => {
@@ -37,6 +41,57 @@ describe("userSerialize", () => {
   it("keeps dark theme", () => {
     expect(normalizeUserAppTheme({ appTheme: "dark" })).toEqual({
       appTheme: "dark",
+    });
+  });
+
+  it("strips stripe ids and keeps email for the account holder", () => {
+    expect(
+      serializeUser(
+        {
+          email: "a@example.com",
+          stripeCustomerId: "cus_123",
+          stripeSubscriptionId: "sub_123",
+          googleId: "g_1",
+          password: "hash",
+          domains: [{ domain: "a.com", paymentIntentId: "pi_123" }],
+        },
+        { includeEmail: true }
+      )
+    ).toEqual({
+      email: "a@example.com",
+      appTheme: "light",
+      domains: [{ domain: "a.com" }],
+    });
+  });
+
+  it("omits another user's email unless explicitly included", () => {
+    expect(
+      serializeUser({ email: "other@example.com", username: "other" }).email
+    ).toBeUndefined();
+  });
+
+  it("public projection returns only display fields", () => {
+    expect(
+      serializePublicUser({
+        _id: "abc",
+        username: "ada",
+        name: "Ada",
+        firstName: "Ada",
+        lastName: "Lovelace",
+        displayName: "Ada L",
+        email: "ada@example.com",
+        password: "hash",
+        stripeCustomerId: "cus_x",
+        resetPasswordToken: "tok",
+      })
+    ).toEqual({
+      id: "abc",
+      _id: "abc",
+      displayName: "Ada L",
+      username: "ada",
+      name: "Ada",
+      firstName: "Ada",
+      lastName: "Lovelace",
     });
   });
 });

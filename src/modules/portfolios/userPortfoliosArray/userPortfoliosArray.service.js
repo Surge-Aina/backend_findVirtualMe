@@ -31,9 +31,13 @@ async function updatePortfolioArray(userId) {
 }
 exports.updatePortfolioArray = updatePortfolioArray;
 
-exports.getPortfolioList = async (portfolioList) => {
+exports.getPortfolioList = async (portfolioList, actor) => {
   const ids = portfolioList.map((p) => p.portfolioId).filter(Boolean);
-  return Portfolio.find({ _id: { $in: ids } }).lean();
+  const filter = { _id: { $in: ids } };
+  if (!actor || actor.role !== "admin") {
+    filter.$or = [{ owner: actor?._id }, { visibility: "public" }];
+  }
+  return Portfolio.find(filter).lean();
 };
 
 exports.updateAllUsersPortfolioArrays = async function () {

@@ -15,6 +15,15 @@
     return multerFn;
     });
 
+    jest.mock("../../../shared/middleware/auth", () => (req, _res, next) => {
+      req.user = {
+        _id: "656f9f9f9f9f9f9f9f9f9f9f",
+        email: "u@test.com",
+        role: "admin",
+      };
+      next();
+    });
+
     // 2) Mock user model used by auth (so Bearer auth passes when needed)
     jest.mock("../../../shared/models/User", () => ({
     findById: jest

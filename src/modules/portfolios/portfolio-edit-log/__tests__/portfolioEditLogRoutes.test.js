@@ -1,7 +1,9 @@
 const express = require("express");
 const request = require("supertest");
+const jwt = require("jsonwebtoken");
 const portfolioEditLogRoutes = require("../../portfolio-edit-log.routes");
 const PortfolioEditLog = require("../../../../shared/models/portfolioLogs/PortfolioEditLog");
+const User = require("../../../../shared/models/User");
 
 // Note: Database connection is handled by setup.js
 // Setup Express app with routes
@@ -9,6 +11,28 @@ const app = express();
 app.use(express.json());
 app.use("/api/portfolios/edit-log", portfolioEditLogRoutes);
 app.use((req, res) => res.status(404).json({ message: "not found" }));
+
+let authHeader = {};
+
+beforeEach(async () => {
+  const stamp = `${Date.now()}_${Math.random()}`;
+  const admin = await User.create({
+    email: `admin_${stamp}@example.com`,
+    username: `admin_${stamp}`,
+    password: "password123",
+    userKey: `key_${stamp}`,
+    practiceId: `practice_${stamp}`,
+    role: "admin",
+  });
+  const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, {
+    expiresIn: "1h",
+  });
+  authHeader = { Authorization: `Bearer ${token}` };
+});
+
+function authedGet(url) {
+  return request(app).get(url).set(authHeader);
+}
 
 // We only need to clean up data after each test
 afterEach(async () => {
@@ -110,7 +134,7 @@ describe("PortfolioEditLog Routes", () => {
         });
       }
 
-      const res = await request(app).get("/api/portfolios/edit-log");
+      const res = await authedGet("/api/portfolios/edit-log");
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -128,7 +152,7 @@ describe("PortfolioEditLog Routes", () => {
         });
       }
 
-      const res = await request(app).get(
+      const res = await authedGet(
         "/api/portfolios/edit-log?page=2&limit=5"
       );
 
@@ -140,7 +164,7 @@ describe("PortfolioEditLog Routes", () => {
     });
 
     it("should return empty array when no logs exist", async () => {
-      const res = await request(app).get("/api/portfolios/edit-log");
+      const res = await authedGet("/api/portfolios/edit-log");
 
       expect(res.status).toBe(200);
       expect(res.body.count).toBe(0);
@@ -165,7 +189,7 @@ describe("PortfolioEditLog Routes", () => {
         portfolioType: "handyman",
       });
 
-      const res = await request(app).get(
+      const res = await authedGet(
         "/api/portfolios/edit-log/user/user_find"
       );
 
@@ -178,7 +202,7 @@ describe("PortfolioEditLog Routes", () => {
     });
 
     it("should return empty array when user has no logs", async () => {
-      const res = await request(app).get(
+      const res = await authedGet(
         "/api/portfolios/edit-log/user/user_no_logs"
       );
 
@@ -193,7 +217,7 @@ describe("PortfolioEditLog Routes", () => {
         portfolioType: "handyman",
       });
 
-      const res = await request(app).get(
+      const res = await authedGet(
         "/api/portfolios/edit-log/user/user@special"
       );
 
@@ -220,7 +244,7 @@ describe("PortfolioEditLog Routes", () => {
         portfolioType: "handyman",
       });
 
-      const res = await request(app).get(
+      const res = await authedGet(
         "/api/portfolios/edit-log/portfolio/portfolio_find"
       );
 
@@ -232,7 +256,7 @@ describe("PortfolioEditLog Routes", () => {
     });
 
     it("should return empty array when portfolio has no logs", async () => {
-      const res = await request(app).get(
+      const res = await authedGet(
         "/api/portfolios/edit-log/portfolio/portfolio_no_logs"
       );
 
@@ -260,7 +284,7 @@ describe("PortfolioEditLog Routes", () => {
         portfolioType: "handyman",
       });
 
-      const res = await request(app).get(
+      const res = await authedGet(
         "/api/portfolios/edit-log/session/session_find"
       );
 
@@ -272,7 +296,7 @@ describe("PortfolioEditLog Routes", () => {
     });
 
     it("should return empty array when session has no logs", async () => {
-      const res = await request(app).get(
+      const res = await authedGet(
         "/api/portfolios/edit-log/session/session_no_logs"
       );
 
@@ -284,7 +308,7 @@ describe("PortfolioEditLog Routes", () => {
 
   describe("Route Error Handling", () => {
     it("should return 404 for non-existent routes", async () => {
-      const res = await request(app).get("/api/portfolios/edit-log/invalid");
+      const res = await authedGet("/api/portfolios/edit-log/invalid");
 
       expect(res.status).toBe(404);
     });
@@ -312,21 +336,21 @@ describe("PortfolioEditLog Routes", () => {
       const createdLogId = createRes.body.log._id;
 
       // Retrieve by userId
-      const userRes = await request(app).get(
+      const userRes = await authedGet(
         "/api/portfolios/edit-log/user/integration_user"
       );
       expect(userRes.status).toBe(200);
       expect(userRes.body.count).toBe(1);
 
       // Retrieve by portfolioID
-      const portfolioRes = await request(app).get(
+      const portfolioRes = await authedGet(
         "/api/portfolios/edit-log/portfolio/integration_portfolio"
       );
       expect(portfolioRes.status).toBe(200);
       expect(portfolioRes.body.count).toBe(1);
 
       // Retrieve by sessionId
-      const sessionRes = await request(app).get(
+      const sessionRes = await authedGet(
         "/api/portfolios/edit-log/session/integration_session"
       );
       expect(sessionRes.status).toBe(200);
@@ -348,7 +372,7 @@ describe("PortfolioEditLog Routes", () => {
       }
 
       // Get first page
-      const page1 = await request(app).get(
+      const page1 = await authedGet(
         "/api/portfolios/edit-log?page=1&limit=10"
       );
       expect(page1.status).toBe(200);
@@ -356,7 +380,7 @@ describe("PortfolioEditLog Routes", () => {
       expect(page1.body.page).toBe(1);
 
       // Get second page
-      const page2 = await request(app).get(
+      const page2 = await authedGet(
         "/api/portfolios/edit-log?page=2&limit=10"
       );
       expect(page2.status).toBe(200);
@@ -364,7 +388,7 @@ describe("PortfolioEditLog Routes", () => {
       expect(page2.body.page).toBe(2);
 
       // Get third page
-      const page3 = await request(app).get(
+      const page3 = await authedGet(
         "/api/portfolios/edit-log?page=3&limit=10"
       );
       expect(page3.status).toBe(200);

@@ -1,16 +1,37 @@
 const request = require("supertest");
 const express = require("express");
 const bodyParser = require("body-parser");
+
+jest.mock("../../guestLogin/guestUser.service");
+jest.mock("../../../portfolios/portfolio.service", () => ({
+  assertPortfolioOwner: jest.fn(),
+}));
+jest.mock("../../guestLogin/guestUser.model", () => ({
+  findById: jest.fn(),
+}));
+
 const controller = require("../guestAdminPanel.controller");
 const guestUserService = require("../../guestLogin/guestUser.service");
-
-// Mock the guestUserService
-jest.mock("../../guestLogin/guestUser.service");
+const { assertPortfolioOwner } = require("../../../portfolios/portfolio.service");
+const GuestUser = require("../../guestLogin/guestUser.model");
 
 const app = express();
 app.use(bodyParser.json());
+app.use((req, _res, next) => {
+  if (req.headers["x-test-user"] === "none") return next();
+  if (req.headers["x-test-user"] === "customer") {
+    req.user = {
+      _id: "owner1",
+      id: "owner1",
+      role: "customer",
+      portfolios: [],
+    };
+    return next();
+  }
+  req.user = { _id: "owner1", id: "owner1", role: "admin", portfolios: [] };
+  next();
+});
 
-// Setup routes
 app.get("/admin/users", controller.getAllUsers);
 app.put("/admin/users/:id", controller.editUser);
 
@@ -82,6 +103,31 @@ describe("GuestAdminPanel Controller", () => {
       expect(res.statusCode).toBe(400);
       expect(res.body.success).toBe(false);
       expect(res.body.message).toBe("Failed to fetch users");
+    });
+
+    it("returns 401 when the caller is not authenticated", async () => {
+      const res = await request(app)
+        .get("/admin/users")
+        .set("x-test-user", "none");
+
+      expect(res.statusCode).toBe(401);
+      expect(guestUserService.getAllUsers).not.toHaveBeenCalled();
+    });
+
+    it("returns 403 when a non-owner requests another portfolio", async () => {
+      assertPortfolioOwner.mockResolvedValue({
+        ok: false,
+        status: 403,
+        error: "Forbidden",
+      });
+
+      const res = await request(app)
+        .get("/admin/users")
+        .set("x-test-user", "customer")
+        .query({ portfolioId: "portfolio-123" });
+
+      expect(res.statusCode).toBe(403);
+      expect(guestUserService.getAllUsers).not.toHaveBeenCalled();
     });
 
     it("should handle errors gracefully", async () => {
@@ -167,6 +213,25 @@ describe("GuestAdminPanel Controller", () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body.data.loyaltyPoints).toBe(150);
+    });
+
+    it("returns 403 when a non-owner edits another portfolio's sub-user", async () => {
+      GuestUser.findById.mockReturnValue({
+        select: jest.fn().mockResolvedValue({ portfolioId: "portfolio-123" }),
+      });
+      assertPortfolioOwner.mockResolvedValue({
+        ok: false,
+        status: 403,
+        error: "Forbidden",
+      });
+
+      const res = await request(app)
+        .put("/admin/users/user123")
+        .set("x-test-user", "customer")
+        .send({ name: "Hijack" });
+
+      expect(res.statusCode).toBe(403);
+      expect(guestUserService.updateUser).not.toHaveBeenCalled();
     });
 
     it("should handle update errors", async () => {
