@@ -33,6 +33,21 @@ function hashKey(secret) {
   return crypto.createHash("sha256").update(`${pepper}:${secret}`).digest("hex");
 }
 
+/**
+ * Compare two stored digests without leaking the matching prefix.
+ * Both sides are hex strings of equal length for a real key.
+ */
+function hashesEqual(left, right) {
+  const a = Buffer.from(typeof left === "string" ? left : "", "utf8");
+  const b = Buffer.from(typeof right === "string" ? right : "", "utf8");
+  if (a.length !== b.length) {
+    if (a.length > 0) crypto.timingSafeEqual(a, a);
+    return false;
+  }
+  if (a.length === 0) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
 function generateSecret() {
   const body = crypto.randomBytes(32).toString("base64url");
   const secret = `${KEY_PREFIX}${body}`;
@@ -216,8 +231,9 @@ async function authenticate(secret) {
   if (typeof secret !== "string" || !secret.startsWith(KEY_PREFIX) || secret.length > 200) {
     return null;
   }
-  const key = await ApiKey.findOne({ keyHash: hashKey(secret), revokedAt: null });
-  if (!key) return null;
+  const digest = hashKey(secret);
+  const key = await ApiKey.findOne({ keyHash: digest, revokedAt: null });
+  if (!key || !hashesEqual(key.keyHash, digest)) return null;
 
   const user = await User.findById(key.userId).select(
     "_id username role createdAt isActive"
@@ -229,6 +245,7 @@ async function authenticate(secret) {
 module.exports = {
   ApiKeyError,
   hashKey,
+  hashesEqual,
   createKey,
   listKeys,
   revokeKey,

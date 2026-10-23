@@ -65,7 +65,7 @@ function renderDocsPage() {
 
     <h2>Errors and limits</h2>
     <p>Errors use <code>{ "error": { "code": "...", "message": "..." } }</code>. Unknown and revoked keys both return <code>invalid_api_key</code>. A missing scope returns <code>insufficient_scope</code>. Another customer's site id returns <code>not_found</code>.</p>
-    <p>Each key is limited per process. Defaults are 60 requests per 60 seconds. <code>429</code> responses use code <code>rate_limited</code> and include <code>Retry-After</code>. Successful responses include <code>RateLimit-Limit</code>, <code>RateLimit-Remaining</code>, and <code>RateLimit-Reset</code>.</p>
+    <p>Each key is counted in the database, so the limit is shared by every process. If that counter is unavailable, the process applies the same limit on its own. Defaults are 60 requests per 60 seconds. <code>429</code> responses use code <code>rate_limited</code> and include <code>Retry-After</code>. Successful responses include <code>RateLimit-Limit</code>, <code>RateLimit-Remaining</code>, and <code>RateLimit-Reset</code>.</p>
 
     <h2>Not in this version</h2>
     <p>HMAC-signed outbound webhooks, including <code>lead.captured</code>, are not served by this version. The event name is reserved for the event catalog.</p>

@@ -7,7 +7,7 @@ const DomainRoute = require("../../domains/DomainRouter/DomainRouter.model");
 const ApiKey = require("../apiKey.model");
 const developerKeys = require("../developerKeys.routes");
 const { mountPublicApi } = require("../mount");
-const { resetPublicApiRateLimits } = require("../rateLimit");
+const { resetPublicApiRateLimits, setSharedRateCounter } = require("../rateLimit");
 const { hashKey } = require("../apiKey.service");
 
 const app = express();
@@ -421,6 +421,26 @@ describe("public API v1", () => {
 
     const other = await publicGet("/api/public/v1/me", second.secret);
     expect(other.status).toBe(200);
+  });
+
+  it("keeps limiting a key when the shared counter is unavailable", async () => {
+    process.env.PUBLIC_API_RATE_LIMIT_MAX = "1";
+    resetPublicApiRateLimits();
+    setSharedRateCounter(async () => {
+      throw new Error("counter unavailable");
+    });
+    const user = await createUser("degrade");
+    const created = await issueKey(user, ["sites:read"], "Local");
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    expect((await publicGet("/api/public/v1/me", created.secret)).status).toBe(200);
+    const limited = await publicGet("/api/public/v1/me", created.secret);
+    expect(limited.status).toBe(429);
+    expect(limited.body.error.code).toBe("rate_limited");
+    expect(JSON.stringify(errorSpy.mock.calls)).toBe(
+      JSON.stringify([["public_api_rate_limit_degraded"], ["public_api_rate_limit_degraded"]])
+    );
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain(created.secret);
   });
 
   it("stops at the active key limit and still allows rotation", async () => {
