@@ -9,21 +9,34 @@ const Subscriptions = require("../../shared/models/Subscriptions");
 const bcrypt = require("bcrypt");
 const Stripe = require("stripe");
 const Portfolio = require("../../legacy/project-manager/models/portfolioModel");
+const UnifiedPortfolio = require("../portfolios/models/Portfolio");
+const { assertPortfolioOwner } = require("../portfolios/portfolio.service");
+const { templateToPortfolioType } = require("../../shared/utils/templateToPortfolioType");
 const subscriptionAccess = require("../payments/subscription-access.service");
 
-const BLOCKED_UPDATE_FIELDS = [
-  "_id",
-  "id",
-  "__v",
-  "resetPasswordToken",
-  "resetPasswordExpires",
-  "resetCode",
-  "stripeCustomerId",
-  "stripeSubscriptionId",
-  "googleId",
-  "passwordHash",
+const SELF_UPDATE_FIELDS = [
+  "firstName",
+  "lastName",
+  "username",
+  "email",
+  "phone",
+  "location",
+  "bio",
+  "goal",
+  "industry",
+  "experienceLevel",
+  "skills",
+  "displayName",
+  "name",
+  "appTheme",
 ];
-const ADMIN_ONLY_UPDATE_FIELDS = ["role", "isAdmin", "password"];
+const ADMIN_UPDATE_FIELDS = [
+  ...SELF_UPDATE_FIELDS,
+  "role",
+  "isAdmin",
+  "isActive",
+  "password",
+];
 
 function actorId(user) {
   return String(user?._id || user?.id || "");
@@ -34,12 +47,14 @@ function isAdmin(user) {
 }
 
 async function sanitizeUserUpdate(body, actorIsAdmin) {
-  const data = { ...(body || {}) };
-  for (const key of BLOCKED_UPDATE_FIELDS) delete data[key];
-  if (!actorIsAdmin) {
-    for (const key of ADMIN_ONLY_UPDATE_FIELDS) delete data[key];
-    return data;
+  const source = body && typeof body === "object" && !Array.isArray(body) ? body : {};
+  const allowed = new Set(actorIsAdmin ? ADMIN_UPDATE_FIELDS : SELF_UPDATE_FIELDS);
+  const data = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (key.startsWith("$") || !allowed.has(key)) continue;
+    data[key] = value;
   }
+  if (!actorIsAdmin) return data;
   if (typeof data.password === "string" && data.password.length > 0) {
     if (!data.password.startsWith("$2")) {
       data.password = await bcrypt.hash(data.password, 10);
@@ -48,6 +63,28 @@ async function sanitizeUserUpdate(body, actorIsAdmin) {
     delete data.password;
   }
   return data;
+}
+
+async function linkablePortfolio(raw, user) {
+  const check = await assertPortfolioOwner(raw, user._id);
+  if (check.ok || (check.status === 403 && isAdmin(user))) {
+    const doc = await UnifiedPortfolio.findById(raw).select("template").lean();
+    return {
+      ok: true,
+      portfolioType: templateToPortfolioType(doc?.template) || "project_manager",
+    };
+  }
+  if (check.status !== 404) {
+    return { ok: false, status: check.status || 400, message: check.error || "Portfolio not found" };
+  }
+  const legacy = await Portfolio.findById(raw).select("email");
+  if (!legacy) return { ok: false, status: 404, message: "Portfolio not found" };
+  const ownerEmail = String(legacy.email || "").trim().toLowerCase();
+  const actorEmail = String(user.email || "").trim().toLowerCase();
+  if (!isAdmin(user) && (!actorEmail || ownerEmail !== actorEmail)) {
+    return { ok: false, status: 403, message: "Forbidden" };
+  }
+  return { ok: true, portfolioType: "project_manager" };
 }
 
 const stripeSecretkey =
@@ -274,10 +311,14 @@ exports.updateUser = async (req, res) => {
     }
 
     const updates = await sanitizeUserUpdate(req.body, actorIsAdmin);
-    const user = await User.findByIdAndUpdate(targetId, updates, {
-      new: true,
-      runValidators: true,
-    });
+    const user = await User.findByIdAndUpdate(
+      targetId,
+      { $set: updates },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
     if (!user) return res.status(404).json({ message: "User not found" });
     res.status(200).json({
       user: serializeUser(user, { includeEmail: true }),
@@ -393,12 +434,21 @@ exports.getMe = async (req, res) => {
 exports.addPortfolioID = async (req, res) => {
   try {
     const userID = req.user._id;
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const raw = body.portfolioId || body._id || body.id;
+    if (!raw || !mongoose.Types.ObjectId.isValid(String(raw))) {
+      return res.status(400).json({ message: "portfolioId is required" });
+    }
+
+    const link = await linkablePortfolio(String(raw), req.user);
+    if (!link.ok) {
+      return res.status(link.status).json({ message: link.message });
+    }
 
     const user = await User.findByIdAndUpdate(
       userID,
-      { $push: { portfolios: req.body } },
+      { $addToSet: { portfolios: { portfolioId: raw, portfolioType: link.portfolioType } } },
       { new: true, runValidators: true },
-      { $addToSet: { portfolios: req.body } },
     );
 
     if (!user) {

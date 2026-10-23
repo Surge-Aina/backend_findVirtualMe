@@ -95,8 +95,15 @@ exports.createUserAsOwner = async (req, res) => {
       portfolioType = portfolio ? templateToPortfolioType(portfolio.template) : null;
     }
 
+    const payload = { ...(req.body || {}) };
+    for (const key of Object.keys(payload)) {
+      if (key.startsWith("$")) delete payload[key];
+    }
+    delete payload.role;
+    delete payload.isAdmin;
+
     const newUser = await guestUserService.createNewUser({
-      ...req.body,
+      ...payload,
       portfolioId,
       portfolioType,
     });
@@ -127,10 +134,13 @@ exports.editUser = async (req, res) => {
       }
     }
 
-    const updatedInfo = { ...(req.body || {}) };
-    delete updatedInfo.password;
-    delete updatedInfo.role;
-    delete updatedInfo.isAdmin;
+    const source = req.body && typeof req.body === "object" ? req.body : {};
+    const updatedInfo = {};
+    const blocked = new Set(["password", "role", "isAdmin", "portfolioId", "_id", "id"]);
+    for (const [key, value] of Object.entries(source)) {
+      if (key.startsWith("$") || blocked.has(key)) continue;
+      updatedInfo[key] = value;
+    }
 
     const user = await guestUserService.updateUser({ userId, updatedInfo });
 

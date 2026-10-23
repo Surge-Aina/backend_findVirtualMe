@@ -395,6 +395,28 @@ describe('Portfolio Controller Tests', () => {
       );
     });
 
+    it('should refuse to edit another email by id', async () => {
+      const portfolio = await Portfolio.create({
+        name: 'Theirs',
+        email: 'owner@example.com',
+        title: 'Developer',
+      });
+
+      req.user = { email: 'attacker@example.com', role: 'customer' };
+      req.body.portfolio = {
+        _id: portfolio._id.toString(),
+        name: 'Hijacked',
+        email: 'attacker@example.com',
+      };
+
+      await editPortfolioByEmail(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      const stored = await Portfolio.findById(portfolio._id);
+      expect(stored.name).toBe('Theirs');
+      expect(stored.email).toBe('owner@example.com');
+    });
+
     it('should return 404 if portfolio not found', async () => {
       req.user = { email: 'notfound@example.com' };
       req.body.portfolio = { name: 'Test' };

@@ -162,37 +162,30 @@ const createResponse = () => {
 };
 
 describe('index.js OAuth callback route', () => {
-  it('responds with success and does not spin up a new server instance', async () => {
+  it('rejects the callback without exchanging a code or writing tokens', async () => {
     const initialCreateServerCalls = createServerSpy.mock.calls.length;
-    mockGetTokensFromCode.mockResolvedValue({ refresh_token: 'token-123' });
 
     const res = createResponse();
     await oauthCallbackHandler({ query: { code: 'abc' } }, res);
 
     expect(createServerSpy.mock.calls.length).toBe(initialCreateServerCalls);
-    expect(mockGetTokensFromCode).toHaveBeenCalledWith('abc');
-    expect(res.send).toHaveBeenCalledWith(
-      'Authorization successful! You can close this tab.'
-    );
-    expect(res.status).not.toHaveBeenCalledWith(500);
+    expect(mockGetTokensFromCode).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.send).toHaveBeenCalledWith('OAuth callback is disabled');
     if (jest.isMockFunction(appendFileSyncMock)) {
-      expect(appendFileSyncMock).toHaveBeenCalledWith(
-        '.env',
-        '\nREFRESH_TOKEN=token-123'
-      );
+      expect(appendFileSyncMock).not.toHaveBeenCalled();
     }
   });
 
-  it('handles OAuth errors without duplicating server setup', async () => {
+  it('does not write a refresh token when a code is present', async () => {
     const initialCreateServerCalls = createServerSpy.mock.calls.length;
-    mockGetTokensFromCode.mockRejectedValue(new Error('boom'));
 
     const res = createResponse();
     await oauthCallbackHandler({ query: { code: 'bad' } }, res);
 
     expect(createServerSpy.mock.calls.length).toBe(initialCreateServerCalls);
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.send).toHaveBeenCalledWith('Auth failed');
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.send).toHaveBeenCalledWith('OAuth callback is disabled');
     if (jest.isMockFunction(appendFileSyncMock)) {
       expect(appendFileSyncMock).not.toHaveBeenCalled();
     }

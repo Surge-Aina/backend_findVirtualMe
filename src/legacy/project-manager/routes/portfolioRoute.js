@@ -17,17 +17,17 @@ const {
 const {
   submitContact,
 } = require("../../../modules/contact/contactMeForm.controller");
-const auth = require("../../../shared/middleware/auth");
+const { auth, adminOnly, requireSelfOrAdminEmail } = require("../../legacyWriteGuard");
 
 const upload = multer({ storage: multer.memoryStorage() });
-router.get("/email/:email", getPortfolioByEmail);
-router.get("/all-porfolios-by-email/:email", getAllPortfoliosByEmail);
+router.get("/email/:email", auth, requireSelfOrAdminEmail("email"), getPortfolioByEmail);
+router.get("/all-porfolios-by-email/:email", auth, requireSelfOrAdminEmail("email"), getAllPortfoliosByEmail);
 router.get("/id/:id", getPortfolioById);
-router.get("/all-portfolios", getAllPortfolios);
+router.get("/all-portfolios", ...adminOnly, getAllPortfolios);
 
-router.post("/add", addPortfolio);
-router.post("/upload-pdf", upload.single("resume"), addPDF);
-router.post("/ai-summary", aiSummary);
+router.post("/add", auth, addPortfolio);
+router.post("/upload-pdf", auth, upload.single("resume"), addPDF);
+router.post("/ai-summary", auth, aiSummary);
 router.post("/contact", submitContact);
 router.patch("/edit", auth, editPortfolioByEmail);
 router.post("/profile-image/:id",auth,upload.single("image"),uploadProfileImage);

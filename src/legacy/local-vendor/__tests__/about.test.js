@@ -14,7 +14,7 @@ app.use("/about", aboutRouter);
 
 // Mock auth middleware only (keep logic real)
 jest.mock("../../../shared/middleware/auth", () => (req, _res, next) => {
-  req.user = { email: "test@example.com" };
+  req.user = { _id: "mockUserId", email: "test@example.com", role: "admin" };
   next();
 });
 

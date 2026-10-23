@@ -155,8 +155,10 @@ const userSchema = new mongoose.Schema({
 userSchema.set("toJSON", {
   transform: (doc, ret) => {
     delete ret.password;
+    delete ret.passwordHash;
     delete ret.resetPasswordToken;
     delete ret.resetPasswordExpires;
+    delete ret.resetCode;
     delete ret.stripeCustomerId;
     delete ret.stripeSubscriptionId;
     delete ret.googleId;

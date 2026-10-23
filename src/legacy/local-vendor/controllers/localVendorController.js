@@ -12,10 +12,24 @@ const mammoth = require("mammoth");
 const { PDFDocument } = require("pdf-lib");
 const User = require("../../../shared/models/User");
 
+function plainBody(body) {
+  const source = body && typeof body === "object" && !Array.isArray(body) ? body : {};
+  const updates = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (key.startsWith("$")) continue;
+    updates[key] = value;
+  }
+  return updates;
+}
+
 // Create vendor and add the basic info so website doesn't look blank, view seedVendor
 exports.createVendor = async (req, res) => {
   try {
-    const vendor = new LocalVendorPortfolio(req.body);
+    const payload = plainBody(req.body);
+    if (req.user && req.user.role !== "admin" && req.user.email) {
+      payload.email = req.user.email;
+    }
+    const vendor = new LocalVendorPortfolio(payload);
     await vendor.save();
 
     //seeding info
@@ -59,9 +73,13 @@ exports.getVendorById = async (req, res) => {
 // Update vendor
 exports.updateVendor = async (req, res) => {
   try {
+    const updates = plainBody(req.body);
+    if (req.user && req.user.role !== "admin") {
+      delete updates.email;
+    }
     const updated = await LocalVendorPortfolio.findByIdAndUpdate(
       req.params.vendorId,
-      req.body,
+      updates,
       { new: true }
     );
     if (!updated) return res.status(404).json({ error: "Vendor not found" });
@@ -232,6 +250,10 @@ exports.injectVendorPortfolio = async (req, res) => {
         error:
           "Could not convert the document into valid vendor data. Please check formatting.",
       });
+    }
+
+    if (parsed?.vendor && req.user && req.user.role !== "admin" && req.user.email) {
+      parsed.vendor.email = req.user.email;
     }
 
     if (

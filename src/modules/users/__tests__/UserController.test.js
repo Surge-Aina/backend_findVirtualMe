@@ -265,6 +265,44 @@ describe('User Controller Integration Tests', () => {
       expect(response.body.user.firstName).toBe('Updated');
     });
 
+    test('should ignore operator updates that try to set role or password', async () => {
+      const response = await request(app)
+        .patch('/api/users')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          $set: { role: 'admin', password: 'plaintext', isAdmin: true },
+          firstName: 'Safe',
+        })
+        .expect(200);
+
+      expect(response.body.user.role).toBe('customer');
+      expect(response.body.user.firstName).toBe('Safe');
+      expect(response.body.user.password).toBeUndefined();
+      const stored = await User.findById(testUser._id);
+      expect(stored.role).toBe('customer');
+      expect(stored.password).toBe(testUser.password);
+      expect(stored.firstName).toBe('Safe');
+    });
+
+    test('should ignore portfolios and isActive from a non-admin', async () => {
+      await request(app)
+        .patch('/api/users')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          portfolios: [{ portfolioId: otherUser._id, portfolioType: 'local_vendor' }],
+          isActive: false,
+          resetCode: 'stolen',
+          passwordHash: 'stolen',
+        })
+        .expect(200);
+
+      const stored = await User.findById(testUser._id);
+      expect(stored.isActive).not.toBe(false);
+      expect(stored.portfolios || []).toHaveLength(0);
+      expect(stored.resetCode).toBeUndefined();
+      expect(stored.passwordHash).toBeUndefined();
+    });
+
     test('should ignore role changes from a non-admin', async () => {
       const response = await request(app)
         .patch('/api/users')

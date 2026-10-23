@@ -12,18 +12,19 @@ const {
   getAllTaggedImages,
   deleteTaggedImage,
 } = require("../controllers/taggedImageController");
+const { vendorWrite } = require("../../legacyWriteGuard");
 
 // Upload a new image
-router.post("/:vendorId/upload", upload.single("image"), uploadImage);
+router.post("/:vendorId/upload", ...vendorWrite, upload.single("image"), uploadImage);
 
 // Add a tag to the image
-router.post("/:vendorId/:imageId/tags", addTag);
+router.post("/:vendorId/:imageId/tags", ...vendorWrite, addTag);
 
 // Update a specific tag by image ID and tag index
-router.put("/:vendorId/:imageId/tags/:tagIndex", updateTag);
+router.put("/:vendorId/:imageId/tags/:tagIndex", ...vendorWrite, updateTag);
 
 // Delete a specific tag by image ID and tag index
-router.delete("/:vendorId/:imageId/tags/:tagIndex", deleteTag);
+router.delete("/:vendorId/:imageId/tags/:tagIndex", ...vendorWrite, deleteTag);
 
 // Get a single tagged image with populated tags
 router.get("/:vendorId/:imageId", getTaggedImage);
@@ -31,6 +32,6 @@ router.get("/:vendorId/:imageId", getTaggedImage);
 // Get all tagged images
 router.get("/:vendorId", getAllTaggedImages);
 
-router.delete("/:vendorId/:imageId", deleteTaggedImage);
+router.delete("/:vendorId/:imageId", ...vendorWrite, deleteTaggedImage);
 
 module.exports = router;

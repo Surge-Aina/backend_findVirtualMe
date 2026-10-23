@@ -6,10 +6,11 @@ const {
   updateReview,
   deleteReview,
 } = require("../controllers/reviewController");
+const { vendorWrite } = require("../../legacyWriteGuard");
 
 router.get("/:vendorId", getAllReviews);
 router.post("/:vendorId", createReview);
-router.put("/:vendorId/:id", updateReview);
-router.delete("/:vendorId/:id", deleteReview);
+router.put("/:vendorId/:id", ...vendorWrite, updateReview);
+router.delete("/:vendorId/:id", ...vendorWrite, deleteReview);
 
 module.exports = router;

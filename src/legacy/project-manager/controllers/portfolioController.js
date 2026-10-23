@@ -4,6 +4,43 @@ const pdfParse = require("pdf-parse");
 const { generatePortfolioJSON, generateMatchSummary } = require("../../../shared/services/openAiService");
 const { uploadToS3, deleteFromS3 } = require("../../../shared/services/s3Service");
 
+function publicPortfolio(doc) {
+  const plain = typeof doc.toObject === "function" ? doc.toObject() : { ...doc };
+  delete plain.sessionId;
+  delete plain.resumeKey;
+  delete plain.profileImageKey;
+  return plain;
+}
+
+function callerCanEditPortfolio(portfolio, user) {
+  if (!user) return false;
+  if (user.role === "admin") return true;
+  const actorEmail = String(user.email || "").trim().toLowerCase();
+  const ownerEmail = String(portfolio.email || "").trim().toLowerCase();
+  if (actorEmail && actorEmail === ownerEmail) return true;
+  if (portfolio.userId && (user._id || user.id) && String(portfolio.userId) === String(user._id || user.id)) {
+    return true;
+  }
+  return false;
+}
+
+function plainPortfolioUpdate(portfolio, { admin }) {
+  const source = portfolio && typeof portfolio === "object" ? portfolio : {};
+  const updates = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (key.startsWith("$") || key === "_id" || key === "id") continue;
+    updates[key] = value;
+  }
+  delete updates.sessionId;
+  delete updates.resumeKey;
+  delete updates.profileImageKey;
+  if (!admin) {
+    delete updates.email;
+    delete updates.userId;
+  }
+  return updates;
+}
+
 exports.getPortfolioByEmail = async(req, res) => {
     const email = req.params.email;
     try {
@@ -55,7 +92,7 @@ exports.getPortfolioById = async(req, res) => {
             res.status(404).json({ message: "portfolio not found" });
             return;
         }
-        res.status(200).json(portfolio);
+        res.status(200).json(publicPortfolio(portfolio));
     } catch (error) {
         console.log("error getting portfolio: ", error);
         res.status(500).json({ message: "error getting portfolio" });
@@ -70,16 +107,18 @@ exports.addPortfolio = async(req, res) => {
             return res.status(400).json({ message: "portfolio needed" });
         }
 
+        const actorEmail = req.user?.email;
         const formattedPortfolio = {
             name: `${portfolio.firstName} ${portfolio.lastName}`,
             title: portfolio.industry,
-            email: portfolio.email,
+            email: actorEmail || portfolio.email,
             phone: portfolio.phone,
             location: portfolio.location,
             summary: `Goal: ${portfolio.goal}\n
                       Skills: 
                       ${portfolio.skills.join("\n")}`,
         };
+        if (req.user?._id) formattedPortfolio.userId = req.user._id;
 
         const newPortfolio = new Portfolio(formattedPortfolio);
         await newPortfolio.save();
@@ -91,7 +130,7 @@ exports.addPortfolio = async(req, res) => {
 };
 
 exports.addPDF = async(req, res) => {
-    const email = req.body.email;
+    const email = req.user?.email || req.body.email;
     const sessionId = req.body.sessionId; // get sessionId
     if (!req.file) {
         return res.status(400).json({ error: "No PDF file uploaded" });
@@ -118,8 +157,13 @@ exports.addPDF = async(req, res) => {
 
         //save portfolio
         // add sessionId to portfolio object
-        if (sessionId) {
+        if (sessionId && !req.user?.email) {
             portfolioObj.sessionId = sessionId;
+        }
+        if (req.user?.email) {
+            portfolioObj.email = req.user.email;
+            if (req.user._id) portfolioObj.userId = req.user._id;
+            delete portfolioObj.sessionId;
         }
         console.log("Session ID:", sessionId);
         const newPortfolio = new Portfolio(portfolioObj);
@@ -132,21 +176,36 @@ exports.addPDF = async(req, res) => {
 };
 
     exports.editPortfolioByEmail = async (req, res) => {
-    const email = req.user.email; // obtained from auth middleware
-    const portfolio = req.body.portfolio || {};
-
-    // ✅ Prefer id if client sends it; fall back to email for older callers
-    const id = portfolio._id || portfolio.id;
-    const filter = id ? { _id: id } : { email };
-
-    // Don't try to overwrite the _id field itself
-    delete portfolio._id;
-    delete portfolio.id;
+    const actor = req.user || {};
+    const actorEmail = String(actor.email || "").trim();
+    const admin = actor.role === "admin";
+    const incoming = req.body.portfolio && typeof req.body.portfolio === "object"
+      ? req.body.portfolio
+      : {};
+    const id = incoming._id || incoming.id;
+    const updates = plainPortfolioUpdate(incoming, { admin });
 
     try {
+        let filter;
+        if (id) {
+            const existing = await Portfolio.findById(id);
+            if (!existing) {
+                return res.status(404).json({ message: "item not found" });
+            }
+            if (!callerCanEditPortfolio(existing, actor)) {
+                return res.status(403).json({ message: "Forbidden" });
+            }
+            filter = { _id: existing._id };
+        } else {
+            if (!actorEmail) {
+                return res.status(401).json({ message: "Unauthorized" });
+            }
+            filter = { email: actorEmail };
+        }
+
         const updatedPortfolio = await Portfolio.findOneAndUpdate(
         filter,
-        { $set: portfolio },
+        { $set: updates },
         { new: true } // return updated document
         );
 
@@ -212,6 +271,9 @@ exports.uploadProfileImage = async (req, res) => {
         if (!portfolio) {
         return res.status(404).json({ message: "Portfolio not found" });
         }
+        if (!callerCanEditPortfolio(portfolio, req.user)) {
+        return res.status(403).json({ message: "Forbidden" });
+        }
 
         // If there was a previous image stored, try to delete it from S3
         if (portfolio.profileImageKey) {
@@ -260,6 +322,9 @@ exports.uploadResume = async (req, res) => {
         const portfolio = await Portfolio.findById(id);
         if (!portfolio) {
         return res.status(404).json({ message: "Portfolio not found" });
+        }
+        if (!callerCanEditPortfolio(portfolio, req.user)) {
+        return res.status(403).json({ message: "Forbidden" });
         }
 
         // If an old resume exists, try to delete it

@@ -149,7 +149,7 @@ jest.mock("pdfjs-dist/legacy/build/pdf.mjs", () => ({
 
 // Auth middleware
 jest.mock("../../../shared/middleware/auth", () => (req, res, next) => {
-  req.user = { _id: "mockUserId" };
+  req.user = { _id: "mockUserId", role: "admin", email: "admin@test.com" };
   next();
 });
 
@@ -330,8 +330,7 @@ describe("Local Vendor Portfolio API", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.message).toBe("Vendor deleted");
-      // Route does not use auth for delete, so user unlink will not run
-      expect(User.findByIdAndUpdate).not.toHaveBeenCalled();
+      expect(User.findByIdAndUpdate).toHaveBeenCalled();
     });
 
     it("should return 404 when deleting non existing vendor", async () => {
