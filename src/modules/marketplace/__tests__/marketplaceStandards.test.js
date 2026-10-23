@@ -6,7 +6,8 @@ const User = require("../../../shared/models/User");
 const Portfolio = require("../../portfolios/models/Portfolio");
 const { mountPublicApi } = require("../../public-api/mount");
 const { signWebhookPayload } = require("../../public-api/webhookSignature");
-const { flushLifecycleEvents } = require("../../public-api/lifecycleEvents");
+const { dispatchLeadCaptured, flushLifecycleEvents } = require("../../public-api/lifecycleEvents");
+const ContactMeForm = require("../../contact/contactMeForm.model");
 const {
   developerApps,
   adminApps,
@@ -81,7 +82,7 @@ describe("marketplace standards", () => {
         name: "Sample Partner",
         redirectUris: ["https://hooks.example.test/callback"],
         webhookUrl: "https://hooks.example.test/app",
-        scopes: ["sites:read", "profile:read", "webhooks:write"],
+        scopes: ["sites:read", "profile:read", "webhooks:write", "leads:read"],
       });
     expect(registered.status).toBe(201);
     const webhookSecret = registered.body.webhookSecret;
@@ -108,7 +109,7 @@ describe("marketplace standards", () => {
         response_type: "code",
         client_id: registered.body.data.clientId,
         redirect_uri: "https://hooks.example.test/callback",
-        scope: "sites:read profile:read",
+        scope: "sites:read profile:read leads:read",
         state: "state_synthetic",
         code_challenge: challenge,
         code_challenge_method: "S256",
@@ -145,8 +146,65 @@ describe("marketplace standards", () => {
       `v1=${signWebhookPayload(webhookSecret, timestamp, installBody)}`
     );
     expect(installBody).not.toContain(webhookSecret);
+    const installed = JSON.parse(installBody);
+    expect(installed.apiVersion).toBe("2026-10-23");
+    expect(installCall[1].headers["X-FindVirtualMe-Api-Version"]).toBe("2026-10-23");
+
+    const submittedEmail = "Visitor@Example.TEST";
+    const saved = await ContactMeForm.create({
+      portfolioId: site._id,
+      ownerEmail: "owner@example.test",
+      ownerName: "Owner Example",
+      name: "Visitor Example",
+      email: submittedEmail,
+      message: "Hello",
+      consentContact: true,
+    });
+    await dispatchLeadCaptured({
+      siteId: site._id,
+      leadId: saved._id,
+      email: submittedEmail,
+      name: "Visitor Example",
+      consent: { contact: true },
+      createdAt: saved.createdAt,
+    });
+    await flushLifecycleEvents();
+    const leadCall = global.fetch.mock.calls.find((call) => String(call[1].body).includes("lead.captured"));
+    expect(leadCall[0]).toBe("https://hooks.example.test/app");
+    const leadBody = JSON.parse(leadCall[1].body);
+    const leadTimestamp = leadCall[1].headers["X-FindVirtualMe-Timestamp"];
+    expect(leadCall[1].headers["X-FindVirtualMe-Signature"]).toBe(
+      `v1=${signWebhookPayload(webhookSecret, leadTimestamp, leadCall[1].body)}`
+    );
+    expect(leadCall[1].headers["X-FindVirtualMe-Api-Version"]).toBe("2026-10-23");
+    expect(leadBody.apiVersion).toBe("2026-10-23");
+    expect(leadBody.appId).toBe(installed.data.appId);
+    expect(leadBody.installationId).toBe(installed.data.installationId);
+    expect(leadBody.data.leadId).toBe(saved._id.toString());
+    expect(leadBody.data.email).toBe(submittedEmail);
+    expect(leadBody.data.consent).toEqual({ contact: true });
 
     const bearer = `Bearer ${token.body.access_token}`;
+    const ownLead = await request(app)
+      .get(`/api/public/v1/leads/${saved._id}`)
+      .set("Authorization", bearer);
+    expect(ownLead.status).toBe(200);
+    expect(ownLead.body.data.email).toBe(submittedEmail);
+    expect(ownLead.body.data.consent).toEqual({ contact: true });
+    expect(JSON.stringify(ownLead.body)).not.toContain("owner@example.test");
+
+    const otherLead = await ContactMeForm.create({
+      portfolioId: other._id,
+      ownerEmail: "owner@example.test",
+      ownerName: "Owner Example",
+      name: "Other Visitor",
+      email: "other@example.test",
+      message: "Elsewhere",
+    });
+    const hiddenLead = await request(app)
+      .get(`/api/public/v1/leads/${otherLead._id}`)
+      .set("Authorization", bearer);
+    expect(hiddenLead.status).toBe(404);
     const me = await request(app).get("/api/public/v1/me").set("Authorization", bearer);
     expect(me.status).toBe(200);
     expect(me.body.data.siteId).toBe(site._id.toString());
