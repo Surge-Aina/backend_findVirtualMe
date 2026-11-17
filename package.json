@@ -37,6 +37,7 @@
     "google-auth-library": "^10.5.0",
     "googleapis": "^155.0.1",
     "imapflow": "^1.2.0",
+    "jose": "^5.10.0",
     "jsonwebtoken": "^9.0.3",
     "mailparser": "^3.9.1",
     "mammoth": "^1.10.0",

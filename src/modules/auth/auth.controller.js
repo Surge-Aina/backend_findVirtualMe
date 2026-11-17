@@ -1,7 +1,7 @@
 const User = require("../../shared/models/User");
-const { normalizeUserAppTheme } = require("../../shared/utils/userSerialize");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { buildLoginSuccessPayload } = require("./auth.service");
 
 exports.signupUser = async (req, res) => {
   try {
@@ -45,19 +45,7 @@ exports.loginUser = async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ message: "Invalid credentials" });
 
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" },
-    );
-    const portfolioIds = user.portfolios || [];
-
-    res.status(201).json({
-      message: "logged in successfully",
-      token,
-      user: normalizeUserAppTheme(user),
-      portfolioIds,
-    });
+    res.status(201).json(buildLoginSuccessPayload(user));
   } catch (err) {
     console.log("error loggin in: ", err);
     res.status(500).json({ message: "error loggin in", error: err.message });

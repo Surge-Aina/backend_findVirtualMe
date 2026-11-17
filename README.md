@@ -80,6 +80,12 @@ npm test -- tests/softwareeng.model.test.js
 
 Deployed environments must set `MONGODB_URI` and `JWT_SECRET`. Do not commit those values.
 
+Optional one-click admin handoff (disabled unless explicitly enabled):
+
+- `BAGGLEME_HANDOFF_ENABLED` — set to `true` to expose `POST /api/auth/baggleme`; omit or any other value keeps the route hidden (404).
+- `BAGGLEME_HANDOFF_PUBLIC_KEY` — Ed25519 public key (SPKI PEM) used to verify handoff JWTs from the issuer. Multi-line PEM values may use literal `\n` in the env string.
+- `BAGGLEME_HANDOFF_USER_ID` — MongoDB `_id` of the single pinned admin user allowed to sign in via handoff.
+
 User seeding reads `ADMIN_EMAIL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `CUSTOMER_EMAIL`, `CUSTOMER_USERNAME`, and `CUSTOMER_PASSWORD`. The seed fails if any of them are missing.
 
 The Jest setup forces `NODE_ENV=test` and, only in that mode, fills a synthetic `JWT_SECRET` when one is not already set. That value is not a production secret.
