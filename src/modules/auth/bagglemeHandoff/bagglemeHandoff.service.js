@@ -20,9 +20,20 @@ function normalizePem(pem) {
   return pem.replace(/\\n/g, "\n").trim();
 }
 
-function pinnedUserId() {
-  const id = process.env.BAGGLEME_HANDOFF_USER_ID;
-  return typeof id === "string" ? id.trim() : "";
+function allowedHandoffUserIds() {
+  const ids = new Set();
+  const legacy = process.env.BAGGLEME_HANDOFF_USER_ID;
+  if (typeof legacy === "string" && legacy.trim()) {
+    ids.add(legacy.trim());
+  }
+  const list = process.env.BAGGLEME_HANDOFF_USER_IDS;
+  if (typeof list === "string" && list.trim()) {
+    for (const part of list.split(",")) {
+      const id = part.trim();
+      if (id) ids.add(id);
+    }
+  }
+  return ids;
 }
 
 async function getVerifyKey() {
@@ -65,9 +76,9 @@ async function verifyHandoffToken(handoffJwt) {
     throw err;
   }
 
-  const userId = pinnedUserId();
+  const allowedIds = allowedHandoffUserIds();
   const verifyKey = await getVerifyKey();
-  if (!userId || !verifyKey) {
+  if (!allowedIds.size || !verifyKey) {
     const err = new Error("config");
     err.code = "handoff_config";
     throw err;
@@ -98,8 +109,8 @@ async function verifyHandoffToken(handoffJwt) {
   assertExpNotTooFarFuture(payload.exp);
 
   const sub = String(payload.sub);
-  if (sub !== userId) {
-    const err = new Error("sub mismatch");
+  if (!allowedIds.has(sub)) {
+    const err = new Error("sub not allowed");
     err.code = "handoff_claims";
     throw err;
   }
@@ -118,7 +129,7 @@ async function verifyHandoffToken(handoffJwt) {
     throw err;
   }
 
-  const user = await User.findById(userId);
+  const user = await User.findById(sub);
   if (!user) {
     const err = new Error("user missing");
     err.code = "handoff_user";

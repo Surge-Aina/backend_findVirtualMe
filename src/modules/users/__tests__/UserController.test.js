@@ -411,5 +411,24 @@ describe('User Controller Integration Tests', () => {
       expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('token');
     });
+
+    test('should not let signup set isDemo from the request body', async () => {
+      const email = getUniqueEmail();
+      const response = await request(app)
+        .post('/api/auth/signup')
+        .send({
+          name: 'Demo Imposter',
+          username: getUniqueUsername(),
+          email,
+          password: 'SecurePass123',
+          isDemo: true,
+        });
+
+      expect(response.status).toBe(201);
+
+      const saved = await User.findOne({ email });
+      expect(saved).toBeTruthy();
+      expect(saved.isDemo).not.toBe(true);
+    });
   });
 });

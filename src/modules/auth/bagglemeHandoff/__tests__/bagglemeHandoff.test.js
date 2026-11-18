@@ -20,6 +20,7 @@ describe("POST /api/auth/baggleme", () => {
     "BAGGLEME_HANDOFF_ENABLED",
     "BAGGLEME_HANDOFF_PUBLIC_KEY",
     "BAGGLEME_HANDOFF_USER_ID",
+    "BAGGLEME_HANDOFF_USER_IDS",
   ];
 
   function saveEnv() {
@@ -273,10 +274,78 @@ describe("POST /api/auth/baggleme", () => {
       expect(res.body).toEqual({ message: "Invalid handoff" });
     });
 
-    it("rejects sub that does not match pinned user id", async () => {
+    it("rejects sub that is not in the handoff allowlist", async () => {
       const token = await signHandoffToken({
         sub: "507f1f77bcf86cd799439011",
       });
+
+      const res = await request(app)
+        .post("/api/auth/baggleme")
+        .send({ token })
+        .expect(401);
+
+      expect(res.body).toEqual({ message: "Invalid handoff" });
+    });
+
+    it("accepts sub for a demo user listed in BAGGLEME_HANDOFF_USER_IDS", async () => {
+      const password = await bcrypt.hash("synthetic-pass", 4);
+      const demoUser = await User.create({
+        username: `handoff-demo-${Date.now()}`,
+        email: `handoff-demo-${Date.now()}@example.test`,
+        name: "Handoff Demo",
+        password,
+        authProvider: "local",
+        role: "customer",
+        isDemo: true,
+        userKey: `handoff-demo-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,
+        practiceId: `handoff-demo-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,
+      });
+
+      process.env.BAGGLEME_HANDOFF_USER_IDS = [
+        pinnedUser._id.toString(),
+        demoUser._id.toString(),
+      ].join(",");
+
+      const token = await signHandoffToken({ sub: demoUser._id.toString() });
+
+      const res = await request(app)
+        .post("/api/auth/baggleme")
+        .send({ token })
+        .expect(200);
+
+      expect(res.body.user._id.toString()).toBe(demoUser._id.toString());
+      expect(res.body.user.isDemo).toBe(true);
+    });
+
+    it("still allows handoff when only BAGGLEME_HANDOFF_USER_ID is set", async () => {
+      delete process.env.BAGGLEME_HANDOFF_USER_IDS;
+
+      const token = await signHandoffToken();
+
+      const res = await request(app)
+        .post("/api/auth/baggleme")
+        .send({ token })
+        .expect(200);
+
+      expect(res.body.user._id.toString()).toBe(pinnedUser._id.toString());
+    });
+
+    it("rejects sub for a user that is not in BAGGLEME_HANDOFF_USER_IDS", async () => {
+      const password = await bcrypt.hash("synthetic-pass", 4);
+      const outsider = await User.create({
+        username: `handoff-outsider-${Date.now()}`,
+        email: `handoff-outsider-${Date.now()}@example.test`,
+        name: "Outsider",
+        password,
+        authProvider: "local",
+        role: "customer",
+        userKey: `handoff-outsider-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,
+        practiceId: `handoff-outsider-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`,
+      });
+
+      process.env.BAGGLEME_HANDOFF_USER_IDS = pinnedUser._id.toString();
+
+      const token = await signHandoffToken({ sub: outsider._id.toString() });
 
       const res = await request(app)
         .post("/api/auth/baggleme")
