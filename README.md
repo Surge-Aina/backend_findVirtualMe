@@ -84,7 +84,9 @@ Optional one-click admin handoff (disabled unless explicitly enabled):
 
 - `BAGGLEME_HANDOFF_ENABLED` — set to `true` to expose `POST /api/auth/baggleme`; omit or any other value keeps the route hidden (404).
 - `BAGGLEME_HANDOFF_PUBLIC_KEY` — Ed25519 public key (SPKI PEM) used to verify handoff JWTs from the issuer. Multi-line PEM values may use literal `\n` in the env string.
-- `BAGGLEME_HANDOFF_USER_ID` — MongoDB `_id` of the single pinned admin user allowed to sign in via handoff.
+- `BAGGLEME_HANDOFF_USER_ID` — MongoDB `_id` of a pinned user allowed to sign in via handoff (legacy single-user config; merged into the allowlist below).
+- `BAGGLEME_HANDOFF_USER_IDS` — Comma-separated MongoDB `_id` values allowed as JWT `sub` for handoff login. Merged with `BAGGLEME_HANDOFF_USER_ID`.
+- `DEMO_EMAIL` / `DEMO_PASSWORD` — Credentials for `scripts/create-demo-account.js` (demo customer seeding).
 
 User seeding reads `ADMIN_EMAIL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `CUSTOMER_EMAIL`, `CUSTOMER_USERNAME`, and `CUSTOMER_PASSWORD`. The seed fails if any of them are missing.
 

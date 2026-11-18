@@ -150,6 +150,11 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  isDemo: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
 });
 //remove password before sending back to front end
 userSchema.set("toJSON", {
