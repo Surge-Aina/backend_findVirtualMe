@@ -39,6 +39,27 @@ const userSchema = new mongoose.Schema({
   phone: {
     type: String,
   },
+  phoneEnc: {
+    type: String,
+    select: false,
+  },
+  phoneLookupHash: {
+    type: String,
+    unique: true,
+    sparse: true,
+    index: true,
+    select: false,
+  },
+  phoneLast4: {
+    type: String,
+  },
+  phoneVerified: {
+    type: Boolean,
+    default: false,
+  },
+  phoneVerifiedAt: {
+    type: Date,
+  },
   location: {
     type: String,
   },
@@ -159,6 +180,8 @@ userSchema.set("toJSON", {
     delete ret.resetPasswordToken;
     delete ret.resetPasswordExpires;
     delete ret.resetCode;
+    delete ret.phoneEnc;
+    delete ret.phoneLookupHash;
     delete ret.stripeCustomerId;
     delete ret.stripeSubscriptionId;
     delete ret.googleId;

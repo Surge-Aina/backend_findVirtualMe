@@ -86,6 +86,14 @@ Optional one-click admin handoff (disabled unless explicitly enabled):
 - `BAGGLEME_HANDOFF_PUBLIC_KEY` — Ed25519 public key (SPKI PEM) used to verify handoff JWTs from the issuer. Multi-line PEM values may use literal `\n` in the env string.
 - `BAGGLEME_HANDOFF_USER_ID` — MongoDB `_id` of the single pinned admin user allowed to sign in via handoff.
 
+Optional phone OTP sign-in via Twilio Verify (disabled unless explicitly enabled):
+
+- `PHONE_LOGIN_ENABLED` — set to `true` to expose `/api/auth/phone/*` routes; any other value keeps them hidden (404).
+- `PHONE_ENC_KEY` — 32-byte AES key, base64-encoded, for encrypting E.164 phone numbers at rest.
+- `PHONE_HASH_KEY` — 32-byte HMAC key, base64-encoded, for phone lookup hashes. If either key is missing, phone login stays off even when `PHONE_LOGIN_ENABLED` is `true`.
+- `TWILIO_ACCOUNT_SID`, `TWILIO_API_KEY_SID`, `TWILIO_API_KEY_SECRET`, `TWILIO_VERIFY_SERVICE_SID` — Twilio Verify credentials (API key auth).
+- `OTP_DAILY_CAP` — global daily cap for OTP sends across the app (default `200`).
+
 User seeding reads `ADMIN_EMAIL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `CUSTOMER_EMAIL`, `CUSTOMER_USERNAME`, and `CUSTOMER_PASSWORD`. The seed fails if any of them are missing.
 
 The Jest setup forces `NODE_ENV=test` and, only in that mode, fills a synthetic `JWT_SECRET` when one is not already set. That value is not a production secret.
