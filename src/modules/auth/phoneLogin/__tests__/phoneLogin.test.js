@@ -11,7 +11,7 @@ const {
   resetTwilioFactoryForTests,
 } = require("../twilioVerify.service");
 const { resetDailyOtpCountersForTests } = require("../phoneOtpDailyCap");
-const { resetLockoutsForTests } = require("../phoneOtpLockout");
+const { resetLockoutsForTests, lockoutDocId } = require("../phoneOtpLockout");
 const { phoneLookupHash, encryptPhone } = require("../phoneCrypto");
 const { deleteRateBucketsByPrefix } = require("../../../../shared/middleware/rateBucket");
 const { LOGIN_START_MESSAGE } = require("../phoneLogin.service");
@@ -76,6 +76,19 @@ function mockTwilio({ approve = true } = {}) {
 const uniqueKey = () => `key_${Date.now()}_${Math.random()}`;
 const uniquePracticeId = () => `practice_${Date.now()}_${Math.random()}`;
 
+const RATE_LIMITER_PREFIXES = [
+  "phone_otp_send_phone_min",
+  "phone_otp_send_phone_hour",
+  "phone_otp_send_ip_hour",
+  "phone_otp_verify_ip_hour",
+];
+
+async function resetPhoneOtpRateBuckets() {
+  for (const prefix of RATE_LIMITER_PREFIXES) {
+    await deleteRateBucketsByPrefix(prefix);
+  }
+}
+
 describe("phone OTP auth", () => {
   let app;
   let customer;
@@ -89,8 +102,7 @@ describe("phone OTP auth", () => {
 
     await resetDailyOtpCountersForTests();
     await resetLockoutsForTests();
-    await deleteRateBucketsByPrefix("phone_otp_send");
-    await deleteRateBucketsByPrefix("phone_otp_verify");
+    await resetPhoneOtpRateBuckets();
 
     const password = await bcrypt.hash("password123", 4);
     customer = await User.create({
@@ -289,7 +301,7 @@ describe("phone OTP auth", () => {
       const mocks = mockTwilio({ approve: false });
       const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 
-      await Promise.all(
+      const results = await Promise.all(
         Array.from({ length: 30 }, () =>
           request(app)
             .post("/api/auth/phone/login/verify")
@@ -297,9 +309,40 @@ describe("phone OTP auth", () => {
         ),
       );
 
+      expect(results.every((res) => res.status !== 500)).toBe(true);
       expect(mocks.verificationChecksCreate.mock.calls.length).toBeLessThanOrEqual(5);
+      const logs = JSON.stringify(errorSpy.mock.calls);
+      expect(logs).not.toContain(lockoutDocId(phoneLookupHash(TEST_PHONE)));
       errorSpy.mockRestore();
     });
+
+    it("allows send and verify again after the 15-minute lockout expires", async () => {
+      mockTwilio({ approve: false });
+      for (let i = 0; i < 5; i += 1) {
+        await request(app)
+          .post("/api/auth/phone/login/verify")
+          .send({ phone: TEST_PHONE, code: "000000" });
+      }
+
+      await mongoose.connection.db.collection("phone_otp_lockouts").updateOne(
+        { _id: lockoutDocId(phoneLookupHash(TEST_PHONE)) },
+        { $set: { lockedUntil: new Date(Date.now() - 1000), failedAttempts: 0 } },
+      );
+      await resetDailyOtpCountersForTests();
+      await resetPhoneOtpRateBuckets();
+
+      mockTwilio({ approve: true });
+
+      const send = await request(app)
+        .post("/api/auth/phone/login/start")
+        .send({ phone: TEST_PHONE });
+      expect(send.status).toBe(200);
+
+      const verify = await request(app)
+        .post("/api/auth/phone/login/verify")
+        .send({ phone: TEST_PHONE, code: TEST_CODE });
+      expect(verify.status).toBe(201);
+    }, 25000);
 
     async function expectLoginStartMatchesUnknown(knownPhone) {
       const unknown = "+14155558801";
@@ -321,7 +364,7 @@ describe("phone OTP auth", () => {
           .send({ phone: TEST_PHONE, code: "000000" });
       }
       await resetDailyOtpCountersForTests();
-      await deleteRateBucketsByPrefix("phone_otp_send");
+      await resetPhoneOtpRateBuckets();
       await expectLoginStartMatchesUnknown(TEST_PHONE);
     }, 20000);
 
@@ -332,7 +375,7 @@ describe("phone OTP auth", () => {
         .post("/api/auth/phone/start-verify")
         .set("Authorization", `Bearer ${customerToken}`)
         .send({ phone: CUSTOMER_VERIFY_PHONE });
-      await deleteRateBucketsByPrefix("phone_otp_send");
+      await resetPhoneOtpRateBuckets();
       await expectLoginStartMatchesUnknown(TEST_PHONE);
     }, 20000);
 
@@ -349,7 +392,7 @@ describe("phone OTP auth", () => {
           },
         },
       }));
-      await deleteRateBucketsByPrefix("phone_otp_send");
+      await resetPhoneOtpRateBuckets();
       await expectLoginStartMatchesUnknown(TEST_PHONE);
     }, 20000);
 

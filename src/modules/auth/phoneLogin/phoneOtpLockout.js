@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const COLLECTION = "phone_otp_lockouts";
 const MAX_FAILED = 5;
 const LOCKOUT_MS = 15 * 60 * 1000;
+const RECORD_TTL_MS = 60 * 60 * 1000;
 
 async function nativeCollection() {
   const db = mongoose.connection && mongoose.connection.db;
@@ -36,6 +37,10 @@ function notLockedFilter(now = new Date()) {
   };
 }
 
+function isDuplicateKeyError(err) {
+  return Boolean(err && err.code === 11000);
+}
+
 /**
  * Atomically reserves one verification attempt before calling Twilio.
  * At most MAX_FAILED concurrent claims succeed until lockout is applied.
@@ -46,25 +51,45 @@ async function claimVerificationAttempt(phoneHash) {
   const id = lockoutDocId(phoneHash);
   const now = new Date();
 
-  const doc = await col.findOneAndUpdate(
-    {
-      _id: id,
-      failedAttempts: { $lt: MAX_FAILED },
-      ...notLockedFilter(now),
-    },
-    {
-      $inc: { failedAttempts: 1 },
-      $setOnInsert: {
-        expireAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+  try {
+    await col.updateOne(
+      { _id: id },
+      {
+        $setOnInsert: {
+          failedAttempts: 0,
+          expireAt: new Date(Date.now() + RECORD_TTL_MS),
+        },
       },
-    },
-    { upsert: true, returnDocument: "after" },
-  );
-
-  if (!doc) {
-    return { claimed: false };
+      { upsert: true },
+    );
+  } catch (err) {
+    if (isDuplicateKeyError(err)) {
+      return { claimed: false };
+    }
+    throw err;
   }
-  return { claimed: true, failedAttempts: doc.failedAttempts };
+
+  try {
+    const doc = await col.findOneAndUpdate(
+      {
+        _id: id,
+        failedAttempts: { $lt: MAX_FAILED },
+        ...notLockedFilter(now),
+      },
+      { $inc: { failedAttempts: 1 } },
+      { returnDocument: "after" },
+    );
+
+    if (!doc) {
+      return { claimed: false };
+    }
+    return { claimed: true, failedAttempts: doc.failedAttempts };
+  } catch (err) {
+    if (isDuplicateKeyError(err)) {
+      return { claimed: false };
+    }
+    throw err;
+  }
 }
 
 async function applyLockoutIfNeeded(phoneHash) {
@@ -80,7 +105,8 @@ async function applyLockoutIfNeeded(phoneHash) {
     {
       $set: {
         lockedUntil: new Date(now + LOCKOUT_MS),
-        expireAt: new Date(now + 24 * 60 * 60 * 1000),
+        failedAttempts: 0,
+        expireAt: new Date(now + RECORD_TTL_MS),
       },
     },
   );
@@ -102,7 +128,9 @@ async function isVerifyBlockedByLockout(phoneHash) {
   const doc = await col.findOne({ _id: lockoutDocId(phoneHash) });
   if (!doc) return false;
   if (doc.lockedUntil && doc.lockedUntil.getTime() > Date.now()) return true;
-  if (doc.failedAttempts >= MAX_FAILED) return true;
+  if (typeof doc.failedAttempts === "number" && doc.failedAttempts >= MAX_FAILED) {
+    return true;
+  }
   return false;
 }
 
@@ -125,4 +153,5 @@ module.exports = {
   clearLockout,
   resetLockoutsForTests,
   MAX_FAILED,
+  lockoutDocId,
 };

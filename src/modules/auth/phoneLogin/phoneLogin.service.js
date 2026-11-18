@@ -23,6 +23,7 @@ const GENERIC_VERIFY_ERROR = "Unable to verify code";
 const INVALID_INPUT = "Invalid request";
 const LOGIN_START_MESSAGE = "If this number is eligible, a verification code was sent";
 const LOGIN_START_MIN_MS = 700;
+const LOGIN_START_TWILIO_WAIT_MS = 600;
 
 function isValidOtpCode(code) {
   return typeof code === "string" && /^\d{4,10}$/.test(code);
@@ -217,9 +218,7 @@ async function loginStart(rawPhone) {
   const user = await User.findOne({ phoneLookupHash: hash, phoneVerified: true }).select("_id");
 
   if (user) {
-    try {
-      await sendOtp(e164);
-    } catch (err) {
+    const sendWork = sendOtp(e164).catch((err) => {
       const code =
         err && err.code
           ? err.code
@@ -229,7 +228,8 @@ async function loginStart(rawPhone) {
               ? "not_configured"
               : "send_failed";
       console.error("phone_login_start_send_failed", maskPhoneForLog(e164), code);
-    }
+    });
+    await Promise.race([sendWork, sleep(LOGIN_START_TWILIO_WAIT_MS)]);
   }
 
   await applyLoginStartTiming(startedAt);

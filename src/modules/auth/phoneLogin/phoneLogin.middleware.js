@@ -52,7 +52,9 @@ function handleServiceError(res, err) {
   const message =
     status >= 500 ? "Server error" : err.message || "Request failed";
   if (status >= 500) {
-    console.error("phone_login_error", err && err.message ? err.message : "Error");
+    const errName = err && err.name ? String(err.name).replace(/[^A-Za-z0-9_]/g, "") : "Error";
+    const errCode = err && err.code != null ? String(err.code) : "";
+    console.error("phone_login_error", errName, errCode);
   }
   return res.status(status).json({ message });
 }
