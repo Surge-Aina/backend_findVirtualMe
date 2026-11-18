@@ -38,6 +38,15 @@ const sendIpPerHour = createRateLimiter({
 
 const sendRateLimits = [sendPhonePerMinute, sendPhonePerHour, sendIpPerHour];
 
+const verifyIpPerHour = createRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  name: "phone_otp_verify_ip_hour",
+  keyFn: clientIp,
+});
+
+const verifyRateLimits = [verifyIpPerHour];
+
 function handleServiceError(res, err) {
   const status = err && typeof err.status === "number" ? err.status : 500;
   const message =
@@ -51,5 +60,6 @@ function handleServiceError(res, err) {
 module.exports = {
   requirePhoneLoginFeature,
   sendRateLimits,
+  verifyRateLimits,
   handleServiceError,
 };

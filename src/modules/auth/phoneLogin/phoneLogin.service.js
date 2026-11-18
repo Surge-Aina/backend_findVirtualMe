@@ -10,8 +10,10 @@ const {
 const { startVerification, checkVerification } = require("./twilioVerify.service");
 const { consumeGlobalDailyOtpSend } = require("./phoneOtpDailyCap");
 const {
-  getLockoutState,
-  recordFailedVerification,
+  claimVerificationAttempt,
+  applyLockoutIfNeeded,
+  isSendBlockedByLockout,
+  isVerifyBlockedByLockout,
   clearLockout,
 } = require("./phoneOtpLockout");
 const { phoneLoginOperational } = require("./phoneLogin.config");
@@ -19,6 +21,26 @@ const { phoneLoginOperational } = require("./phoneLogin.config");
 const GENERIC_SEND_ERROR = "Unable to send verification code";
 const GENERIC_VERIFY_ERROR = "Unable to verify code";
 const INVALID_INPUT = "Invalid request";
+const LOGIN_START_MESSAGE = "If this number is eligible, a verification code was sent";
+const LOGIN_START_MIN_MS = 700;
+
+function isValidOtpCode(code) {
+  return typeof code === "string" && /^\d{4,10}$/.test(code);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function applyLoginStartTiming(startedAt) {
+  const jitter = Math.floor(Math.random() * 80);
+  const targetMs = LOGIN_START_MIN_MS + jitter;
+  const elapsed = Date.now() - startedAt;
+  const waitMs = targetMs - elapsed;
+  if (waitMs > 0) {
+    await sleep(waitMs);
+  }
+}
 
 async function assertCanSend(e164) {
   const hash = phoneLookupHash(e164);
@@ -27,8 +49,7 @@ async function assertCanSend(e164) {
     err.status = 503;
     throw err;
   }
-  const lockout = await getLockoutState(hash);
-  if (lockout.locked) {
+  if (await isSendBlockedByLockout(hash)) {
     const err = new Error(GENERIC_SEND_ERROR);
     err.status = 429;
     throw err;
@@ -57,7 +78,7 @@ async function sendOtp(e164) {
     wrapped.status = 400;
     throw wrapped;
   }
-  return { message: "If this number is eligible, a verification code was sent" };
+  return { message: LOGIN_START_MESSAGE };
 }
 
 async function verifyOtpCode(e164, code) {
@@ -66,37 +87,40 @@ async function verifyOtpCode(e164, code) {
     err.status = 503;
     throw err;
   }
-  if (!code) {
+  if (!isValidOtpCode(String(code))) {
     const err = new Error(INVALID_INPUT);
     err.status = 400;
     throw err;
   }
   const hash = phoneLookupHash(e164);
-  const lockout = await getLockoutState(hash);
-  if (lockout.locked) {
+  if (await isVerifyBlockedByLockout(hash)) {
     const err = new Error(GENERIC_VERIFY_ERROR);
     err.status = 429;
     throw err;
   }
+
+  const claim = await claimVerificationAttempt(hash);
+  if (!claim.claimed) {
+    const err = new Error(GENERIC_VERIFY_ERROR);
+    err.status = 429;
+    throw err;
+  }
+
   let check;
   try {
     check = await checkVerification(e164, code);
   } catch (err) {
     console.error("phone_otp_check_failed", maskPhoneForLog(e164), err?.code || "Error");
-    await recordFailedVerification(hash);
+    await applyLockoutIfNeeded(hash);
     const wrapped = new Error(GENERIC_VERIFY_ERROR);
-    wrapped.status = 400;
+    wrapped.status = await isSendBlockedByLockout(hash) ? 429 : 400;
     throw wrapped;
   }
   if (!check || check.status !== "approved") {
-    const failure = await recordFailedVerification(hash);
-    if (failure.locked) {
-      const err = new Error(GENERIC_VERIFY_ERROR);
-      err.status = 429;
-      throw err;
-    }
+    await applyLockoutIfNeeded(hash);
+    const locked = await isSendBlockedByLockout(hash);
     const err = new Error(GENERIC_VERIFY_ERROR);
-    err.status = 400;
+    err.status = locked ? 429 : 400;
     throw err;
   }
   await clearLockout(hash);
@@ -124,19 +148,29 @@ async function attachPhoneToUser(userId, e164) {
   }
 
   const now = new Date();
-  const user = await User.findByIdAndUpdate(
-    userId,
-    {
-      $set: {
-        phoneEnc: enc,
-        phoneLookupHash: hash,
-        phoneLast4: phoneLast4(e164),
-        phoneVerified: true,
-        phoneVerifiedAt: now,
+  let user;
+  try {
+    user = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          phoneEnc: enc,
+          phoneLookupHash: hash,
+          phoneLast4: phoneLast4(e164),
+          phoneVerified: true,
+          phoneVerifiedAt: now,
+        },
       },
-    },
-    { new: true, runValidators: true },
-  );
+      { new: true, runValidators: true },
+    );
+  } catch (err) {
+    if (err && err.code === 11000) {
+      const dup = new Error(GENERIC_VERIFY_ERROR);
+      dup.status = 400;
+      throw dup;
+    }
+    throw err;
+  }
   if (!user) {
     const err = new Error("User not found");
     err.status = 404;
@@ -172,6 +206,7 @@ async function confirmVerifyForUser(userId, rawPhone, code) {
 }
 
 async function loginStart(rawPhone) {
+  const startedAt = Date.now();
   const e164 = normalizeE164(rawPhone);
   if (!e164) {
     const err = new Error(INVALID_INPUT);
@@ -180,11 +215,25 @@ async function loginStart(rawPhone) {
   }
   const hash = phoneLookupHash(e164);
   const user = await User.findOne({ phoneLookupHash: hash, phoneVerified: true }).select("_id");
-  if (!user) {
-    return { message: "If this number is eligible, a verification code was sent" };
+
+  if (user) {
+    try {
+      await sendOtp(e164);
+    } catch (err) {
+      const code =
+        err && err.code
+          ? err.code
+          : err && err.status === 429
+            ? "rate_limited"
+            : err && err.status === 503
+              ? "not_configured"
+              : "send_failed";
+      console.error("phone_login_start_send_failed", maskPhoneForLog(e164), code);
+    }
   }
-  await sendOtp(e164);
-  return { message: "If this number is eligible, a verification code was sent" };
+
+  await applyLoginStartTiming(startedAt);
+  return { message: LOGIN_START_MESSAGE };
 }
 
 async function loginVerify(rawPhone, code) {
@@ -202,8 +251,7 @@ async function loginVerify(rawPhone, code) {
     err.status = 400;
     throw err;
   }
-  user.lastLogin = new Date();
-  await user.save();
+  await User.updateOne({ _id: user._id }, { $set: { lastLogin: new Date() } });
   return buildLoginSuccessPayload(user);
 }
 
@@ -229,4 +277,5 @@ module.exports = {
   sendOtp,
   verifyOtpCode,
   normalizeE164,
+  LOGIN_START_MESSAGE,
 };

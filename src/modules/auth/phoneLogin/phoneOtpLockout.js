@@ -26,34 +26,84 @@ function lockoutDocId(phoneHash) {
   return `ph:${phoneHash}`;
 }
 
-async function getLockoutState(phoneHash) {
-  const col = await nativeCollection();
-  const doc = await col.findOne({ _id: lockoutDocId(phoneHash) });
-  if (!doc) return { locked: false, failedAttempts: 0 };
-  if (doc.lockedUntil && doc.lockedUntil.getTime() > Date.now()) {
-    return { locked: true, failedAttempts: doc.failedAttempts || 0 };
-  }
-  return { locked: false, failedAttempts: doc.failedAttempts || 0 };
+function notLockedFilter(now = new Date()) {
+  return {
+    $or: [
+      { lockedUntil: { $exists: false } },
+      { lockedUntil: null },
+      { lockedUntil: { $lte: now } },
+    ],
+  };
 }
 
-async function recordFailedVerification(phoneHash) {
+/**
+ * Atomically reserves one verification attempt before calling Twilio.
+ * At most MAX_FAILED concurrent claims succeed until lockout is applied.
+ */
+async function claimVerificationAttempt(phoneHash) {
   const col = await nativeCollection();
   await ensureIndex(col);
   const id = lockoutDocId(phoneHash);
-  const now = Date.now();
-  const doc = await col.findOne({ _id: id });
-  const previous = (doc && doc.failedAttempts) || 0;
-  const failedAttempts = previous + 1;
-  const update = {
-    failedAttempts,
-    expireAt: new Date(now + 24 * 60 * 60 * 1000),
-  };
-  if (failedAttempts >= MAX_FAILED) {
-    update.lockedUntil = new Date(now + LOCKOUT_MS);
-    update.failedAttempts = 0;
+  const now = new Date();
+
+  const doc = await col.findOneAndUpdate(
+    {
+      _id: id,
+      failedAttempts: { $lt: MAX_FAILED },
+      ...notLockedFilter(now),
+    },
+    {
+      $inc: { failedAttempts: 1 },
+      $setOnInsert: {
+        expireAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+    },
+    { upsert: true, returnDocument: "after" },
+  );
+
+  if (!doc) {
+    return { claimed: false };
   }
-  await col.updateOne({ _id: id }, { $set: update }, { upsert: true });
-  return update.lockedUntil ? { locked: true } : { locked: false, failedAttempts };
+  return { claimed: true, failedAttempts: doc.failedAttempts };
+}
+
+async function applyLockoutIfNeeded(phoneHash) {
+  const col = await nativeCollection();
+  const id = lockoutDocId(phoneHash);
+  const now = Date.now();
+  await col.updateOne(
+    {
+      _id: id,
+      failedAttempts: { $gte: MAX_FAILED },
+      ...notLockedFilter(new Date(now)),
+    },
+    {
+      $set: {
+        lockedUntil: new Date(now + LOCKOUT_MS),
+        expireAt: new Date(now + 24 * 60 * 60 * 1000),
+      },
+    },
+  );
+}
+
+async function isSendBlockedByLockout(phoneHash) {
+  const col = await nativeCollection();
+  const doc = await col.findOne({ _id: lockoutDocId(phoneHash) });
+  if (!doc) return false;
+  if (doc.lockedUntil && doc.lockedUntil.getTime() > Date.now()) return true;
+  if (typeof doc.failedAttempts === "number" && doc.failedAttempts >= MAX_FAILED) {
+    return true;
+  }
+  return false;
+}
+
+async function isVerifyBlockedByLockout(phoneHash) {
+  const col = await nativeCollection();
+  const doc = await col.findOne({ _id: lockoutDocId(phoneHash) });
+  if (!doc) return false;
+  if (doc.lockedUntil && doc.lockedUntil.getTime() > Date.now()) return true;
+  if (doc.failedAttempts >= MAX_FAILED) return true;
+  return false;
 }
 
 async function clearLockout(phoneHash) {
@@ -68,8 +118,10 @@ async function resetLockoutsForTests() {
 }
 
 module.exports = {
-  getLockoutState,
-  recordFailedVerification,
+  claimVerificationAttempt,
+  applyLockoutIfNeeded,
+  isSendBlockedByLockout,
+  isVerifyBlockedByLockout,
   clearLockout,
   resetLockoutsForTests,
   MAX_FAILED,

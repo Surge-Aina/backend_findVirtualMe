@@ -14,6 +14,7 @@ const { resetDailyOtpCountersForTests } = require("../phoneOtpDailyCap");
 const { resetLockoutsForTests } = require("../phoneOtpLockout");
 const { phoneLookupHash, encryptPhone } = require("../phoneCrypto");
 const { deleteRateBucketsByPrefix } = require("../../../../shared/middleware/rateBucket");
+const { LOGIN_START_MESSAGE } = require("../phoneLogin.service");
 
 const TEST_PHONE = "+14155552671";
 const CUSTOMER_VERIFY_PHONE = "+14155558989";
@@ -89,6 +90,7 @@ describe("phone OTP auth", () => {
     await resetDailyOtpCountersForTests();
     await resetLockoutsForTests();
     await deleteRateBucketsByPrefix("phone_otp_send");
+    await deleteRateBucketsByPrefix("phone_otp_verify");
 
     const password = await bcrypt.hash("password123", 4);
     customer = await User.create({
@@ -216,6 +218,7 @@ describe("phone OTP auth", () => {
         .send({ phone: TEST_PHONE });
 
       expect(start.status).toBe(200);
+      expect(start.body).toEqual({ message: LOGIN_START_MESSAGE });
 
       const verify = await request(app)
         .post("/api/auth/phone/login/verify")
@@ -238,8 +241,9 @@ describe("phone OTP auth", () => {
         .send({ phone: unknown });
 
       expect(res.status).toBe(200);
+      expect(res.body).toEqual({ message: LOGIN_START_MESSAGE });
       expect(mocks.verificationsCreate).not.toHaveBeenCalled();
-    });
+    }, 20000);
 
     it("enforces the global daily OTP cap", async () => {
       process.env.OTP_DAILY_CAP = "1";
@@ -281,6 +285,74 @@ describe("phone OTP auth", () => {
       errorSpy.mockRestore();
     });
 
+    it("allows at most five Twilio verification checks under parallel bad codes", async () => {
+      const mocks = mockTwilio({ approve: false });
+      const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+      await Promise.all(
+        Array.from({ length: 30 }, () =>
+          request(app)
+            .post("/api/auth/phone/login/verify")
+            .send({ phone: TEST_PHONE, code: "000000" }),
+        ),
+      );
+
+      expect(mocks.verificationChecksCreate.mock.calls.length).toBeLessThanOrEqual(5);
+      errorSpy.mockRestore();
+    });
+
+    async function expectLoginStartMatchesUnknown(knownPhone) {
+      const unknown = "+14155558801";
+      const [knownRes, unknownRes] = await Promise.all([
+        request(app).post("/api/auth/phone/login/start").send({ phone: knownPhone }),
+        request(app).post("/api/auth/phone/login/start").send({ phone: unknown }),
+      ]);
+      expect(knownRes.status).toBe(200);
+      expect(unknownRes.status).toBe(200);
+      expect(knownRes.body).toEqual(unknownRes.body);
+      expect(knownRes.body).toEqual({ message: LOGIN_START_MESSAGE });
+    }
+
+    it("login/start returns identical responses when the phone is locked", async () => {
+      mockTwilio({ approve: false });
+      for (let i = 0; i < 5; i += 1) {
+        await request(app)
+          .post("/api/auth/phone/login/verify")
+          .send({ phone: TEST_PHONE, code: "000000" });
+      }
+      await resetDailyOtpCountersForTests();
+      await deleteRateBucketsByPrefix("phone_otp_send");
+      await expectLoginStartMatchesUnknown(TEST_PHONE);
+    }, 20000);
+
+    it("login/start returns identical responses when the daily cap is exceeded", async () => {
+      process.env.OTP_DAILY_CAP = "1";
+      mockTwilio();
+      await request(app)
+        .post("/api/auth/phone/start-verify")
+        .set("Authorization", `Bearer ${customerToken}`)
+        .send({ phone: CUSTOMER_VERIFY_PHONE });
+      await deleteRateBucketsByPrefix("phone_otp_send");
+      await expectLoginStartMatchesUnknown(TEST_PHONE);
+    }, 20000);
+
+    it("login/start returns identical responses when Twilio send fails", async () => {
+      setTwilioFactoryForTests(() => ({
+        verify: {
+          v2: {
+            services: () => ({
+              verifications: {
+                create: jest.fn().mockRejectedValue(Object.assign(new Error("fail"), { code: 500 })),
+              },
+              verificationChecks: { create: jest.fn() },
+            }),
+          },
+        },
+      }));
+      await deleteRateBucketsByPrefix("phone_otp_send");
+      await expectLoginStartMatchesUnknown(TEST_PHONE);
+    }, 20000);
+
     it("rate limits rapid resends for the same phone", async () => {
       mockTwilio();
 
@@ -293,7 +365,7 @@ describe("phone OTP auth", () => {
         .post("/api/auth/phone/login/start")
         .send({ phone: TEST_PHONE });
       expect(second.status).toBe(429);
-    });
+    }, 20000);
 
     it("does not log OTP codes or full phone numbers on send failure", async () => {
       const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});

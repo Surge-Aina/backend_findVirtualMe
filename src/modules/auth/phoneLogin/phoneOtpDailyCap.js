@@ -41,13 +41,12 @@ async function consumeGlobalDailyOtpSend() {
   await ensureIndex(col);
   const expireAt = expireAtForDay(dayKey);
 
-  await col.updateOne(
+  const doc = await col.findOneAndUpdate(
     { _id: dayKey },
     { $inc: { count: 1 }, $setOnInsert: { expireAt } },
-    { upsert: true },
+    { upsert: true, returnDocument: "after" },
   );
 
-  const doc = await col.findOne({ _id: dayKey });
   const count = doc && typeof doc.count === "number" ? doc.count : 0;
   return { allowed: count <= cap, count, cap };
 }
