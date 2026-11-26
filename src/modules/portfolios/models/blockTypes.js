@@ -150,6 +150,26 @@ const BLOCK_TYPES = {
       "Inline login/signup widget for portfolio sub-users; links to the My Account dashboard",
     templates: ["healthcare"],
   },
+
+  socialLinks: {
+    label: "Social Links",
+    description:
+      "Social profile links resolved from the site's SocialLinks document or portfolio.socialLinks (visibility toggles only in section data)",
+    templates: ["healthcare", "handyman", "projectManager", "dataScientist", "agent"],
+  },
+
+  qrCode: {
+    label: "QR Code",
+    description: "QR code block with target URL/path, size, and caption (http(s) targets validated like the qr-code module)",
+    templates: ["healthcare", "handyman", "projectManager", "dataScientist", "agent"],
+  },
+
+  voucherOffer: {
+    label: "Voucher / Offer",
+    description:
+      "Marketing block referencing an owner UserVoucher by id; never stores voucher codes or redemption stats",
+    templates: ["healthcare", "handyman", "projectManager", "dataScientist", "agent"],
+  },
 };
 
 for (const meta of Object.values(BLOCK_TYPES)) {

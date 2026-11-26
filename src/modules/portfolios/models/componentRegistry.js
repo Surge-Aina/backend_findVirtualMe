@@ -28,6 +28,9 @@ const LEGACY_TYPE_ALIASES = Object.freeze({
   services: "Services",
   testimonials: "Testimonials",
   businessHours: "BusinessHours",
+  socialLinks: "SocialLinks",
+  qrCode: "QrCode",
+  voucherOffer: "VoucherOffer",
 });
 
 const ROOT_CONFIG = Object.freeze({
@@ -185,6 +188,116 @@ const PUCK_COMPONENTS = Object.freeze({
     },
     metadata: {
       blockType: "testimonials",
+    },
+  },
+  SocialLinks: {
+    label: "Social links",
+    fields: {
+      title: { type: "text", label: "Title", maxLength: 120 },
+      platforms: {
+        type: "object",
+        label: "Platforms to show",
+        objectFields: {
+          github: {
+            type: "radio",
+            label: "GitHub",
+            options: [
+              { label: "Show", value: true },
+              { label: "Hide", value: false },
+            ],
+          },
+          twitter: {
+            type: "radio",
+            label: "Twitter / X",
+            options: [
+              { label: "Show", value: true },
+              { label: "Hide", value: false },
+            ],
+          },
+          linkedin: {
+            type: "radio",
+            label: "LinkedIn",
+            options: [
+              { label: "Show", value: true },
+              { label: "Hide", value: false },
+            ],
+          },
+          instagram: {
+            type: "radio",
+            label: "Instagram",
+            options: [
+              { label: "Show", value: true },
+              { label: "Hide", value: false },
+            ],
+          },
+          website: {
+            type: "radio",
+            label: "Website",
+            options: [
+              { label: "Show", value: true },
+              { label: "Hide", value: false },
+            ],
+          },
+        },
+      },
+    },
+    defaultProps: {
+      title: "Connect",
+      platforms: {
+        github: true,
+        twitter: true,
+        linkedin: true,
+        instagram: false,
+        website: true,
+      },
+    },
+    metadata: {
+      blockType: "socialLinks",
+      linkSource: "GET /api/social-links/:portfolioId and portfolio.socialLinks fallback",
+    },
+  },
+  QrCode: {
+    label: "QR code",
+    fields: {
+      title: { type: "text", label: "Title", maxLength: 120 },
+      target: {
+        type: "text",
+        label: "Target (site default, same-site path, or https URL)",
+        maxLength: 2048,
+      },
+      size: { type: "number", label: "Size (px)", min: 64, max: 512 },
+      caption: { type: "textarea", label: "Caption", maxLength: 500 },
+    },
+    defaultProps: {
+      title: "Scan to visit",
+      target: "",
+      size: 160,
+      caption: "",
+    },
+    metadata: {
+      blockType: "qrCode",
+      targetDefault: "published site URL when target is empty",
+    },
+  },
+  VoucherOffer: {
+    label: "Voucher / offer",
+    fields: {
+      title: { type: "text", label: "Title", maxLength: 120 },
+      voucherId: { type: "text", label: "User voucher id (site owner)", maxLength: 24 },
+      description: { type: "textarea", label: "Description", maxLength: 2000 },
+      cta: { type: "text", label: "Call to action label", maxLength: 80 },
+      ctaUrl: { type: "text", label: "CTA URL (https)", maxLength: 2048 },
+    },
+    defaultProps: {
+      title: "Special offer",
+      voucherId: "",
+      description: "",
+      cta: "Learn more",
+      ctaUrl: "",
+    },
+    metadata: {
+      blockType: "voucherOffer",
+      voucherRef: "UserVoucher._id for portfolio owner; codes are never stored in section.data",
     },
   },
   BusinessHours: {

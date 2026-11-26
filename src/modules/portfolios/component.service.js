@@ -11,6 +11,7 @@ const {
   normalizePuckType,
 } = require("./models/componentRegistry");
 const { validateComponentProps, ComponentConfigError } = require("./models/componentSchemas");
+const { assertWritableComponentRefs } = require("./models/componentRefValidation");
 const {
   buildOwnerComponentsPayload,
   sectionToComponentData,
@@ -227,6 +228,7 @@ async function addComponent(ctx, input) {
   assertUnifiedSiteTemplate(listing.template);
 
   const validated = validateComponentProps(type, props);
+  await assertWritableComponentRefs(type, validated, { ownerId: ctx.ownerId });
   const legacyData = puckPropsToSectionData(type, validated, listing.template, {});
   const blockType = blockTypeForComponent(type);
   const order = input.order;
@@ -309,6 +311,7 @@ async function updateComponent(ctx, { sectionId, props, config }) {
     ...puckProps,
     id: String(sectionId),
   });
+  await assertWritableComponentRefs(puckType, validated, { ownerId: ctx.ownerId });
   const legacyData = puckPropsToSectionData(puckType, validated, listing.template, existingData);
   const updatedDraft = await portfolioDraftService.updateDraftSection(ctx.siteId, sectionId, legacyData);
   if (!updatedDraft) {

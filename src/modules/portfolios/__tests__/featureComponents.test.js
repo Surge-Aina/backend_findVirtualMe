@@ -10,6 +10,10 @@ const { mountPublicApi } = require("../../public-api/mount");
 const { mountMcp } = require("../../public-api/mcp");
 const contactRoutes = require("../../contact/contactMeForm.routes");
 
+const { Voucher } = require("../../vouchers/voucher.model");
+const { UserVoucher } = require("../../vouchers/userVoucher.model");
+const { socialLinksService } = require("../../social-links/socialLinks.service.js");
+
 const TEST_USER_ID = "507f1f77bcf86cd799439011";
 const OTHER_USER_ID = "507f1f77bcf86cd799439012";
 
@@ -404,6 +408,177 @@ describe("Feature components (Puck registry)", () => {
       expect(contact.data.phone).toBe("555-0199");
       expect(contact.data.headline).toBe("Updated headline");
       expect(contact.data.submitText).toBeTruthy();
+    });
+
+    it("lists slice-2 components in Puck config", async () => {
+      const site = await createOwnerPortfolio();
+      const res = await request(ownerApp).get(`/api/portfolios/components?siteId=${site._id}`);
+      expect(res.status).toBe(200);
+      expect(res.body.config.components.SocialLinks).toBeTruthy();
+      expect(res.body.config.components.QrCode).toBeTruthy();
+      expect(res.body.config.components.VoucherOffer).toBeTruthy();
+    });
+
+    it("persists SocialLinks visibility without URLs", async () => {
+      const site = await createOwnerPortfolio();
+      await socialLinksService.updateLinks(site._id, {
+        github: "https://github.com/example",
+        linkedin: "https://linkedin.com/in/example",
+      });
+
+      const writeKey = await issueWriteKey();
+      const added = await request(publicApp)
+        .post(`/api/public/v1/sites/${site._id}/components`)
+        .set("Authorization", `Bearer ${writeKey.secret}`)
+        .send({
+          type: "SocialLinks",
+          props: {
+            title: "Find us",
+            platforms: { github: true, twitter: false, linkedin: true, instagram: false, website: false },
+          },
+        });
+      expect(added.status).toBe(201);
+      expect(added.body.data.section.blockType).toBe("socialLinks");
+
+      const rejectUrls = await request(publicApp)
+        .post(`/api/public/v1/sites/${site._id}/components`)
+        .set("Authorization", `Bearer ${writeKey.secret}`)
+        .send({
+          type: "SocialLinks",
+          props: {
+            title: "Bad",
+            platforms: { github: "https://evil.example" },
+          },
+        });
+      expect(rejectUrls.status).toBe(400);
+
+      const draft = await PortfolioDraft.findOne({ portfolioId: site._id }).lean();
+      const block = draft.sections.find((s) => s.type === "socialLinks");
+      expect(block.data.platforms.github).toBe(true);
+      expect(block.data.github).toBeUndefined();
+      expect(block.data.links).toBeUndefined();
+    });
+
+    it("validates QrCode targets and keeps draft-only", async () => {
+      const site = await createOwnerPortfolio();
+      const writeKey = await issueWriteKey();
+      const readKey = await createKey({
+        userId: TEST_USER_ID,
+        scopes: ["sites:read"],
+        name: "Read",
+      });
+
+      const bad = await request(publicApp)
+        .post(`/api/public/v1/sites/${site._id}/components`)
+        .set("Authorization", `Bearer ${writeKey.secret}`)
+        .send({ type: "QrCode", props: { title: "X", target: "ftp://bad.example" } });
+      expect(bad.status).toBe(400);
+
+      const ok = await request(publicApp)
+        .post(`/api/public/v1/sites/${site._id}/components`)
+        .set("Authorization", `Bearer ${writeKey.secret}`)
+        .send({
+          type: "QrCode",
+          props: { title: "Visit", target: "/welcome", size: 180, caption: "Scan" },
+        });
+      expect(ok.status).toBe(201);
+
+      const publicListed = await request(publicApp)
+        .get(`/api/public/v1/sites/${site._id}/components`)
+        .set("Authorization", `Bearer ${readKey.secret}`);
+      expect(publicListed.body.data.data.content.some((c) => c.type === "QrCode")).toBe(false);
+    });
+
+    it("denies cross-tenant VoucherOffer references", async () => {
+      const site = await createOwnerPortfolio();
+      const writeKey = await issueWriteKey();
+
+      const voucherDef = await Voucher.create({
+        name: "Slice2 promo",
+        type: "discount",
+        discountPercentage: 10,
+      });
+
+      const otherUserVoucher = await UserVoucher.create({
+        userId: OTHER_USER_ID,
+        voucherId: voucherDef._id,
+        status: "active",
+      });
+
+      const cross = await request(publicApp)
+        .post(`/api/public/v1/sites/${site._id}/components`)
+        .set("Authorization", `Bearer ${writeKey.secret}`)
+        .send({
+          type: "VoucherOffer",
+          props: {
+            title: "Steal",
+            voucherId: String(otherUserVoucher._id),
+            description: "Nope",
+            cta: "Go",
+          },
+        });
+      expect(cross.status).toBe(404);
+      expect(cross.body.error.code).toBe("not_found");
+    });
+
+    it("adds owner VoucherOffer without exposing voucher codes", async () => {
+      const site = await createOwnerPortfolio();
+      const writeKey = await issueWriteKey();
+
+      const voucherDef = await Voucher.create({
+        name: "Owner promo",
+        type: "discount",
+        code: "SECRET-CODE",
+        discountAmount: 5,
+      });
+
+      const ownerVoucher = await UserVoucher.create({
+        userId: TEST_USER_ID,
+        voucherId: voucherDef._id,
+        status: "active",
+      });
+
+      const added = await request(publicApp)
+        .post(`/api/public/v1/sites/${site._id}/components`)
+        .set("Authorization", `Bearer ${writeKey.secret}`)
+        .send({
+          type: "VoucherOffer",
+          props: {
+            title: "Welcome",
+            voucherId: String(ownerVoucher._id),
+            description: "Thanks for visiting",
+            cta: "Redeem",
+          },
+        });
+      expect(added.status).toBe(201);
+      const props = added.body.data.section.props;
+      expect(props.voucherId).toBe(String(ownerVoucher._id));
+      expect(JSON.stringify(props)).not.toContain("SECRET-CODE");
+
+      const draft = await PortfolioDraft.findOne({ portfolioId: site._id }).lean();
+      const block = draft.sections.find((s) => s.type === "voucherOffer");
+      expect(block.data.userVoucherId).toBe(String(ownerVoucher._id));
+      expect(block.data.code).toBeUndefined();
+    });
+
+    it("rejects OTHER_USER site writes as not_found", async () => {
+      const otherSite = await Portfolio.create({
+        owner: OTHER_USER_ID,
+        template: "healthcare",
+        title: "Other",
+        visibility: "public",
+        slug: `other-${nonce()}`,
+        sections: [],
+      });
+      const writeKey = await issueWriteKey();
+      const res = await request(publicApp)
+        .post(`/api/public/v1/sites/${otherSite._id}/components`)
+        .set("Authorization", `Bearer ${writeKey.secret}`)
+        .send({
+          type: "QrCode",
+          props: { title: "X", target: "https://example.test/x" },
+        });
+      expect(res.status).toBe(404);
     });
 
     it("routes contact form submission through leads pipeline", async () => {

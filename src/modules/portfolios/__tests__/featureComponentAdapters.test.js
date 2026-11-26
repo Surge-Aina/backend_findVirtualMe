@@ -111,6 +111,66 @@ describe("featureComponentAdapters", () => {
     });
   });
 
+  describe("SocialLinks", () => {
+    const puck = {
+      title: "Follow us",
+      platforms: { github: true, twitter: false, linkedin: true, instagram: false, website: true },
+    };
+
+    it("round-trips without persisting URLs", () => {
+      const legacy = puckPropsToSectionData("SocialLinks", puck, "healthcare", {
+        github: "https://github.com/secret",
+      });
+      expect(legacy.github).toBeUndefined();
+      expect(legacy.sectionTitle).toBe("Follow us");
+      expect(legacy.platforms.github).toBe(true);
+      expect(legacy.linkSource).toBe("socialLinksModule");
+      expect(sectionDataToPuckProps("SocialLinks", legacy)).toEqual(puck);
+    });
+  });
+
+  describe("QrCode", () => {
+    const puck = {
+      title: "Open menu",
+      target: "/menu",
+      size: 200,
+      caption: "Scan here",
+    };
+
+    it("round-trips path targets", () => {
+      const legacy = puckPropsToSectionData("QrCode", puck, "healthcare", {});
+      expect(legacy).toMatchObject({
+        sectionTitle: "Open menu",
+        target: "/menu",
+        size: 200,
+        caption: "Scan here",
+      });
+      expect(sectionDataToPuckProps("QrCode", legacy)).toEqual(puck);
+    });
+  });
+
+  describe("VoucherOffer", () => {
+    const puck = {
+      title: "Save today",
+      voucherId: "507f1f77bcf86cd799439099",
+      description: "Limited time",
+      cta: "Claim",
+      ctaUrl: "https://example.test/offer",
+    };
+
+    it("stores userVoucherId only", () => {
+      const legacy = puckPropsToSectionData("VoucherOffer", puck, "healthcare", {
+        code: "SECRET",
+        redemptionCount: 9,
+      });
+      expect(legacy.userVoucherId).toBe(puck.voucherId);
+      expect(legacy.voucherId).toBeUndefined();
+      expect(legacy.code).toBeUndefined();
+      expect(legacy.redemptionCount).toBeUndefined();
+      expect(sectionDataToPuckProps("VoucherOffer", legacy)).toEqual(puck);
+    });
+  });
+
   describe("ContactLeadForm", () => {
     const puck = {
       headline: "Contact our clinic",

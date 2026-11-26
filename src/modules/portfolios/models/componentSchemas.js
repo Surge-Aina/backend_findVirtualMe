@@ -56,6 +56,48 @@ function validateHttpUrlString(value, path) {
   }
 }
 
+const SAME_SITE_PATH = /^\/[a-zA-Z0-9/_.~-]*$/;
+
+function validateQrCodeTarget(value, path) {
+  if (value === undefined || value === null || value === "") return;
+  if (typeof value !== "string") {
+    throw new ComponentConfigError(`${path} must be a string`, {
+      code: "invalid_component_config",
+      details: { field: path },
+    });
+  }
+  const trimmed = value.trim();
+  if (!trimmed) return;
+  if (trimmed.startsWith("/")) {
+    if (trimmed.length > 512 || !SAME_SITE_PATH.test(trimmed)) {
+      throw new ComponentConfigError(`${path} must be a valid same-site path`, {
+        code: "invalid_component_config",
+        details: { field: path },
+      });
+    }
+    return;
+  }
+  validateHttpUrlString(trimmed, path);
+}
+
+function validateObjectIdProp(value, path, { required = false } = {}) {
+  if (value === undefined || value === null || value === "") {
+    if (required) {
+      throw new ComponentConfigError(`${path} is required`, {
+        code: "invalid_component_config",
+        details: { field: path },
+      });
+    }
+    return;
+  }
+  if (typeof value !== "string" || !/^[a-fA-F0-9]{24}$/.test(value)) {
+    throw new ComponentConfigError(`${path} must be a valid id`, {
+      code: "invalid_component_config",
+      details: { field: path },
+    });
+  }
+}
+
 function validateTextValue(value, field, path, { required = false, httpUrl = false } = {}) {
   if (value === undefined || value === null) {
     if (required) {
@@ -291,6 +333,29 @@ function validateComponentProps(typeOrLegacyId, props) {
 
   for (const [key, field] of Object.entries(entry.fields)) {
     validateFieldValue(field, merged[key], key);
+  }
+
+  if (type === "QrCode") {
+    validateQrCodeTarget(merged.target, "target");
+  }
+  if (type === "VoucherOffer") {
+    validateObjectIdProp(merged.voucherId, "voucherId", { required: true });
+    if (merged.ctaUrl) {
+      validateTextValue(merged.ctaUrl, { maxLength: 2048 }, "ctaUrl", { httpUrl: true });
+    }
+  }
+  if (type === "SocialLinks") {
+    const platforms = merged.platforms;
+    if (platforms && typeof platforms === "object" && !Array.isArray(platforms)) {
+      for (const key of Object.keys(platforms)) {
+        if (key === "__proto__" || key === "constructor") {
+          throw new ComponentConfigError(`Invalid prop at platforms.${key}`, {
+            code: "invalid_component_config",
+            details: { field: `platforms.${key}` },
+          });
+        }
+      }
+    }
   }
 
   const stripped = stripPropsAgainstFields(entry.fields, merged);

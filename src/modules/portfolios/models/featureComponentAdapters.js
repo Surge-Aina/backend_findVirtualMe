@@ -316,6 +316,110 @@ function hoursPuckToSection(puckProps = {}, existing = {}) {
   return next;
 }
 
+const SOCIAL_PLATFORM_KEYS = ["github", "twitter", "linkedin", "instagram", "website"];
+
+const DEFAULT_SOCIAL_PLATFORMS = Object.freeze({
+  github: true,
+  twitter: true,
+  linkedin: true,
+  instagram: false,
+  website: true,
+});
+
+function stripSocialUrlFields(obj = {}) {
+  const out = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (SOCIAL_PLATFORM_KEYS.includes(key) && typeof value === "string") continue;
+    if (key === "links" && typeof value === "object") continue;
+    out[key] = value;
+  }
+  return out;
+}
+
+function normalizePlatformFlags(platforms = {}) {
+  const out = { ...DEFAULT_SOCIAL_PLATFORMS };
+  for (const key of SOCIAL_PLATFORM_KEYS) {
+    if (platforms[key] === true || platforms[key] === false) {
+      out[key] = platforms[key];
+    }
+  }
+  return out;
+}
+
+function socialLinksSectionToPuck(sectionData = {}) {
+  const title = sectionData.sectionTitle || sectionData.title || "Connect";
+  const platforms = normalizePlatformFlags(sectionData.platforms || sectionData.showPlatforms || {});
+  return { title, platforms };
+}
+
+function socialLinksPuckToSection(puckProps = {}, existing = {}) {
+  const title = puckProps.title || existing.sectionTitle || "Connect";
+  const merged = {
+    ...preserveEditorMeta(existing),
+    ...stripSocialUrlFields(existing),
+    sectionTitle: title,
+    platforms: normalizePlatformFlags(puckProps.platforms),
+    linkSource: "socialLinksModule",
+  };
+  delete merged.title;
+  delete merged.showPlatforms;
+  delete merged.links;
+  for (const key of SOCIAL_PLATFORM_KEYS) {
+    delete merged[key];
+  }
+  return merged;
+}
+
+function qrCodeSectionToPuck(sectionData = {}) {
+  return {
+    title: sectionData.sectionTitle || sectionData.title || "Scan to visit",
+    target: sectionData.target || "",
+    size: sectionData.size ?? 160,
+    caption: sectionData.caption || "",
+  };
+}
+
+function qrCodePuckToSection(puckProps = {}, existing = {}) {
+  const merged = {
+    ...preserveEditorMeta(existing),
+    ...existing,
+    sectionTitle: puckProps.title || existing.sectionTitle || "Scan to visit",
+    target: puckProps.target ?? existing.target ?? "",
+    size: puckProps.size ?? existing.size ?? 160,
+    caption: puckProps.caption || existing.caption || "",
+  };
+  delete merged.title;
+  return merged;
+}
+
+function voucherOfferSectionToPuck(sectionData = {}) {
+  return {
+    title: sectionData.sectionTitle || sectionData.title || "Special offer",
+    voucherId: sectionData.userVoucherId || sectionData.voucherId || "",
+    description: sectionData.description || "",
+    cta: sectionData.cta || sectionData.ctaLabel || "Learn more",
+    ctaUrl: sectionData.ctaUrl || "",
+  };
+}
+
+function voucherOfferPuckToSection(puckProps = {}, existing = {}) {
+  const voucherId = puckProps.voucherId || existing.userVoucherId || existing.voucherId || "";
+  const merged = {
+    ...preserveEditorMeta(existing),
+    ...existing,
+    sectionTitle: puckProps.title || existing.sectionTitle || "Special offer",
+    userVoucherId: voucherId,
+    description: puckProps.description || "",
+    cta: puckProps.cta || "Learn more",
+    ctaUrl: puckProps.ctaUrl || "",
+  };
+  delete merged.title;
+  delete merged.voucherId;
+  delete merged.code;
+  delete merged.redemptionCount;
+  return merged;
+}
+
 const ADAPTERS = {
   ContactLeadForm: {
     toPuck: contactSectionToPuck,
@@ -336,6 +440,18 @@ const ADAPTERS = {
   BusinessHours: {
     toPuck: hoursSectionToPuck,
     toSection: hoursPuckToSection,
+  },
+  SocialLinks: {
+    toPuck: socialLinksSectionToPuck,
+    toSection: socialLinksPuckToSection,
+  },
+  QrCode: {
+    toPuck: qrCodeSectionToPuck,
+    toSection: qrCodePuckToSection,
+  },
+  VoucherOffer: {
+    toPuck: voucherOfferSectionToPuck,
+    toSection: voucherOfferPuckToSection,
   },
 };
 
@@ -368,4 +484,10 @@ module.exports = {
   testimonialsPuckToSection,
   hoursSectionToPuck,
   hoursPuckToSection,
+  socialLinksSectionToPuck,
+  socialLinksPuckToSection,
+  qrCodeSectionToPuck,
+  qrCodePuckToSection,
+  voucherOfferSectionToPuck,
+  voucherOfferPuckToSection,
 };
