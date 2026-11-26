@@ -1,41 +1,29 @@
+const mongoose = require("mongoose");
 const Portfolio = require("../portfolios/models/Portfolio");
 const ContactMeForm = require("../contact/contactMeForm.model");
-const portfolioService = require("../portfolios/portfolio.service");
 const User = require("../../shared/models/User");
 const { notifyLeadCaptured, notifyFormSubmitted } = require("../public-api/lifecycleEvents");
 const { consentContactFromBody } = require("../public-api/leadConsent");
 const { sendGenericContactEmails } = require("../../shared/services/emailService");
 const { isFeatureComponentBookingEnabled } = require("../../shared/config/featureComponentBooking");
+const { isSiteDraftsEnabled } = require("../../shared/config/siteDrafts");
 const { sectionDataToPuckProps } = require("../portfolios/models/featureComponentAdapters");
-const { validateRequestedWindow } = require("./bookingWindow");
-
-class BookingRequestError extends Error {
-  constructor(message, { status = 400, code = "validation_error", details } = {}) {
-    super(message);
-    this.name = "BookingRequestError";
-    this.status = status;
-    this.code = code;
-    this.details = details;
-  }
-}
-
-function findPublishedBookingSection(portfolio, sectionId) {
-  const sections = portfolio.sections || [];
-  if (sectionId) {
-    const match = sections.find(
-      (s) => String(s._id) === String(sectionId) && s.type === "bookingRequest"
-    );
-    if (match) return match;
-  }
-  return sections.find((s) => s.type === "bookingRequest" && s.visible !== false) || null;
-}
+const {
+  validateRequestedWindow,
+  clampMinNoticeHours,
+  clampDaysAheadMax,
+} = require("./bookingWindow");
+const { validatePublicBookingFields } = require("./bookingRequest.validation");
+const { BookingRequestError } = require("./bookingRequest.errors");
 
 function bookingRulesFromSection(section) {
   const data = section?.data && typeof section.data === "object" ? section.data : {};
   const puck = sectionDataToPuckProps("BookingRequest", data, "");
+  const minNoticeHours = clampMinNoticeHours(puck.minNoticeHours ?? data.minNoticeHours ?? 24);
+  const daysAheadMax = clampDaysAheadMax(puck.daysAheadMax ?? data.daysAheadMax ?? 30);
   return {
-    minNoticeHours: puck.minNoticeHours ?? data.minNoticeHours ?? 24,
-    daysAheadMax: puck.daysAheadMax ?? data.daysAheadMax ?? 30,
+    minNoticeHours,
+    daysAheadMax,
     timezone: puck.timezone || data.timezone || "America/New_York",
     services: Array.isArray(puck.services)
       ? puck.services
@@ -52,6 +40,51 @@ function bookingRulesFromSection(section) {
   };
 }
 
+function findPublishedBookingSection(portfolio, sectionId) {
+  if (!sectionId || typeof sectionId !== "string") {
+    throw new BookingRequestError("Booking section not found", {
+      status: 404,
+      code: "not_found",
+      details: { field: "sectionId" },
+    });
+  }
+  if (!mongoose.isValidObjectId(sectionId)) {
+    throw new BookingRequestError("Booking section not found", {
+      status: 404,
+      code: "not_found",
+      details: { field: "sectionId" },
+    });
+  }
+  const match = (portfolio.sections || []).find(
+    (s) =>
+      String(s._id) === String(sectionId) &&
+      s.type === "bookingRequest" &&
+      s.visible !== false
+  );
+  if (!match) {
+    throw new BookingRequestError("Booking section not found", {
+      status: 404,
+      code: "not_found",
+      details: { field: "sectionId" },
+    });
+  }
+  return match;
+}
+
+async function loadPublicPublishedPortfolio(portfolioId) {
+  if (!portfolioId || !mongoose.isValidObjectId(portfolioId)) {
+    throw new BookingRequestError("Site not found", { status: 404, code: "not_found" });
+  }
+  const portfolio = await Portfolio.findById(portfolioId).lean();
+  if (!portfolio || portfolio.visibility !== "public") {
+    throw new BookingRequestError("Site not found", { status: 404, code: "not_found" });
+  }
+  if (isSiteDraftsEnabled() && (portfolio.publishedVersionNumber || 0) < 1) {
+    throw new BookingRequestError("Site not found", { status: 404, code: "not_found" });
+  }
+  return portfolio;
+}
+
 function validateServiceChoice(service, allowed) {
   const trimmed = typeof service === "string" ? service.trim() : "";
   if (!allowed.length) {
@@ -66,18 +99,41 @@ function validateServiceChoice(service, allowed) {
   if (!allowed.includes(trimmed)) {
     throw new BookingRequestError("service is not offered", {
       code: "validation_error",
-      details: { field: "service", allowed },
+      details: { field: "service" },
     });
   }
   return trimmed;
 }
 
-function formatBookingMessage({ service, requestedStart, requestedEnd, timezone }) {
-  return [
+function formatBookingMessage({ service, start, end, timezone, visitorMessage }) {
+  const lines = [
     "Booking request (not a confirmed appointment).",
     `Service: ${service}`,
-    `Requested window (${timezone}): ${requestedStart} – ${requestedEnd}`,
-  ].join("\n");
+    `Requested window (${timezone}): ${start.toISO()} – ${end.toISO()}`,
+  ];
+  if (visitorMessage) {
+    lines.push(`Notes: ${visitorMessage}`);
+  }
+  const message = lines.join("\n");
+  if (message.length > 2000) {
+    throw new BookingRequestError("message exceeds maximum length", {
+      code: "validation_error",
+      details: { field: "message", max: 2000 },
+    });
+  }
+  return message;
+}
+
+async function resolveSiteOwner(portfolio) {
+  const owner = await User.findById(portfolio.owner).select("email name username").lean();
+  const ownerEmail = owner?.email;
+  const ownerName = owner?.name || owner?.username;
+  if (!ownerEmail || !ownerName) {
+    throw new BookingRequestError("Owner contact could not be resolved", {
+      code: "validation_error",
+    });
+  }
+  return { ownerEmail, ownerName };
 }
 
 async function submitBookingRequest(body) {
@@ -88,44 +144,23 @@ async function submitBookingRequest(body) {
     });
   }
 
-  const {
-    name,
-    email,
-    phone,
-    portfolioId,
-    sectionId,
-    service,
-    requestedStart,
-    requestedEnd,
-    ownerEmail,
-    ownerName,
-    portfolioType,
-  } = body;
+  const fields = validatePublicBookingFields(body);
+  const { portfolioId, sectionId, requestedStart, requestedEnd } = body;
 
-  if (!name || !email || !portfolioId || !requestedStart || !requestedEnd) {
+  if (!portfolioId || !requestedStart || !requestedEnd) {
     throw new BookingRequestError(
-      "name, email, portfolioId, requestedStart, and requestedEnd are required",
+      "portfolioId, requestedStart, and requestedEnd are required",
       { code: "validation_error" }
     );
   }
 
-  const portfolio = await portfolioService.getPortfolio(portfolioId);
-  if (!portfolio) {
-    throw new BookingRequestError("Site not found", { status: 404, code: "not_found" });
-  }
-
+  const portfolio = await loadPublicPublishedPortfolio(portfolioId);
   const section = findPublishedBookingSection(portfolio, sectionId);
-  if (!section) {
-    throw new BookingRequestError("Booking section not found on published site", {
-      status: 404,
-      code: "not_found",
-      details: { field: "sectionId" },
-    });
-  }
-
   const rules = bookingRulesFromSection(section);
+
+  let window;
   try {
-    validateRequestedWindow({
+    window = validateRequestedWindow({
       requestedStart,
       requestedEnd,
       minNoticeHours: rules.minNoticeHours,
@@ -142,42 +177,31 @@ async function submitBookingRequest(body) {
     throw err;
   }
 
-  const serviceLabel = validateServiceChoice(service, rules.services);
-
-  let resolvedOwnerEmail = ownerEmail;
-  let resolvedOwnerName = ownerName;
-  if (!resolvedOwnerEmail || !resolvedOwnerName) {
-    const owner = await User.findById(portfolio.owner).select("email name username").lean();
-    resolvedOwnerEmail = resolvedOwnerEmail || owner?.email;
-    resolvedOwnerName = resolvedOwnerName || owner?.name || owner?.username;
-  }
-  if (!resolvedOwnerEmail || !resolvedOwnerName) {
-    throw new BookingRequestError("Owner contact could not be resolved", {
-      code: "validation_error",
-    });
-  }
-
+  const serviceLabel = validateServiceChoice(fields.service, rules.services);
+  const { ownerEmail, ownerName } = await resolveSiteOwner(portfolio);
+  const portfolioType = portfolio.template || undefined;
   const consentContact = consentContactFromBody(body);
   const message = formatBookingMessage({
     service: serviceLabel,
-    requestedStart,
-    requestedEnd,
+    start: window.start,
+    end: window.end,
     timezone: rules.timezone,
+    visitorMessage: fields.message,
   });
 
   const contact = await ContactMeForm.create({
     portfolioId,
     portfolioType,
-    ownerEmail: resolvedOwnerEmail,
-    ownerName: resolvedOwnerName,
-    name,
-    email,
-    phone: typeof phone === "string" ? phone.trim() : undefined,
+    ownerEmail,
+    ownerName,
+    name: fields.name,
+    email: fields.email,
+    phone: fields.phone || undefined,
     message,
     leadType: "booking",
     bookingService: serviceLabel,
-    bookingRequestedStart: new Date(requestedStart),
-    bookingRequestedEnd: new Date(requestedEnd),
+    bookingRequestedStart: window.start.toJSDate(),
+    bookingRequestedEnd: window.end.toJSDate(),
     bookingTimezone: rules.timezone,
     bookingSectionId: section._id,
     status: "new",
@@ -189,9 +213,8 @@ async function submitBookingRequest(body) {
   notifyLeadCaptured({
     siteId: portfolioId,
     leadId,
-    email,
-    name,
-    phone: contact.phone,
+    email: fields.email,
+    name: fields.name,
     consent,
     createdAt: contact.createdAt,
   });
@@ -199,9 +222,8 @@ async function submitBookingRequest(body) {
     siteId: portfolioId,
     leadId,
     form: "booking",
-    email,
-    name,
-    phone: contact.phone,
+    email: fields.email,
+    name: fields.name,
     message,
     consent,
     submittedAt: contact.createdAt,
@@ -209,14 +231,13 @@ async function submitBookingRequest(body) {
 
   sendGenericContactEmails(
     {
-      name,
-      email,
+      name: fields.name,
+      email: fields.email,
       message,
       portfolioType,
-      phone: contact.phone,
     },
-    resolvedOwnerEmail,
-    resolvedOwnerName
+    ownerEmail,
+    ownerName
   ).catch(() => {
     console.error("booking_request_email_failed");
   });
@@ -224,7 +245,6 @@ async function submitBookingRequest(body) {
   return {
     success: true,
     message: rules.confirmationText || "Booking request received",
-    leadId,
   };
 }
 
@@ -233,4 +253,5 @@ module.exports = {
   submitBookingRequest,
   findPublishedBookingSection,
   bookingRulesFromSection,
+  loadPublicPublishedPortfolio,
 };

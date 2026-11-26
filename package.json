@@ -40,6 +40,7 @@
     "jose": "^5.10.0",
     "jsonwebtoken": "^9.0.3",
     "libphonenumber-js": "^1.13.16",
+    "luxon": "^3.7.2",
     "mailparser": "^3.9.1",
     "mammoth": "^1.10.0",
     "mongoose": "^8.17.1",

@@ -3,6 +3,9 @@
  * no AGPL scheduling code vendored — e.g. Cal.com-style notice and horizon caps).
  */
 
+const { DateTime } = require("luxon");
+const { assertValidIanaTimezone } = require("../../shared/validation/ianaTimezone");
+
 class BookingWindowError extends Error {
   constructor(message, { code = "validation_error", details } = {}) {
     super(message);
@@ -12,23 +15,58 @@ class BookingWindowError extends Error {
   }
 }
 
-const { assertValidIanaTimezone } = require("../../shared/validation/ianaTimezone");
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
-function parseInstant(value, path) {
+function hasExplicitOffset(value) {
+  return /([zZ]|[+-]\d{2}:\d{2})$/.test(value);
+}
+
+function parseRequestedInstant(value, path, timezone) {
   if (typeof value !== "string" || !value.trim()) {
     throw new BookingWindowError(`${path} must be an ISO 8601 datetime`, {
       code: "validation_error",
       details: { field: path },
     });
   }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    throw new BookingWindowError(`${path} must be a valid datetime`, {
+  const trimmed = value.trim();
+  if (DATE_ONLY.test(trimmed)) {
+    throw new BookingWindowError(`${path} must include a time of day`, {
+      code: "validation_error",
+      details: { field: path, reason: "date_only" },
+    });
+  }
+  if (!trimmed.includes("T")) {
+    throw new BookingWindowError(`${path} must be an ISO 8601 datetime`, {
       code: "validation_error",
       details: { field: path },
     });
   }
-  return date;
+
+  let dt;
+  if (hasExplicitOffset(trimmed)) {
+    dt = DateTime.fromISO(trimmed, { setZone: true });
+  } else {
+    dt = DateTime.fromISO(trimmed, { zone: timezone });
+  }
+  if (!dt.isValid) {
+    throw new BookingWindowError(`${path} must be a valid datetime`, {
+      code: "validation_error",
+      details: { field: path, reason: dt.invalidReason },
+    });
+  }
+  return dt;
+}
+
+function clampMinNoticeHours(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 24;
+  return Math.min(168, Math.max(0, Math.round(num)));
+}
+
+function clampDaysAheadMax(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 30;
+  return Math.min(365, Math.max(1, Math.round(num)));
 }
 
 function validateRequestedWindow({
@@ -37,42 +75,53 @@ function validateRequestedWindow({
   minNoticeHours,
   daysAheadMax,
   timezone,
-  now = new Date(),
+  now = DateTime.now(),
 }) {
-  const start = parseInstant(requestedStart, "requestedStart");
-  const end = parseInstant(requestedEnd, "requestedEnd");
-  if (end.getTime() < start.getTime()) {
+  const tz = assertValidIanaTimezone(timezone, "timezone");
+  const noticeHours = clampMinNoticeHours(minNoticeHours);
+  const horizonDays = clampDaysAheadMax(daysAheadMax);
+
+  const start = parseRequestedInstant(requestedStart, "requestedStart", tz);
+  const end = parseRequestedInstant(requestedEnd, "requestedEnd", tz);
+
+  if (end.toMillis() < start.toMillis()) {
     throw new BookingWindowError("requestedEnd must be on or after requestedStart", {
       code: "validation_error",
       details: { field: "requestedEnd" },
     });
   }
 
-  const noticeMs = Math.max(0, Number(minNoticeHours) || 0) * 60 * 60 * 1000;
-  const earliest = new Date(now.getTime() + noticeMs);
-  if (start.getTime() < earliest.getTime()) {
+  const earliest = now.plus({ hours: noticeHours });
+  if (start.toMillis() < earliest.toMillis()) {
     throw new BookingWindowError("Requested time is too soon", {
       code: "booking_window_too_soon",
-      details: { field: "requestedStart", minNoticeHours },
+      details: { field: "requestedStart", minNoticeHours: noticeHours },
     });
   }
 
-  const horizonDays = Math.max(1, Number(daysAheadMax) || 1);
-  const latest = new Date(now.getTime() + horizonDays * 24 * 60 * 60 * 1000);
-  if (start.getTime() > latest.getTime()) {
+  const localNow = now.setZone(tz);
+  const lastCalendarDay = localNow.startOf("day").plus({ days: horizonDays });
+  const startLocalDay = start.setZone(tz).startOf("day");
+  if (startLocalDay.toMillis() > lastCalendarDay.toMillis()) {
     throw new BookingWindowError("Requested time is too far in the future", {
       code: "booking_window_too_far",
       details: { field: "requestedStart", daysAheadMax: horizonDays },
     });
   }
 
-  assertValidIanaTimezone(timezone, "timezone");
-
-  return { start, end, timezone: timezone.trim() };
+  return {
+    start,
+    end,
+    timezone: tz,
+    minNoticeHours: noticeHours,
+    daysAheadMax: horizonDays,
+  };
 }
 
 module.exports = {
   BookingWindowError,
-  parseInstant,
+  parseRequestedInstant,
   validateRequestedWindow,
+  clampMinNoticeHours,
+  clampDaysAheadMax,
 };

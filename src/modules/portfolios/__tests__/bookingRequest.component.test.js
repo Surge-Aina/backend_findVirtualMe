@@ -28,8 +28,9 @@ jest.mock("openai", () =>
   }))
 );
 
+const mockSendGenericContactEmails = jest.fn().mockResolvedValue(undefined);
 jest.mock("../../../shared/services/emailService", () => ({
-  sendGenericContactEmails: jest.fn().mockResolvedValue(undefined),
+  sendGenericContactEmails: (...args) => mockSendGenericContactEmails(...args),
 }));
 
 const portfolioRoutes = require("../portfolio.routes");
@@ -75,6 +76,26 @@ async function issueWriteKey() {
   });
 }
 
+async function addPublishedBookingSection(site, props = {}) {
+  const writeKey = await issueWriteKey();
+  const added = await request(publicApp)
+    .post(`/api/public/v1/sites/${site._id}/components`)
+    .set("Authorization", `Bearer ${writeKey.secret}`)
+    .send({
+      type: "BookingRequest",
+      props: {
+        sectionTitle: "Book",
+        timezone: "America/New_York",
+        minNoticeHours: 0,
+        daysAheadMax: 30,
+        ...props,
+      },
+    });
+  expect(added.status).toBe(201);
+  await request(ownerApp).post(`/api/portfolios/${site._id}/publish`);
+  return added.body.data.section.sectionId;
+}
+
 describe("BookingRequest feature component", () => {
   const originalComponents = process.env.FEATURE_COMPONENTS_ENABLED;
   const originalDrafts = process.env.SITE_DRAFTS_ENABLED;
@@ -91,6 +112,7 @@ describe("BookingRequest feature component", () => {
   });
 
   beforeEach(async () => {
+    mockSendGenericContactEmails.mockClear();
     await bookingRequestRoutes.bookingRequestIpLimit.reset();
     await User.findOneAndUpdate(
       { _id: TEST_USER_ID },
@@ -270,8 +292,6 @@ describe("BookingRequest feature component", () => {
         service: "Checkup",
         requestedStart: futureIso(2),
         requestedEnd: futureIso(3),
-        ownerEmail: "owner@example.test",
-        ownerName: "Owner",
       });
       expect(tooSoon.status).toBe(400);
       expect(tooSoon.body.code).toBe("booking_window_too_soon");
@@ -288,10 +308,9 @@ describe("BookingRequest feature component", () => {
         service: "Checkup",
         requestedStart: futureIso(48),
         requestedEnd: futureIso(50),
-        ownerEmail: "owner@example.test",
-        ownerName: "Owner",
       });
       expect(ok.status).toBe(201);
+      expect(ok.body.leadId).toBeUndefined();
 
       const stored = await ContactMeForm.findOne({ portfolioId: site._id, leadType: "booking" }).lean();
       expect(stored).toBeTruthy();
@@ -330,8 +349,6 @@ describe("BookingRequest feature component", () => {
         sectionId,
         requestedStart: futureIso(48),
         requestedEnd: futureIso(49),
-        ownerEmail: "owner@example.test",
-        ownerName: "Owner",
       };
 
       for (let i = 0; i < 20; i += 1) {
@@ -364,6 +381,195 @@ describe("BookingRequest feature component", () => {
       expect(audits.some((a) => a.componentId === "BookingRequest" && a.action === "add")).toBe(
         true
       );
+    });
+
+    it("ignores attacker ownerEmail and notifies the portfolio owner", async () => {
+      const ownerEmail = `real.owner.${nonce()}@example.test`;
+      await User.findByIdAndUpdate(TEST_USER_ID, { email: ownerEmail, name: "Real Owner" });
+      const site = await createOwnerPortfolio();
+      const sectionId = await addPublishedBookingSection(site, {
+        services: [{ name: "Consult" }],
+      });
+
+      const res = await request(publicApp).post("/api/booking-requests").send({
+        name: "Pat Visitor",
+        email: "pat.visitor@example.test",
+        portfolioId: site._id.toString(),
+        sectionId,
+        service: "Consult",
+        requestedStart: futureIso(72),
+        requestedEnd: futureIso(73),
+        ownerEmail: "attacker@example.test",
+        ownerName: "Attacker",
+      });
+      expect(res.status).toBe(201);
+      const stored = await ContactMeForm.findOne({ portfolioId: site._id, leadType: "booking" }).lean();
+      expect(stored.ownerEmail).toBe(ownerEmail);
+      expect(mockSendGenericContactEmails).toHaveBeenCalledWith(
+        expect.objectContaining({ email: "pat.visitor@example.test" }),
+        ownerEmail,
+        "Real Owner"
+      );
+    });
+
+    it("accepts honeypot spam silently without storing a lead", async () => {
+      const site = await createOwnerPortfolio();
+      const sectionId = await addPublishedBookingSection(site);
+      const res = await request(publicApp).post("/api/booking-requests").send({
+        name: "Bot",
+        email: "bot@example.test",
+        portfolioId: site._id.toString(),
+        sectionId,
+        requestedStart: futureIso(72),
+        requestedEnd: futureIso(73),
+        _hp: "filled",
+      });
+      expect(res.status).toBe(201);
+      const count = await ContactMeForm.countDocuments({ portfolioId: site._id });
+      expect(count).toBe(0);
+    });
+
+    it("rejects private sites and unpublished sites", async () => {
+      const site = await createOwnerPortfolio({ visibility: "private" });
+      const sectionId = await addPublishedBookingSection(site);
+      const closed = await request(publicApp).post("/api/booking-requests").send({
+        name: "Pat Visitor",
+        email: "pat.visitor@example.test",
+        portfolioId: site._id.toString(),
+        sectionId,
+        requestedStart: futureIso(72),
+        requestedEnd: futureIso(73),
+      });
+      expect(closed.status).toBe(404);
+      expect(closed.body.code).toBe("not_found");
+
+      const draftOnly = await createOwnerPortfolio();
+      const writeKey = await issueWriteKey();
+      const added = await request(publicApp)
+        .post(`/api/public/v1/sites/${draftOnly._id}/components`)
+        .set("Authorization", `Bearer ${writeKey.secret}`)
+        .send({
+          type: "BookingRequest",
+          props: { sectionTitle: "Draft", timezone: "America/New_York" },
+        });
+      const draftSectionId = added.body.data.section.sectionId;
+      const unpublished = await request(publicApp).post("/api/booking-requests").send({
+        name: "Pat Visitor",
+        email: "pat.visitor@example.test",
+        portfolioId: draftOnly._id.toString(),
+        sectionId: draftSectionId,
+        requestedStart: futureIso(72),
+        requestedEnd: futureIso(73),
+      });
+      expect(unpublished.status).toBe(404);
+    });
+
+    it("returns 404 for invalid, unknown, or hidden sectionId", async () => {
+      const site = await createOwnerPortfolio({
+        publishedVersionNumber: 1,
+        sections: [
+          { type: "hero", order: 0, data: { headline: "Hi" } },
+          {
+            type: "bookingRequest",
+            order: 1,
+            visible: true,
+            data: {
+              sectionTitle: "Visible",
+              timezone: "America/New_York",
+              minNoticeHours: 0,
+              daysAheadMax: 30,
+            },
+          },
+          {
+            type: "bookingRequest",
+            order: 2,
+            visible: false,
+            data: {
+              sectionTitle: "Hidden",
+              timezone: "America/New_York",
+              minNoticeHours: 0,
+              daysAheadMax: 30,
+            },
+          },
+        ],
+      });
+      const live = await Portfolio.findById(site._id).lean();
+      const visibleId = String(
+        live.sections.find((s) => s.type === "bookingRequest" && s.visible !== false)._id
+      );
+      const hiddenId = String(
+        live.sections.find((s) => s.type === "bookingRequest" && s.visible === false)._id
+      );
+
+      const invalid = await request(publicApp).post("/api/booking-requests").send({
+        name: "Pat Visitor",
+        email: "pat.visitor@example.test",
+        portfolioId: site._id.toString(),
+        sectionId: "not-valid",
+        requestedStart: futureIso(72),
+        requestedEnd: futureIso(73),
+      });
+      expect(invalid.status).toBe(404);
+
+      const unknown = await request(publicApp).post("/api/booking-requests").send({
+        name: "Pat Visitor",
+        email: "pat.visitor@example.test",
+        portfolioId: site._id.toString(),
+        sectionId: "507f1f77bcf86cd799439099",
+        requestedStart: futureIso(72),
+        requestedEnd: futureIso(73),
+      });
+      expect(unknown.status).toBe(404);
+
+      const hiddenRes = await request(publicApp).post("/api/booking-requests").send({
+        name: "Pat Visitor",
+        email: "pat.visitor@example.test",
+        portfolioId: site._id.toString(),
+        sectionId: hiddenId,
+        requestedStart: futureIso(72),
+        requestedEnd: futureIso(73),
+      });
+      expect(hiddenRes.status).toBe(404);
+
+      const visibleRes = await request(publicApp).post("/api/booking-requests").send({
+        name: "Pat Visitor",
+        email: "pat.visitor@example.test",
+        portfolioId: site._id.toString(),
+        sectionId: visibleId,
+        requestedStart: futureIso(72),
+        requestedEnd: futureIso(73),
+      });
+      expect(visibleRes.status).toBe(201);
+    });
+
+    it("rejects date-only datetimes and invalid services without listing allowed values", async () => {
+      const site = await createOwnerPortfolio();
+      const sectionId = await addPublishedBookingSection(site, {
+        services: [{ name: "Consult" }],
+      });
+
+      const dateOnly = await request(publicApp).post("/api/booking-requests").send({
+        name: "Pat Visitor",
+        email: "pat.visitor@example.test",
+        portfolioId: site._id.toString(),
+        sectionId,
+        service: "Consult",
+        requestedStart: "2030-06-01",
+        requestedEnd: "2030-06-01T15:00:00",
+      });
+      expect(dateOnly.status).toBe(400);
+
+      const badService = await request(publicApp).post("/api/booking-requests").send({
+        name: "Pat Visitor",
+        email: "pat.visitor@example.test",
+        portfolioId: site._id.toString(),
+        sectionId,
+        service: "Not Listed",
+        requestedStart: futureIso(72),
+        requestedEnd: futureIso(73),
+      });
+      expect(badService.status).toBe(400);
+      expect(badService.body.details?.allowed).toBeUndefined();
     });
 
     it("maps section.data to legacy bookingRequest shape", async () => {

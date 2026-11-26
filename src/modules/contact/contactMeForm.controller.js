@@ -7,14 +7,9 @@ const portfolioService = require("../portfolios/portfolio.service");
 const User = require("../../shared/models/User");
 const { notifyLeadCaptured, notifyFormSubmitted } = require("../public-api/lifecycleEvents");
 const { consentContactFromBody } = require("../public-api/leadConsent");
-const { isHoneypotTripped, silentlyAcceptSpam } = require("./leadFormSpam");
 
 exports.submitContact = async (req, res) => {
   try {
-    if (isHoneypotTripped(req.body)) {
-      return silentlyAcceptSpam(res);
-    }
-
     const { name, email, message, portfolioId, portfolioType } = req.body;
     let { ownerEmail, ownerName } = req.body;
 
@@ -53,6 +48,7 @@ exports.submitContact = async (req, res) => {
       ...(consentContact === undefined ? {} : { consentContact }),
     });
 
+    console.log("✅ Contact saved to database:", contact._id);
     const leadId = contact._id.toString();
     const consent = consentContact === undefined ? null : { contact: consentContact };
     notifyLeadCaptured({
