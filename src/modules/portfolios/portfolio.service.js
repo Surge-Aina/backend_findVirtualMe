@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const Portfolio = require("./models/Portfolio");
+const { isSiteDraftsEnabled } = require("../../shared/config/siteDrafts");
+const portfolioDraftService = require("./portfolioDraft.service");
 const { readLegacyPortfolioById } = require("../../../scripts/migratePortfolios");
 const { notifySitePublished, notifyBusinessProfileUpdated } = require("../public-api/lifecycleEvents");
 const { buildBusinessProfile, publishedContact } = require("../public-api/businessProfile");
@@ -16,6 +18,7 @@ const {
 
 const MAX_PORTFOLIO_SECTIONS = 24;
 const MAX_SECTION_DATA_BYTES = 50 * 1024;
+const MAX_THEME_TOKENS_BYTES = 50 * 1024;
 const MAX_BLOCK_HINTS = 5;
 
 class PortfolioValidationError extends Error {
@@ -136,7 +139,29 @@ function normalizeThemeTokens(themeTokens) {
       code: "INVALID_THEME_TOKENS",
     });
   }
+
+  const sizeBytes = getJsonSizeBytes(themeTokens);
+  if (sizeBytes > MAX_THEME_TOKENS_BYTES) {
+    throw new PortfolioValidationError(
+      `themeTokens exceed the maximum of ${MAX_THEME_TOKENS_BYTES} bytes`,
+      {
+        code: "THEME_TOKENS_TOO_LARGE",
+        details: { sizeBytes, maxBytes: MAX_THEME_TOKENS_BYTES },
+      }
+    );
+  }
+
   return themeTokens;
+}
+
+function shouldNotifySitePublished(beforeDoc, afterDoc) {
+  const after = plainPortfolio(afterDoc);
+  const before = plainPortfolio(beforeDoc);
+  if (!after || after.visibility !== "public") return false;
+  if (!before) return true;
+  const firstVersionedPublish = (before.publishedVersionNumber || 0) === 0;
+  const becamePublic = before.visibility !== "public";
+  return firstVersionedPublish || becamePublic;
 }
 
 function normalizePageBannerDefaults(value) {
@@ -408,6 +433,7 @@ async function getPortfolioForViewer(id, viewerUserId, options = {}) {
   const { domainHost } = options;
   const portfolio = await getPortfolio(id);
   if (!portfolio) return null;
+
   if (canViewerAccessPortfolio(portfolio, viewerUserId)) return portfolio;
   if (domainHost && (await isActiveDomainMappingForPortfolio(domainHost, id))) {
     return portfolio;
@@ -419,6 +445,7 @@ async function getPortfolioBySlugForViewer(slug, viewerUserId, options = {}) {
   const { domainHost } = options;
   const portfolio = await getPortfolioBySlug(slug);
   if (!portfolio) return null;
+
   if (canViewerAccessPortfolio(portfolio, viewerUserId)) return portfolio;
   const id = portfolio._id?.toString?.();
   if (domainHost && id && (await isActiveDomainMappingForPortfolio(domainHost, id))) {
@@ -489,6 +516,12 @@ async function assertPortfolioOwner(portfolioId, userId) {
 // ─── Update base fields ─────────────────────────────────────────────────────
 
 async function updatePortfolio(id, updates) {
+  if (isSiteDraftsEnabled()) {
+    const draft = await portfolioDraftService.updateDraftPortfolio(id, updates);
+    if (!draft) return null;
+    return portfolioDraftService.draftMutationPortfolioResponse(draft);
+  }
+
   const allowed = [
     "title",
     "slug",
@@ -570,6 +603,12 @@ async function updatePortfolio(id, updates) {
 // ─── Section-level operations ────────────────────────────────────────────────
 
 async function updateSection(portfolioId, sectionId, data) {
+  if (isSiteDraftsEnabled()) {
+    const draft = await portfolioDraftService.updateDraftSection(portfolioId, sectionId, data);
+    if (!draft) return null;
+    return portfolioDraftService.draftMutationPortfolioResponse(draft);
+  }
+
   const portfolio = await Portfolio.findById(portfolioId);
   if (!portfolio) return null;
 
@@ -584,6 +623,18 @@ async function updateSection(portfolioId, sectionId, data) {
 }
 
 async function addSection(portfolioId, blockType, data, order, options = {}) {
+  if (isSiteDraftsEnabled()) {
+    const draft = await portfolioDraftService.addDraftSection(
+      portfolioId,
+      blockType,
+      data,
+      order,
+      options
+    );
+    if (!draft) return null;
+    return portfolioDraftService.draftMutationPortfolioResponse(draft);
+  }
+
   const portfolio = await Portfolio.findById(portfolioId);
   if (!portfolio) return null;
 
@@ -613,6 +664,12 @@ async function addSection(portfolioId, blockType, data, order, options = {}) {
 }
 
 async function removeSection(portfolioId, sectionId) {
+  if (isSiteDraftsEnabled()) {
+    const draft = await portfolioDraftService.removeDraftSection(portfolioId, sectionId);
+    if (!draft) return null;
+    return portfolioDraftService.draftMutationPortfolioResponse(draft);
+  }
+
   const before = await Portfolio.findById(portfolioId).lean();
   const updated = await Portfolio.findByIdAndUpdate(
     portfolioId,
@@ -624,6 +681,12 @@ async function removeSection(portfolioId, sectionId) {
 }
 
 async function reorderSections(portfolioId, orderedIds) {
+  if (isSiteDraftsEnabled()) {
+    const draft = await portfolioDraftService.reorderDraftSections(portfolioId, orderedIds);
+    if (!draft) return null;
+    return portfolioDraftService.draftMutationPortfolioResponse(draft);
+  }
+
   const portfolio = await Portfolio.findById(portfolioId);
   if (!portfolio) return null;
 
@@ -644,18 +707,27 @@ async function reorderSections(portfolioId, orderedIds) {
 // ─── Toggle helpers ──────────────────────────────────────────────────────────
 
 async function toggleVisibility(id) {
-  const doc = await Portfolio.findById(id).select("visibility owner template");
+  if (isSiteDraftsEnabled()) {
+    return portfolioDraftService.toggleDraftVisibility(id);
+  }
+
+  const doc = await Portfolio.findById(id).select("visibility owner template publishedVersionNumber");
   if (!doc) return null;
 
+  const before = doc.toObject();
   doc.visibility = doc.visibility === "public" ? "private" : "public";
-  await doc.save();
-  if (doc.visibility === "public" && doc.owner) {
-    notifySitePublished({ ownerId: doc.owner, siteId: doc._id, publishedAt: new Date() });
+  const saved = await doc.save();
+  if (shouldNotifySitePublished(before, saved) && saved.owner) {
+    notifySitePublished({ ownerId: saved.owner, siteId: saved._id, publishedAt: new Date() });
   }
-  return { _id: doc._id, visibility: doc.visibility };
+  return { _id: saved._id, visibility: saved.visibility };
 }
 
 async function toggleBranding(id) {
+  if (isSiteDraftsEnabled()) {
+    return portfolioDraftService.toggleDraftBranding(id);
+  }
+
   const doc = await Portfolio.findById(id).select("hideBranding");
   if (!doc) return null;
 
@@ -670,6 +742,8 @@ async function deletePortfolio(id) {
   const doc = await Portfolio.findByIdAndDelete(id);
   if (!doc) return null;
 
+  await portfolioDraftService.deleteDraftAndVersionsForSite(id);
+
   try {
     await deleteManyByPrefix(`portfolios/${id}/`);
   } catch (err) {
@@ -682,9 +756,21 @@ async function deletePortfolio(id) {
 module.exports = {
   MAX_PORTFOLIO_SECTIONS,
   MAX_SECTION_DATA_BYTES,
+  MAX_THEME_TOKENS_BYTES,
+  shouldNotifySitePublished,
   PortfolioValidationError,
   getClosestKnownBlocks,
   normalizeSections,
+  prepareSection,
+  validateSectionData,
+  normalizeThemeId,
+  normalizeThemeTokens,
+  normalizePageBannerDefaults,
+  normalizeNavBrand,
+  normalizeSubUserSettings,
+  normalizeLayoutMode,
+  plainPortfolio,
+  profileSnapshot,
   createAgentPortfolio,
   createPortfolio,
   getPortfolio,

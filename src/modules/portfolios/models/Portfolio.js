@@ -81,6 +81,8 @@ const portfolioSchema = new Schema(
       allowBookingCancellation: { type: Boolean, default: false },
     },
     sections: [SectionSchema],
+    /** Monotonic publish counter; 0 means never published via version history (legacy live doc). */
+    publishedVersionNumber: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

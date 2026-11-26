@@ -16,6 +16,13 @@ router.post("/agent", auth, ctrl.createAgent);
 router.post("/agent/generate", auth, ctrl.generateAgentFromPrompt);
 router.post("/:id/agent-edit", auth, ctrl.proposeAgentEdit);
 
+// Draft / version history (authenticated; static path segments before /:id)
+router.get("/:id/draft", auth, ctrl.getDraft);
+router.post("/:id/publish", auth, ctrl.publishDraft);
+router.get("/:id/versions", auth, ctrl.listVersions);
+router.get("/:id/versions/:versionNumber", auth, ctrl.getVersion);
+router.post("/:id/versions/:versionNumber/revert", auth, ctrl.revertVersion);
+
 // Public param route
 router.get("/:id", optionalAuth, ctrl.getById);
 router.patch("/:id", auth, ctrl.update);

@@ -82,6 +82,24 @@ Deployed environments must set `MONGODB_URI` and `JWT_SECRET`. Do not commit tho
 
 Optional one-click admin handoff (disabled unless explicitly enabled):
 
+- `SITE_DRAFTS_ENABLED` — set to `true` to route owner portfolio edits through drafts and versioned publish. When unset or any other value, portfolio APIs behave as before (every save updates the live site).
+
+**Portfolio draft / publish (requires `SITE_DRAFTS_ENABLED=true`)**
+
+Owner-authenticated routes under `/api/portfolios/:id`:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/draft` | Published document plus working draft metadata (`hasDraft`, `draft`, `published`). |
+| `POST` | `/publish` | Applies the working draft to the live site and stores an immutable snapshot (max 20 per site). |
+| `GET` | `/versions` | Lists version numbers with `publishedAt` and `source`. |
+| `GET` | `/versions/:versionNumber` | Returns the frozen snapshot for preview. |
+| `POST` | `/versions/:versionNumber/revert` | Loads a version into the working draft only; call `POST /publish` to go live. |
+
+With drafts enabled, existing `PATCH /:id`, section CRUD, reorder, visibility, and branding routes write to the draft (response includes `draftMode: true`). Public `GET /:id` and `GET /slug/:slug` continue to serve the last published document until publish.
+
+Draft documents record `source` (`owner` \| `ai` \| `api`) and `approvalState` (`pending_owner` \| `approved` \| `rejected`) for future AI/API change proposals; only owner-sourced drafts are implemented today.
+
 - `BAGGLEME_HANDOFF_ENABLED` — set to `true` to expose `POST /api/auth/baggleme`; omit or any other value keeps the route hidden (404).
 - `BAGGLEME_HANDOFF_PUBLIC_KEY` — Ed25519 public key (SPKI PEM) used to verify handoff JWTs from the issuer. Multi-line PEM values may use literal `\n` in the env string.
 - `BAGGLEME_HANDOFF_USER_ID` — MongoDB `_id` of a pinned user allowed to sign in via handoff (legacy single-user config; merged into the allowlist below).
