@@ -25,6 +25,7 @@ const domainPaymentRouter = require("./payments/domain-payment/stripe/stripe.rou
 const emailMvpRoutes = require("./emailmvp/emailmvp.routes");
 const authHttpRoutes = require("./auth/auth.http.routes");
 const contactMeRoutes = require("./contact/contactMeForm.routes.js");
+const bookingRequestRoutes = require("./booking-request/bookingRequest.routes.js");
 const domainRouterRoutes = require("./domains/DomainRouter/DomainRouter.routes.js");
 const s3UploadRoutes = require("./media/S3Upload.routes.js");
 const portfolioRoutes = require("./portfolios/portfolio.routes");
@@ -92,6 +93,7 @@ function mountModules(app) {
   app.use("/api/auth", authHttpRoutes);
   app.use("/api/contact", contactMeRoutes);
   app.use("/contactMe", contactMeRoutes);
+  app.use("/api/booking-requests", bookingRequestRoutes);
   app.use("/api/domains/router", domainRouterRoutes);
   app.use("/domainRouter", domainRouterRoutes);
   app.use("/api/media/s3-upload-url", s3UploadRoutes);

@@ -402,6 +402,45 @@ function voucherOfferSectionToPuck(sectionData = {}) {
   };
 }
 
+function bookingRequestSectionToPuck(sectionData = {}) {
+  const services = Array.isArray(sectionData.services)
+    ? sectionData.services.map((entry) => ({
+        name: typeof entry === "string" ? entry : entry?.name || "",
+      }))
+    : [];
+  return {
+    sectionTitle: sectionData.sectionTitle || sectionData.title || "Request a time",
+    intro: sectionData.intro || "",
+    services,
+    minNoticeHours:
+      sectionData.minNoticeHours !== undefined ? sectionData.minNoticeHours : 24,
+    daysAheadMax: sectionData.daysAheadMax !== undefined ? sectionData.daysAheadMax : 30,
+    timezone: sectionData.timezone || "America/New_York",
+    confirmationText: sectionData.confirmationText || "",
+  };
+}
+
+function bookingRequestPuckToSection(puckProps = {}, existing = {}) {
+  const services = (puckProps.services || [])
+    .map((entry) => String(entry?.name || entry || "").trim())
+    .filter(Boolean);
+  return {
+    ...preserveEditorMeta(existing),
+    ...existing,
+    sectionTitle: puckProps.sectionTitle || existing.sectionTitle || "Request a time",
+    intro: puckProps.intro || "",
+    services,
+    minNoticeHours:
+      puckProps.minNoticeHours !== undefined
+        ? puckProps.minNoticeHours
+        : existing.minNoticeHours ?? 24,
+    daysAheadMax:
+      puckProps.daysAheadMax !== undefined ? puckProps.daysAheadMax : existing.daysAheadMax ?? 30,
+    timezone: puckProps.timezone || existing.timezone || "America/New_York",
+    confirmationText: puckProps.confirmationText || existing.confirmationText || "",
+  };
+}
+
 function voucherOfferPuckToSection(puckProps = {}, existing = {}) {
   const voucherId = puckProps.voucherId || existing.userVoucherId || existing.voucherId || "";
   const merged = {
@@ -457,6 +496,10 @@ const ADAPTERS = {
     toPuck: voucherOfferSectionToPuck,
     toSection: voucherOfferPuckToSection,
   },
+  BookingRequest: {
+    toPuck: bookingRequestSectionToPuck,
+    toSection: bookingRequestPuckToSection,
+  },
 };
 
 function sectionDataToPuckProps(puckType, sectionData, template) {
@@ -494,4 +537,6 @@ module.exports = {
   qrCodePuckToSection,
   voucherOfferSectionToPuck,
   voucherOfferPuckToSection,
+  bookingRequestSectionToPuck,
+  bookingRequestPuckToSection,
 };

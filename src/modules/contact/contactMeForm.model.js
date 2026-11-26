@@ -30,6 +30,21 @@ const ContactMeFormSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    phone: {
+      type: String,
+    },
+    leadType: {
+      type: String,
+      enum: ["contact", "booking"],
+      default: "contact",
+    },
+    bookingService: { type: String },
+    bookingRequestedStart: { type: Date },
+    bookingRequestedEnd: { type: Date },
+    bookingTimezone: { type: String },
+    bookingSectionId: {
+      type: mongoose.Schema.Types.ObjectId,
+    },
     /** Set only when the form asks for contact consent. Absent means it did not ask. */
     consentContact: { type: Boolean },
     status: {

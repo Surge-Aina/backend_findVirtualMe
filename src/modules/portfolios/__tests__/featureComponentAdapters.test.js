@@ -149,6 +149,34 @@ describe("featureComponentAdapters", () => {
     });
   });
 
+  describe("BookingRequest", () => {
+    const puck = {
+      sectionTitle: "Book me",
+      intro: "Pick a slot.",
+      services: [{ name: "Consult" }],
+      minNoticeHours: 6,
+      daysAheadMax: 14,
+      timezone: "America/Denver",
+      confirmationText: "Thanks.",
+    };
+
+    it("round-trips legacy section.data", () => {
+      const legacy = puckPropsToSectionData("BookingRequest", puck, "healthcare", {});
+      expect(legacy).toMatchObject({
+        sectionTitle: "Book me",
+        services: ["Consult"],
+        minNoticeHours: 6,
+        daysAheadMax: 14,
+        timezone: "America/Denver",
+        confirmationText: "Thanks.",
+      });
+      expect(sectionDataToPuckProps("BookingRequest", legacy)).toMatchObject({
+        sectionTitle: "Book me",
+        services: [{ name: "Consult" }],
+      });
+    });
+  });
+
   describe("VoucherOffer", () => {
     const puck = {
       title: "Save today",

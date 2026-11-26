@@ -9,6 +9,7 @@ const {
   componentIdForBlockType,
   isUnifiedTemplate,
   normalizePuckType,
+  assertComponentTypeEnabled,
 } = require("./models/componentRegistry");
 const { validateComponentProps, ComponentConfigError } = require("./models/componentSchemas");
 const { assertWritableComponentRefs } = require("./models/componentRefValidation");
@@ -211,6 +212,7 @@ function activeDraftSections(ctx) {
 async function addComponent(ctx, input) {
   assertDraftWritesAllowed();
   const { type, props, rawType } = resolveTypeAndProps(input);
+  assertComponentTypeEnabled(rawType);
   if (!type || !isFeatureComponentId(type)) {
     throw new ComponentConfigError("Unknown component type", {
       code: "unknown_component",
@@ -303,6 +305,8 @@ async function updateComponent(ctx, { sectionId, props, config }) {
       details: { sectionId },
     });
   }
+
+  assertComponentTypeEnabled(puckType);
 
   const existingData = target.data && typeof target.data === "object" ? target.data : {};
   const existingPuck = sectionDataToPuckProps(puckType, existingData, listing.template);
