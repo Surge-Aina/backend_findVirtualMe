@@ -3,6 +3,12 @@ const axios = require("axios");
 const { createDomainMapping } = require("./DomainRouter.service");
 const { normalizeDomain, getPortfolioMeta } = require("./utils/domainHelpers");
 const { addDomainToUser } = require("../domain.service");
+const Portfolio = require("../../portfolios/models/Portfolio");
+const { templateToPortfolioType } = require("../../../shared/utils/templateToPortfolioType");
+const {
+  extractPlatformCustomerSlugFromHostname,
+  RESERVED_PLATFORM_LABELS,
+} = require("../../../shared/utils/platformSubdomain");
 // ----------------- CREATE -----------------
 
 // POST /api/domains
@@ -225,24 +231,41 @@ exports.deleteDomainRoute = async (req, res) => {
 
 // ----------------- DOMAIN LOOKUP -----------------
 
-exports.domainLookup = async (req, res) => { 
+exports.domainLookup = async (req, res) => {
   try {
-    const domain = req.query.domain?.toLowerCase().replace(/^www\./, '');
-    
+    const domain = req.query.domain?.toLowerCase().replace(/^www\./, "");
+
     const route = await DomainRoute.findOne({
       domain,
-      isActive: true
+      isActive: true,
     }).lean();
 
     if (route) {
-      res.json({
+      return res.json({
         portfolioId: route.portfolioId,
-        portfolioType: route.portfolioType
+        portfolioType: route.portfolioType,
       });
-    } else {
-      res.status(404).json({ error: 'Domain not found' });
     }
+
+    const slug = extractPlatformCustomerSlugFromHostname(domain);
+    if (slug && !RESERVED_PLATFORM_LABELS.has(slug)) {
+      const portfolio = await Portfolio.findOne({
+        slug,
+        visibility: "public",
+      })
+        .select("_id template")
+        .lean();
+
+      if (portfolio) {
+        return res.json({
+          portfolioId: portfolio._id,
+          portfolioType: templateToPortfolioType(portfolio.template),
+        });
+      }
+    }
+
+    res.status(404).json({ error: "Domain not found" });
   } catch (err) {
-    res.status(500).json({ error: 'Lookup failed' });
+    res.status(500).json({ error: "Lookup failed" });
   }
 };

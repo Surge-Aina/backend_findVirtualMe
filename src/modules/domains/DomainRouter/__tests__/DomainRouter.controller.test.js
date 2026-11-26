@@ -2,6 +2,9 @@ jest.mock("../DomainRouter.model");
 jest.mock("../DomainRouter.service");
 jest.mock("../utils/domainHelpers");
 jest.mock("../../domain.service");
+jest.mock("../../../portfolios/models/Portfolio", () => ({
+  findOne: jest.fn(),
+}));
 jest.mock("../../../../shared/middleware/auth", () => (req, res, next) => {
   req.user = {
     _id: "user123",
@@ -14,6 +17,7 @@ const express = require("express");
 const request = require("supertest");
 const mongoose = require("mongoose");
 const DomainRoute = require("../DomainRouter.model");
+const Portfolio = require("../../../portfolios/models/Portfolio");
 const { createDomainMapping } = require("../DomainRouter.service");
 const { normalizeDomain } = require("../utils/domainHelpers");
 const { addDomainToUser } = require("../../domain.service");
@@ -114,5 +118,76 @@ describe("GET /api/domains/router/lookup", () => {
 
     const res = await request(app).get("/api/domains/router/lookup?domain=unknown.com");
     expect(res.status).toBe(404);
+  });
+
+  test("falls back to a public portfolio slug on the platform host", async () => {
+    DomainRoute.findOne.mockReturnValue({
+      lean: jest.fn().mockResolvedValue(null),
+    });
+    Portfolio.findOne.mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue({
+          _id: "507f1f77bcf86cd799439011",
+          template: "photographer",
+        }),
+      }),
+    });
+
+    const res = await request(app).get(
+      "/api/domains/router/lookup?domain=public-slug.findvirtual.me",
+    );
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      portfolioId: "507f1f77bcf86cd799439011",
+      portfolioType: "photographer",
+    });
+    expect(Portfolio.findOne).toHaveBeenCalledWith({
+      slug: "public-slug",
+      visibility: "public",
+    });
+  });
+
+  test("returns 404 for a private portfolio on the platform host", async () => {
+    DomainRoute.findOne.mockReturnValue({
+      lean: jest.fn().mockResolvedValue(null),
+    });
+    Portfolio.findOne.mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      }),
+    });
+
+    const res = await request(app).get(
+      "/api/domains/router/lookup?domain=private-slug.findvirtual.me",
+    );
+    expect(res.status).toBe(404);
+  });
+
+  test("returns 404 for reserved platform labels", async () => {
+    DomainRoute.findOne.mockReturnValue({
+      lean: jest.fn().mockResolvedValue(null),
+    });
+
+    const res = await request(app).get(
+      "/api/domains/router/lookup?domain=api.findvirtual.me",
+    );
+    expect(res.status).toBe(404);
+    expect(Portfolio.findOne).not.toHaveBeenCalled();
+  });
+
+  test("prefers an existing domain route over slug fallback", async () => {
+    DomainRoute.findOne.mockReturnValue({
+      lean: jest.fn().mockResolvedValue({
+        portfolioId: "mapped-id",
+        portfolioType: "project_manager",
+      }),
+    });
+
+    const res = await request(app).get(
+      "/api/domains/router/lookup?domain=mapped.findvirtual.me",
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.portfolioId).toBe("mapped-id");
+    expect(Portfolio.findOne).not.toHaveBeenCalled();
   });
 });
