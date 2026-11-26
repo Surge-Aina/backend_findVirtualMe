@@ -140,6 +140,40 @@ async function ensureDraft(portfolioId, { source = "owner" } = {}) {
   }
 }
 
+/**
+ * Ensures a draft exists and stamps external (AI/API) write metadata.
+ */
+async function ensureDraftForSource(portfolioId, source) {
+  if (!["ai", "api"].includes(source)) {
+    return ensureDraft(portfolioId, { source: "owner" });
+  }
+  let draft = await PortfolioDraft.findOne({ portfolioId });
+  if (draft) {
+    draft.source = source;
+    draft.approvalState = "pending_owner";
+    await draft.save();
+    return draft;
+  }
+
+  const created = await ensureDraft(portfolioId, { source });
+  if (created && created.source !== source) {
+    created.source = source;
+    created.approvalState = "pending_owner";
+    await created.save();
+  }
+  return created;
+}
+
+async function applyExternalDraftSource(draft, source) {
+  if (!draft || !["ai", "api"].includes(source)) return draft;
+  if (draft.source !== source || draft.approvalState !== "pending_owner") {
+    draft.source = source;
+    draft.approvalState = "pending_owner";
+    await draft.save();
+  }
+  return draft;
+}
+
 async function deleteDraftAndVersionsForSite(portfolioId) {
   await Promise.all([
     PortfolioDraft.deleteMany({ portfolioId }),
@@ -554,6 +588,9 @@ function draftMutationPortfolioResponse(draft) {
 module.exports = {
   MAX_VERSIONS_PER_SITE,
   ensureDraft,
+  ensureDraftForSource,
+  applyExternalDraftSource,
+  draftToOwnerView,
   updateDraftPortfolio,
   updateDraftSection,
   addDraftSection,

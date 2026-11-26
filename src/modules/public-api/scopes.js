@@ -4,6 +4,7 @@
  */
 const PUBLIC_API_SCOPES = Object.freeze([
   "sites:read",
+  "sites:write",
   "profile:read",
   "webhooks:write",
   "leads:read",

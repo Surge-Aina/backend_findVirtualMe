@@ -84,6 +84,8 @@ Optional one-click admin handoff (disabled unless explicitly enabled):
 
 - `SITE_DRAFTS_ENABLED` — set to `true` to route owner portfolio edits through drafts and versioned publish. When unset or any other value, portfolio APIs behave as before (every save updates the live site).
 
+- `FEATURE_COMPONENTS_ENABLED` — set to `true` to expose reusable site section components (contact/lead form, gallery, services, testimonials, business hours) on unified templates. Owner route: `GET /api/portfolios/components?siteId=`. Public API and MCP write tools require `SITE_DRAFTS_ENABLED`, the `sites:write` scope (not granted on existing keys by default), and write only to the working draft with `approvalState: pending_owner`. OAuth/MCP writes set draft `source` to `ai`; API-key writes set `api`. When unset or any other value, behavior matches the pre-components API (component routes return `FEATURE_COMPONENTS_DISABLED`).
+
 **Portfolio draft / publish (requires `SITE_DRAFTS_ENABLED=true`)**
 
 Owner-authenticated routes under `/api/portfolios/:id`:
@@ -98,7 +100,21 @@ Owner-authenticated routes under `/api/portfolios/:id`:
 
 With drafts enabled, existing `PATCH /:id`, section CRUD, reorder, visibility, and branding routes write to the draft (response includes `draftMode: true`). Public `GET /:id` and `GET /slug/:slug` continue to serve the last published document until publish.
 
-Draft documents record `source` (`owner` \| `ai` \| `api`) and `approvalState` (`pending_owner` \| `approved` \| `rejected`) for future AI/API change proposals; only owner-sourced drafts are implemented today.
+Draft documents record `source` (`owner` \| `ai` \| `api`) and `approvalState` (`pending_owner` \| `approved` \| `rejected`). With `FEATURE_COMPONENTS_ENABLED` and `SITE_DRAFTS_ENABLED`, Public API / MCP `sites:write` tools land AI/API-sourced component edits on the draft only until the owner publishes.
+
+**Feature components (requires `FEATURE_COMPONENTS_ENABLED=true`)**
+
+Component registry follows the [Puck](https://github.com/puckeditor/puck) (MIT) `ComponentConfig` shape: each type has `fields`, `defaultProps`, and a stable `type` name. `GET /api/portfolios/components?siteId=` returns Puck `config` plus current site `data` (`{ content, root, zones }`) and `dataMapping` (how Puck maps to portfolio `sections`). Puck component types: `ContactLeadForm`, `Gallery`, `Services`, `Testimonials`, `BusinessHours` (each `metadata.blockType` is the persisted `section.type`). Legacy alias ids (`contactLeadForm`, etc.) are accepted on writes only. Contact/lead submissions from the public site continue to use `POST /api/contact` (same validation, lifecycle events, and webhooks as today). The backend does not vendor Puck; clients add `render()` locally.
+
+| Surface | Method | Path / tool | Scope |
+|---------|--------|-------------|-------|
+| Owner | GET | `/api/portfolios/components?siteId=` | session JWT |
+| Public API | GET | `/api/public/v1/sites/:id/components` | `sites:read` |
+| Public API | POST | `/api/public/v1/sites/:id/components` | `sites:write` |
+| Public API | PATCH | `/api/public/v1/sites/:id/components/:sectionId` | `sites:write` |
+| Public API | DELETE | `/api/public/v1/sites/:id/components/:sectionId` | `sites:write` |
+| Public API | POST | `/api/public/v1/sites/:id/components/reorder` | `sites:write` |
+| MCP | — | `list_components`, `add_component`, `update_component`, `remove_component`, `reorder_components` | read / `sites:write` |
 
 - `BAGGLEME_HANDOFF_ENABLED` — set to `true` to expose `POST /api/auth/baggleme`; omit or any other value keeps the route hidden (404).
 - `BAGGLEME_HANDOFF_PUBLIC_KEY` — Ed25519 public key (SPKI PEM) used to verify handoff JWTs from the issuer. Multi-line PEM values may use literal `\n` in the env string.

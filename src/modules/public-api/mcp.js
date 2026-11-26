@@ -7,6 +7,7 @@ const { publicApiRateLimit } = require("./rateLimit");
 const sitesService = require("./sites.service");
 const leadsService = require("./leads.service");
 const { listEndpoints } = require("./webhook.service");
+const componentService = require("../portfolios/component.service");
 
 function textResult(value) {
   return { content: [{ type: "text", text: JSON.stringify(value) }] };
@@ -26,6 +27,17 @@ function hasScope(auth, scope) {
 function installedSiteId(auth) {
   if (auth?.authType !== "oauth" || !auth.siteId) return null;
   return String(auth.siteId);
+}
+
+function toolErrorPayload(err) {
+  const code = err.code || "internal_error";
+  const message = err.message || "Request failed";
+  const payload = { code, message };
+  if (err.details && typeof err.details === "object") payload.details = err.details;
+  return {
+    isError: true,
+    content: [{ type: "text", text: JSON.stringify(payload) }],
+  };
 }
 
 function registerTools(server, auth) {
@@ -102,6 +114,137 @@ function registerTools(server, auth) {
       });
       if (!lead) return { isError: true, content: [{ type: "text", text: "not_found" }] };
       return textResult(lead);
+    }
+  );
+
+  server.registerTool(
+    "list_components",
+    {
+      description:
+        "List reusable feature components available for a site's template (requires FEATURE_COMPONENTS_ENABLED).",
+      inputSchema: { siteId: z.string() },
+    },
+    async ({ siteId }) => {
+      if (!hasScope(auth, "sites:read")) return scopeError("sites:read");
+      if (onlySiteId && onlySiteId !== String(siteId)) {
+        return { isError: true, content: [{ type: "text", text: "not_found" }] };
+      }
+      try {
+        const listed = await componentService.listAvailableComponents({
+          ownerId,
+          siteId,
+          audience: "mcp",
+        });
+        if (!listed) return { isError: true, content: [{ type: "text", text: "not_found" }] };
+        return textResult(listed);
+      } catch (err) {
+        return toolErrorPayload(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "add_component",
+    {
+      description:
+        "Add a feature component to the site draft (requires SITE_DRAFTS_ENABLED and sites:write).",
+      inputSchema: {
+        siteId: z.string(),
+        type: z.string(),
+        props: z.record(z.unknown()).optional(),
+        order: z.number().int().min(0).optional(),
+      },
+    },
+    async ({ siteId, type, props, order }) => {
+      if (!hasScope(auth, "sites:write")) return scopeError("sites:write");
+      if (onlySiteId && onlySiteId !== String(siteId)) {
+        return { isError: true, content: [{ type: "text", text: "not_found" }] };
+      }
+      try {
+        const result = await componentService.addComponent(
+          componentService.buildExternalWriteContext(auth, siteId),
+          { type, props, order }
+        );
+        return textResult(result);
+      } catch (err) {
+        return toolErrorPayload(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "update_component",
+    {
+      description: "Update a feature component section in the site draft.",
+      inputSchema: {
+        siteId: z.string(),
+        sectionId: z.string(),
+        props: z.record(z.unknown()),
+      },
+    },
+    async ({ siteId, sectionId, props }) => {
+      if (!hasScope(auth, "sites:write")) return scopeError("sites:write");
+      if (onlySiteId && onlySiteId !== String(siteId)) {
+        return { isError: true, content: [{ type: "text", text: "not_found" }] };
+      }
+      try {
+        const result = await componentService.updateComponent(
+          componentService.buildExternalWriteContext(auth, siteId),
+          { sectionId, props }
+        );
+        return textResult(result);
+      } catch (err) {
+        return toolErrorPayload(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "remove_component",
+    {
+      description: "Remove a feature component section from the site draft.",
+      inputSchema: { siteId: z.string(), sectionId: z.string() },
+    },
+    async ({ siteId, sectionId }) => {
+      if (!hasScope(auth, "sites:write")) return scopeError("sites:write");
+      if (onlySiteId && onlySiteId !== String(siteId)) {
+        return { isError: true, content: [{ type: "text", text: "not_found" }] };
+      }
+      try {
+        const result = await componentService.removeComponent(
+          componentService.buildExternalWriteContext(auth, siteId),
+          { sectionId }
+        );
+        return textResult(result);
+      } catch (err) {
+        return toolErrorPayload(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "reorder_components",
+    {
+      description: "Reorder feature component sections within the site draft.",
+      inputSchema: {
+        siteId: z.string(),
+        sectionIds: z.array(z.string()).min(1),
+      },
+    },
+    async ({ siteId, sectionIds }) => {
+      if (!hasScope(auth, "sites:write")) return scopeError("sites:write");
+      if (onlySiteId && onlySiteId !== String(siteId)) {
+        return { isError: true, content: [{ type: "text", text: "not_found" }] };
+      }
+      try {
+        const result = await componentService.reorderComponents(
+          componentService.buildExternalWriteContext(auth, siteId),
+          { sectionIds }
+        );
+        return textResult(result);
+      } catch (err) {
+        return toolErrorPayload(err);
+      }
     }
   );
 
