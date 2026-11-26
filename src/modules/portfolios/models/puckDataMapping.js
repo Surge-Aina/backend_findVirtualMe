@@ -32,6 +32,12 @@ const DATA_MAPPING = Object.freeze({
   },
   contactLeadForm:
     "Public visitors submit leads via POST /api/contact (unchanged). Puck props configure the on-page form UI only.",
+  socialLinks:
+    "Section data stores title + platform visibility only. URLs come from GET /api/social-links/:portfolioId with portfolio.socialLinks fallback; component writes cannot set URLs.",
+  qrCode:
+    "Section data stores title, target (empty = site URL, /path, or https URL per qr-code module rules), size, and caption.",
+  voucherOffer:
+    "Section data stores presentation fields plus userVoucherId (Puck props.voucherId). Voucher codes and redemption counts are never persisted or returned in component props.",
 });
 
 function sectionIdStr(section) {

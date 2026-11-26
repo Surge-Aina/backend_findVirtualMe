@@ -47,9 +47,130 @@ function assertAllowedKey(key, path) {
   }
 }
 
+const PATH_SEGMENT = /^[a-zA-Z0-9_.~%-]*$/;
+const PATH_QUERY = /^[a-zA-Z0-9&=%_.~+-]*$/;
+
+function validateHttpUrlWithHost(value, path) {
+  const trimmed = String(value).trim();
+  if (!trimmed) {
+    throw new ComponentConfigError(`${path} must be a non-empty http(s) URL`, {
+      code: "invalid_component_config",
+      details: { field: path },
+    });
+  }
+  let parsed;
+  try {
+    parsed = new URL(trimmed);
+  } catch (_err) {
+    throw new ComponentConfigError(`${path} must be a valid http(s) URL`, {
+      code: "invalid_component_config",
+      details: { field: path },
+    });
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new ComponentConfigError(`${path} must use http or https`, {
+      code: "invalid_component_config",
+      details: { field: path },
+    });
+  }
+  if (!parsed.hostname) {
+    throw new ComponentConfigError(`${path} must include a host`, {
+      code: "invalid_component_config",
+      details: { field: path },
+    });
+  }
+  return trimmed;
+}
+
 function validateHttpUrlString(value, path) {
-  if (!/^https?:\/\//i.test(value)) {
-    throw new ComponentConfigError(`${path} must start with http:// or https://`, {
+  validateHttpUrlWithHost(value, path);
+}
+
+function validateSameSitePath(value, path) {
+  if (value.length > 512) {
+    throw new ComponentConfigError(`${path} must be a valid same-site path`, {
+      code: "invalid_component_config",
+      details: { field: path },
+    });
+  }
+  if (!value.startsWith("/") || value.startsWith("//")) {
+    throw new ComponentConfigError(`${path} must be a valid same-site path`, {
+      code: "invalid_component_config",
+      details: { field: path },
+    });
+  }
+  if (value.length < 2 || value[1] === "/") {
+    throw new ComponentConfigError(`${path} must be a valid same-site path`, {
+      code: "invalid_component_config",
+      details: { field: path },
+    });
+  }
+
+  const qIdx = value.indexOf("?");
+  const pathPart = qIdx >= 0 ? value.slice(0, qIdx) : value;
+  const query = qIdx >= 0 ? value.slice(qIdx + 1) : null;
+
+  const segments = pathPart.split("/").slice(1);
+  for (const seg of segments) {
+    if (seg === ".." || seg === ".") {
+      throw new ComponentConfigError(`${path} must not contain '.' or '..' segments`, {
+        code: "invalid_component_config",
+        details: { field: path },
+      });
+    }
+    if (!PATH_SEGMENT.test(seg)) {
+      throw new ComponentConfigError(`${path} must be a valid same-site path`, {
+        code: "invalid_component_config",
+        details: { field: path },
+      });
+    }
+  }
+
+  if (query !== null) {
+    if (query.length > 512) {
+      throw new ComponentConfigError(`${path} query exceeds maximum length`, {
+        code: "invalid_component_config",
+        details: { field: path },
+      });
+    }
+    if (!PATH_QUERY.test(query)) {
+      throw new ComponentConfigError(`${path} has an invalid query string`, {
+        code: "invalid_component_config",
+        details: { field: path },
+      });
+    }
+  }
+}
+
+function normalizeQrCodeTarget(value, path = "target") {
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value !== "string") {
+    throw new ComponentConfigError(`${path} must be a string`, {
+      code: "invalid_component_config",
+      details: { field: path },
+    });
+  }
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("/")) {
+    validateSameSitePath(trimmed, path);
+    return trimmed;
+  }
+  return validateHttpUrlWithHost(trimmed, path);
+}
+
+function validateObjectIdProp(value, path, { required = false } = {}) {
+  if (value === undefined || value === null || value === "") {
+    if (required) {
+      throw new ComponentConfigError(`${path} is required`, {
+        code: "invalid_component_config",
+        details: { field: path },
+      });
+    }
+    return;
+  }
+  if (typeof value !== "string" || !/^[a-fA-F0-9]{24}$/.test(value)) {
+    throw new ComponentConfigError(`${path} must be a valid id`, {
       code: "invalid_component_config",
       details: { field: path },
     });
@@ -80,7 +201,7 @@ function validateTextValue(value, field, path, { required = false, httpUrl = fal
     });
   }
   if (httpUrl || path.endsWith(".url")) {
-    validateHttpUrlString(value, path);
+    validateHttpUrlWithHost(value, path);
   }
 }
 
@@ -293,6 +414,34 @@ function validateComponentProps(typeOrLegacyId, props) {
     validateFieldValue(field, merged[key], key);
   }
 
+  if (type === "QrCode") {
+    if (merged.target !== undefined && merged.target !== null && merged.target !== "") {
+      merged.target = normalizeQrCodeTarget(merged.target, "target");
+    } else {
+      merged.target = "";
+    }
+  }
+  if (type === "VoucherOffer") {
+    validateObjectIdProp(merged.voucherId, "voucherId", { required: true });
+    if (merged.ctaUrl) {
+      merged.ctaUrl = validateHttpUrlWithHost(merged.ctaUrl, "ctaUrl");
+      validateTextValue(merged.ctaUrl, { maxLength: 2048 }, "ctaUrl", { httpUrl: true });
+    }
+  }
+  if (type === "SocialLinks") {
+    const platforms = merged.platforms;
+    if (platforms && typeof platforms === "object" && !Array.isArray(platforms)) {
+      for (const key of Object.keys(platforms)) {
+        if (key === "__proto__" || key === "constructor") {
+          throw new ComponentConfigError(`Invalid prop at platforms.${key}`, {
+            code: "invalid_component_config",
+            details: { field: `platforms.${key}` },
+          });
+        }
+      }
+    }
+  }
+
   const stripped = stripPropsAgainstFields(entry.fields, merged);
   const withId = props?.id ? { ...stripped, id: props.id } : stripped;
   const sectionData = propsToSectionData(withId);
@@ -318,4 +467,7 @@ module.exports = {
   getConfigJsonSchema,
   validateComponentProps,
   validateComponentConfig,
+  normalizeQrCodeTarget,
+  validateHttpUrlWithHost,
+  validateSameSitePath,
 };
