@@ -19,6 +19,16 @@ jest.mock('../../../shared/services/emailService', () => ({
   sendGenericContactEmails: jest.fn().mockResolvedValue(true),
 }));
 jest.mock('../../../shared/middleware/auth');
+jest.mock('../../../modules/portfolios/portfolio.service', () => ({
+  getPortfolio: jest.fn(),
+  getPortfolioBySlug: jest.fn(),
+}));
+jest.mock('../../../shared/models/User', () => ({
+  findById: jest.fn(),
+}));
+
+const portfolioService = require('../../../modules/portfolios/portfolio.service');
+const User = require('../../../shared/models/User');
 
 describe('Project Manager Contact System Tests', () => {
   let app;
@@ -290,6 +300,23 @@ describe('Project Manager Contact System Tests', () => {
   });
 
   describe('Portfolio Router - Contact Endpoint', () => {
+    beforeEach(() => {
+      portfolioService.getPortfolio.mockResolvedValue({
+        _id: '507f1f77bcf86cd799439011',
+        owner: '507f1f77bcf86cd799439012',
+        template: 'projectManager',
+      });
+      User.findById.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue({
+            email: 'owner@example.com',
+            name: 'Jane Smith',
+            username: 'jane',
+          }),
+        }),
+      });
+    });
+
     it('should call POST /api/portfolio/contact successfully', async () => {
       const mockPortfolio = {
         _id: 'portfolio123',
