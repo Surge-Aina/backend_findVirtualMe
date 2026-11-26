@@ -5,6 +5,7 @@ const ContactMeForm = require("../contactMeForm.model");
 const User = require("../../../shared/models/User");
 const ProjectManagerPortfolio = require("../../../legacy/project-manager/models/portfolioModel");
 const contactRoutes = require("../contactMeForm.routes");
+const { PLATFORM_CONTACT_SITE_ID } = require("../contactOwnerResolution");
 
 const mockSendGenericContactEmails = jest.fn().mockResolvedValue(undefined);
 jest.mock("../../../shared/services/emailService", () => ({
@@ -116,17 +117,58 @@ describe("POST /api/contact owner resolution", () => {
     expect(stored).toBeTruthy();
   });
 
-  it("rejects requests with no portfolio identifier", async () => {
+  it("delivers marketing contact to the platform admin inbox without using body owner fields", async () => {
+    const priorAdminEmail = process.env.ADMIN_EMAIL;
+    const priorAdminUsername = process.env.ADMIN_USERNAME;
+    process.env.ADMIN_EMAIL = "platform-inbox@example.test";
+    process.env.ADMIN_USERNAME = "FindVirtual.me Support";
+
+    try {
+      const res = await request(app).post("/api/contact").send({
+        name: "Platform Visitor",
+        email: "platform.visitor@example.test",
+        message: "FindVirtual.me marketing form",
+        subject: "FindVirtual.me contact form",
+        ownerEmail: "attacker@example.test",
+        ownerName: "Attacker",
+      });
+
+      expect(res.status).toBe(201);
+      const stored = await ContactMeForm.findOne({
+        email: "platform.visitor@example.test",
+      }).lean();
+      expect(stored).toBeTruthy();
+      expect(stored.portfolioId.toString()).toBe(PLATFORM_CONTACT_SITE_ID);
+      expect(stored.portfolioType).toBe("platform");
+      expect(stored.ownerEmail).toBe("platform-inbox@example.test");
+      expect(mockSendGenericContactEmails).toHaveBeenCalledWith(
+        expect.objectContaining({ email: "platform.visitor@example.test" }),
+        "platform-inbox@example.test",
+        "FindVirtual.me Support"
+      );
+    } finally {
+      if (priorAdminEmail === undefined) {
+        delete process.env.ADMIN_EMAIL;
+      } else {
+        process.env.ADMIN_EMAIL = priorAdminEmail;
+      }
+      if (priorAdminUsername === undefined) {
+        delete process.env.ADMIN_USERNAME;
+      } else {
+        process.env.ADMIN_USERNAME = priorAdminUsername;
+      }
+    }
+  });
+
+  it("rejects when a portfolio identifier was sent but does not resolve", async () => {
     const res = await request(app).post("/api/contact").send({
-      name: "Platform Visitor",
-      email: "platform.visitor@example.test",
-      message: "FindVirtual.me marketing form",
-      ownerEmail: "support@example.test",
-      ownerName: "Support",
+      name: "Lost Visitor",
+      email: "lost.visitor@example.test",
+      message: "Hello",
+      portfolioId: "507f1f77bcf86cd799439099",
     });
 
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
-    expect(await ContactMeForm.countDocuments({ email: "platform.visitor@example.test" })).toBe(0);
   });
 });

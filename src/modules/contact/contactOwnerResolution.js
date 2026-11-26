@@ -1,6 +1,43 @@
 const portfolioService = require("../portfolios/portfolio.service");
 const User = require("../../shared/models/User");
 
+/** Sentinel site id for platform marketing / support contact leads (no portfolio). */
+const PLATFORM_CONTACT_SITE_ID = "000000000000000000000000";
+
+function hasPortfolioLookupKey(body = {}) {
+  const portfolioIdRaw = body.portfolioId ?? body.siteId ?? body.practiceId;
+  if (portfolioIdRaw !== undefined && portfolioIdRaw !== null && String(portfolioIdRaw).trim() !== "") {
+    return true;
+  }
+  const slug =
+    typeof body.slug === "string"
+      ? body.slug.trim()
+      : typeof body.portfolioSlug === "string"
+        ? body.portfolioSlug.trim()
+        : "";
+  return slug.length > 0;
+}
+
+function resolvePlatformDeliveryTarget() {
+  const ownerEmail = process.env.ADMIN_EMAIL;
+  const ownerName = process.env.ADMIN_USERNAME || "FindVirtual.me";
+  if (!ownerEmail) {
+    return {
+      ok: false,
+      status: 503,
+      message: "Platform contact delivery is not configured",
+    };
+  }
+  return {
+    ok: true,
+    portfolioId: PLATFORM_CONTACT_SITE_ID,
+    portfolioType: "platform",
+    ownerEmail,
+    ownerName,
+    platformFallback: true,
+  };
+}
+
 /**
  * Resolve the site owner for lead delivery. Never uses ownerEmail/ownerName from the request body.
  */
@@ -21,11 +58,13 @@ async function resolveContactDeliveryTarget(body = {}) {
   }
 
   if (!portfolio) {
+    if (!hasPortfolioLookupKey(body)) {
+      return resolvePlatformDeliveryTarget();
+    }
     return {
       ok: false,
       status: 400,
-      message:
-        "A portfolioId, siteId, practiceId, or slug is required to deliver this message",
+      message: "Could not resolve portfolio for this message",
     };
   }
 
@@ -60,4 +99,5 @@ async function resolveContactDeliveryTarget(body = {}) {
 
 module.exports = {
   resolveContactDeliveryTarget,
+  PLATFORM_CONTACT_SITE_ID,
 };
