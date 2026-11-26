@@ -416,7 +416,11 @@ function voucherOfferPuckToSection(puckProps = {}, existing = {}) {
   delete merged.title;
   delete merged.voucherId;
   delete merged.code;
+  delete merged.codes;
   delete merged.redemptionCount;
+  delete merged.redemptions;
+  delete merged.redemption_count;
+  delete merged.voucherCode;
   return merged;
 }
 

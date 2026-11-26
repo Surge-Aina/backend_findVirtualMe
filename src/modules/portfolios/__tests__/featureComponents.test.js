@@ -297,11 +297,12 @@ describe("Feature components (Puck registry)", () => {
 
     it("lists components via MCP when enabled", async () => {
       const site = await createOwnerPortfolio();
-      const key = await createKey({ userId: TEST_USER_ID, scopes: ["sites:read"], name: "MCP" });
+      const readKey = await createKey({ userId: TEST_USER_ID, scopes: ["sites:read"], name: "MCP" });
+      const writeKey = await issueWriteKey();
 
       const tools = await request(mcpApp)
         .post("/api/mcp")
-        .set("Authorization", `Bearer ${key.secret}`)
+        .set("Authorization", `Bearer ${readKey.secret}`)
         .set("Accept", "application/json, text/event-stream")
         .send({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} });
       const toolsText = JSON.stringify(tools.body);
@@ -311,7 +312,7 @@ describe("Feature components (Puck registry)", () => {
 
       const listed = await request(mcpApp)
         .post("/api/mcp")
-        .set("Authorization", `Bearer ${key.secret}`)
+        .set("Authorization", `Bearer ${readKey.secret}`)
         .set("Accept", "application/json, text/event-stream")
         .send({
           jsonrpc: "2.0",
@@ -319,9 +320,44 @@ describe("Feature components (Puck registry)", () => {
           method: "tools/call",
           params: { name: "list_components", arguments: { siteId: String(site._id) } },
         });
-      const body = typeof listed.body === "string" ? JSON.parse(listed.body) : listed.body;
-      expect(JSON.stringify(body)).toContain("ContactLeadForm");
-      expect(JSON.stringify(body)).toContain("dataMapping");
+      const listText = JSON.stringify(
+        typeof listed.body === "string" ? JSON.parse(listed.body) : listed.body
+      );
+      expect(listText).toContain("ContactLeadForm");
+      expect(listText).toContain("SocialLinks");
+      expect(listText).toContain("QrCode");
+      expect(listText).toContain("VoucherOffer");
+      expect(listText).toContain("dataMapping");
+
+      const added = await request(mcpApp)
+        .post("/api/mcp")
+        .set("Authorization", `Bearer ${writeKey.secret}`)
+        .set("Accept", "application/json, text/event-stream")
+        .send({
+          jsonrpc: "2.0",
+          id: 3,
+          method: "tools/call",
+          params: {
+            name: "add_component",
+            arguments: {
+              siteId: String(site._id),
+              type: "SocialLinks",
+              props: {
+                title: "MCP social",
+                platforms: {
+                  github: true,
+                  twitter: false,
+                  linkedin: false,
+                  instagram: false,
+                  website: false,
+                },
+              },
+            },
+          },
+        });
+      const addText = JSON.stringify(typeof added.body === "string" ? JSON.parse(added.body) : added.body);
+      expect(addText).toContain("SocialLinks");
+      expect(addText).toContain("pending_owner");
     });
 
     it("persists legacy section.data on add and lists Puck props", async () => {
@@ -468,6 +504,12 @@ describe("Feature components (Puck registry)", () => {
         name: "Read",
       });
 
+      const protoRelative = await request(publicApp)
+        .post(`/api/public/v1/sites/${site._id}/components`)
+        .set("Authorization", `Bearer ${writeKey.secret}`)
+        .send({ type: "QrCode", props: { title: "X", target: "//evil.com" } });
+      expect(protoRelative.status).toBe(400);
+
       const bad = await request(publicApp)
         .post(`/api/public/v1/sites/${site._id}/components`)
         .set("Authorization", `Bearer ${writeKey.secret}`)
@@ -519,6 +561,58 @@ describe("Feature components (Puck registry)", () => {
         });
       expect(cross.status).toBe(404);
       expect(cross.body.error.code).toBe("not_found");
+    });
+
+    it("rejects VoucherOffer with invalid ctaUrl", async () => {
+      const site = await createOwnerPortfolio();
+      const writeKey = await issueWriteKey();
+      const voucherDef = await Voucher.create({ name: "Promo", type: "discount", discountAmount: 1 });
+      const ownerVoucher = await UserVoucher.create({
+        userId: TEST_USER_ID,
+        voucherId: voucherDef._id,
+        status: "active",
+      });
+
+      const res = await request(publicApp)
+        .post(`/api/public/v1/sites/${site._id}/components`)
+        .set("Authorization", `Bearer ${writeKey.secret}`)
+        .send({
+          type: "VoucherOffer",
+          props: {
+            title: "Bad CTA",
+            voucherId: String(ownerVoucher._id),
+            description: "",
+            cta: "Go",
+            ctaUrl: "javascript:alert(1)",
+          },
+        });
+      expect(res.status).toBe(400);
+    });
+
+    it("rejects VoucherOffer when user voucher is not active", async () => {
+      const site = await createOwnerPortfolio();
+      const writeKey = await issueWriteKey();
+      const voucherDef = await Voucher.create({ name: "Redeemed", type: "discount", discountAmount: 1 });
+      const redeemed = await UserVoucher.create({
+        userId: TEST_USER_ID,
+        voucherId: voucherDef._id,
+        status: "redeemed",
+      });
+
+      const res = await request(publicApp)
+        .post(`/api/public/v1/sites/${site._id}/components`)
+        .set("Authorization", `Bearer ${writeKey.secret}`)
+        .send({
+          type: "VoucherOffer",
+          props: {
+            title: "Stale",
+            voucherId: String(redeemed._id),
+            description: "",
+            cta: "Go",
+          },
+        });
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe("invalid_component_config");
     });
 
     it("adds owner VoucherOffer without exposing voucher codes", async () => {

@@ -62,6 +62,12 @@ async function assertUserVoucherOwnedBySiteOwner(voucherRefId, ownerId) {
   if (!record || String(record.userId) !== String(ownerId)) {
     throw voucherNotFound({ field: "voucherId" });
   }
+  if (record.status !== "active") {
+    throw new ComponentConfigError("Referenced voucher is not active", {
+      code: "invalid_component_config",
+      details: { field: "voucherId", status: record.status },
+    });
+  }
 }
 
 /**

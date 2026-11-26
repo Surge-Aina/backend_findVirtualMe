@@ -161,12 +161,18 @@ describe("featureComponentAdapters", () => {
     it("stores userVoucherId only", () => {
       const legacy = puckPropsToSectionData("VoucherOffer", puck, "healthcare", {
         code: "SECRET",
+        codes: ["X"],
         redemptionCount: 9,
+        redemptions: 9,
+        voucherCode: "SECRET",
       });
       expect(legacy.userVoucherId).toBe(puck.voucherId);
       expect(legacy.voucherId).toBeUndefined();
       expect(legacy.code).toBeUndefined();
+      expect(legacy.codes).toBeUndefined();
       expect(legacy.redemptionCount).toBeUndefined();
+      expect(legacy.redemptions).toBeUndefined();
+      expect(legacy.voucherCode).toBeUndefined();
       expect(sectionDataToPuckProps("VoucherOffer", legacy)).toEqual(puck);
     });
   });
