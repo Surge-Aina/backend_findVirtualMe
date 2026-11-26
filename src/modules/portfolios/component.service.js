@@ -15,6 +15,8 @@ const {
   buildOwnerComponentsPayload,
   sectionToComponentData,
   sectionIdStr,
+  puckPropsToSectionData,
+  sectionDataToPuckProps,
 } = require("./models/puckDataMapping");
 const { recordComponentAudit } = require("./componentAudit.service");
 
@@ -143,11 +145,11 @@ function plainSection(section) {
   return typeof section.toObject === "function" ? section.toObject() : section;
 }
 
-function publicSectionView(section) {
+function publicSectionView(section, template) {
   const plain = plainSection(section);
   if (!plain) return null;
   const puckType = componentIdForBlockType(plain.type);
-  const puckItem = sectionToComponentData(plain);
+  const puckItem = sectionToComponentData(plain, template);
   return {
     sectionId: sectionIdStr(plain),
     type: puckType,
@@ -225,6 +227,7 @@ async function addComponent(ctx, input) {
   assertUnifiedSiteTemplate(listing.template);
 
   const validated = validateComponentProps(type, props);
+  const legacyData = puckPropsToSectionData(type, validated, listing.template, {});
   const blockType = blockTypeForComponent(type);
   const order = input.order;
 
@@ -236,7 +239,7 @@ async function addComponent(ctx, input) {
   );
 
   await resolveDraftAfterExternalWrite(ctx.siteId, ctx.draftSource);
-  const draft = await portfolioDraftService.addDraftSection(ctx.siteId, blockType, validated, order);
+  const draft = await portfolioDraftService.addDraftSection(ctx.siteId, blockType, legacyData, order);
   if (!draft) {
     throw new FeatureComponentsError("Site not found", { status: 404, code: "not_found" });
   }
@@ -259,7 +262,7 @@ async function addComponent(ctx, input) {
     sectionId: sectionIdStr(added),
   });
 
-  return mutationEnvelope(ctx, { section: publicSectionView(added) });
+  return mutationEnvelope(ctx, { section: publicSectionView(added, listing.template) });
 }
 
 async function updateComponent(ctx, { sectionId, props, config }) {
@@ -273,6 +276,12 @@ async function updateComponent(ctx, { sectionId, props, config }) {
   if (!draft) {
     throw new FeatureComponentsError("Site not found", { status: 404, code: "not_found" });
   }
+
+  const listing = await loadListingContext(ctx.siteId, ctx.ownerId, { publishedOnly: false });
+  if (!listing) {
+    throw new FeatureComponentsError("Site not found", { status: 404, code: "not_found" });
+  }
+  assertUnifiedSiteTemplate(listing.template);
 
   const sections = draft.hasDraft ? draft.draft.sections : draft.published?.sections || [];
   const target = sections.find((s) => sectionIdStr(s) === String(sectionId));
@@ -293,12 +302,15 @@ async function updateComponent(ctx, { sectionId, props, config }) {
     });
   }
 
+  const existingData = target.data && typeof target.data === "object" ? target.data : {};
+  const existingPuck = sectionDataToPuckProps(puckType, existingData, listing.template);
   const validated = validateComponentProps(puckType, {
-    ...target.data,
+    ...existingPuck,
     ...puckProps,
     id: String(sectionId),
   });
-  const updatedDraft = await portfolioDraftService.updateDraftSection(ctx.siteId, sectionId, validated);
+  const legacyData = puckPropsToSectionData(puckType, validated, listing.template, existingData);
+  const updatedDraft = await portfolioDraftService.updateDraftSection(ctx.siteId, sectionId, legacyData);
   if (!updatedDraft) {
     throw new FeatureComponentsError("Section not found", { status: 404, code: "not_found" });
   }
@@ -312,7 +324,7 @@ async function updateComponent(ctx, { sectionId, props, config }) {
     sectionId,
   });
 
-  return mutationEnvelope(ctx, { section: publicSectionView(section) });
+  return mutationEnvelope(ctx, { section: publicSectionView(section, listing.template) });
 }
 
 async function removeComponent(ctx, { sectionId }) {
@@ -455,9 +467,12 @@ async function reorderComponents(ctx, { sectionIds }) {
     componentId: "",
   });
 
+  const portfolio = await Portfolio.findById(ctx.siteId).select("template").lean();
+  const template = portfolio?.template;
+
   const viewSections = updatedDraft.sections
     .filter((s) => componentIdForBlockType(s.type))
-    .map(publicSectionView);
+    .map((s) => publicSectionView(s, template));
 
   return mutationEnvelope(ctx, { sections: viewSections });
 }

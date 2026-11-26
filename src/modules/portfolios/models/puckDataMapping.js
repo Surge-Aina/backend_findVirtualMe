@@ -3,6 +3,7 @@ const {
   PUCK_REFERENCE,
   buildPuckConfig,
 } = require("./componentRegistry");
+const { sectionDataToPuckProps, puckPropsToSectionData } = require("./featureComponentAdapters");
 
 /**
  * How Puck `Data` maps to FindVirtualMe portfolio documents (sections model).
@@ -20,13 +21,14 @@ const DATA_MAPPING = Object.freeze({
   contentItem: {
     type: "Puck component type (config.components key). Registry metadata.blockType is stored as section.type.",
     "props.id": "Mirrors section._id as a string.",
-    "props.*": "All other props are stored in section.data without transformation.",
+    "props.*":
+      "Serialized Puck view; API/MCP reads convert legacy section.data to Puck props. Writes validate Puck props then persist legacy section.data.",
   },
   section: {
     type: "blockType from registry metadata (e.g. contact, gallery).",
     order: "Display order; reorder_components updates order on matching sections only.",
     visible: "Section visibility flag (outside Puck props in this slice).",
-    data: "Puck props minus id.",
+    data: "Legacy block fields in section.data; mirrors frontend unified block renderers.",
   },
   contactLeadForm:
     "Public visitors submit leads via POST /api/contact (unchanged). Puck props configure the on-page form UI only.",
@@ -36,22 +38,23 @@ function sectionIdStr(section) {
   return section?._id?.toString?.() || "";
 }
 
-function sectionToComponentData(section) {
+function sectionToComponentData(section, template) {
   const puckType = componentIdForBlockType(section.type);
   if (!puckType) return null;
   const data = section.data && typeof section.data === "object" ? section.data : {};
+  const puckProps = sectionDataToPuckProps(puckType, data, template);
   return {
     type: puckType,
     props: {
       id: sectionIdStr(section) || undefined,
-      ...JSON.parse(JSON.stringify(data)),
+      ...JSON.parse(JSON.stringify(puckProps)),
     },
   };
 }
 
-function sectionsToPuckData(sections, { title = "" } = {}) {
+function sectionsToPuckData(sections, { title = "", template } = {}) {
   const ordered = [...(sections || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-  const content = ordered.map(sectionToComponentData).filter(Boolean);
+  const content = ordered.map((s) => sectionToComponentData(s, template)).filter(Boolean);
 
   return {
     content,
@@ -74,7 +77,7 @@ function buildOwnerComponentsPayload({ template, sections, title }) {
     reference: PUCK_REFERENCE,
     config: buildPuckConfig(),
     dataMapping: DATA_MAPPING,
-    data: sectionsToPuckData(sections, { title }),
+    data: sectionsToPuckData(sections, { title, template }),
     template,
   };
 }
@@ -84,6 +87,8 @@ module.exports = {
   sectionToComponentData,
   sectionsToPuckData,
   propsToSectionData,
+  puckPropsToSectionData,
+  sectionDataToPuckProps,
   buildOwnerComponentsPayload,
   sectionIdStr,
 };

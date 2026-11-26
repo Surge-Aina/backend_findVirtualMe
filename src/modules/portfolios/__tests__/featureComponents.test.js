@@ -320,6 +320,92 @@ describe("Feature components (Puck registry)", () => {
       expect(JSON.stringify(body)).toContain("dataMapping");
     });
 
+    it("persists legacy section.data on add and lists Puck props", async () => {
+      const site = await createOwnerPortfolio();
+      const writeKey = await issueWriteKey();
+
+      const res = await request(publicApp)
+        .post(`/api/public/v1/sites/${site._id}/components`)
+        .set("Authorization", `Bearer ${writeKey.secret}`)
+        .send({
+          type: "Gallery",
+          props: {
+            title: "Facility tour",
+            images: [{ url: "https://cdn.example/room.jpg", caption: "Front desk" }],
+          },
+        });
+      expect(res.status).toBe(201);
+
+      const draft = await PortfolioDraft.findOne({ portfolioId: site._id }).lean();
+      const gallery = draft.sections.find((s) => s.type === "gallery");
+      expect(gallery.data).toMatchObject({
+        sectionTitle: "Facility tour",
+        facilityImages: [{ url: "https://cdn.example/room.jpg", caption: "Front desk" }],
+      });
+      expect(gallery.data.images).toBeUndefined();
+
+      const listed = await request(ownerApp).get(`/api/portfolios/components?siteId=${site._id}`);
+      const puckGallery = listed.body.data.content.find((c) => c.type === "Gallery");
+      expect(puckGallery.props).toMatchObject({
+        title: "Facility tour",
+        images: [{ url: "https://cdn.example/room.jpg", caption: "Front desk" }],
+      });
+    });
+
+    it("lists Puck-shaped gallery sections without corrupting stored data", async () => {
+      const site = await createOwnerPortfolio({
+        sections: [
+          { type: "hero", order: 0, data: { headline: "Welcome" } },
+          {
+            type: "gallery",
+            order: 1,
+            data: {
+              title: "Legacy puck blob",
+              images: [{ url: "https://cdn.example/legacy.jpg", caption: "Still works" }],
+            },
+          },
+        ],
+      });
+
+      const res = await request(ownerApp).get(`/api/portfolios/components?siteId=${site._id}`);
+      expect(res.status).toBe(200);
+      const gallery = res.body.data.content.find((c) => c.type === "Gallery");
+      expect(gallery.props.title).toBe("Legacy puck blob");
+      expect(gallery.props.images[0].url).toBe("https://cdn.example/legacy.jpg");
+    });
+
+    it("merge-preserves contact legacy fields on update", async () => {
+      const site = await createOwnerPortfolio({
+        sections: [
+          { type: "hero", order: 0, data: { headline: "Welcome" } },
+          {
+            type: "contact",
+            order: 1,
+            data: {
+              headline: "Old",
+              title: "Old",
+              email: "desk@example.test",
+              phone: "555-0199",
+            },
+          },
+        ],
+      });
+      const writeKey = await issueWriteKey();
+      const contactSection = site.sections.find((s) => s.type === "contact");
+
+      await request(publicApp)
+        .patch(`/api/public/v1/sites/${site._id}/components/${contactSection._id}`)
+        .set("Authorization", `Bearer ${writeKey.secret}`)
+        .send({ props: { headline: "Updated headline" } });
+
+      const draft = await PortfolioDraft.findOne({ portfolioId: site._id }).lean();
+      const contact = draft.sections.find((s) => s.type === "contact");
+      expect(contact.data.email).toBe("desk@example.test");
+      expect(contact.data.phone).toBe("555-0199");
+      expect(contact.data.headline).toBe("Updated headline");
+      expect(contact.data.submitText).toBeTruthy();
+    });
+
     it("routes contact form submission through leads pipeline", async () => {
       const site = await createOwnerPortfolio();
       const writeKey = await issueWriteKey();
