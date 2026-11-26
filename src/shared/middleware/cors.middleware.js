@@ -1,5 +1,6 @@
 const cors = require("cors");
 const User = require("../models/User");
+const { isPlatformCustomerOrigin } = require("../utils/platformSubdomain");
 
 const seededOrigins = [
   process.env.FRONTEND_URL,
@@ -71,6 +72,10 @@ const corsOptions = {
       staticOriginSet.has(normalizedOrigin) ||
       staticHostnameSet.has(hostname)
     ) {
+      return callback(null, true);
+    }
+
+    if (isPlatformCustomerOrigin(origin)) {
       return callback(null, true);
     }
 
