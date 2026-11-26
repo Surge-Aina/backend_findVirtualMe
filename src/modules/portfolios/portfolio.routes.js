@@ -1,12 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const ctrl = require("./portfolio.controller");
+const componentCtrl = require("./component.controller");
 const auth = require("../../shared/middleware/auth");
 const optionalAuth = require("../../shared/middleware/optionalAuth");
 
 // Public (static paths before param routes)
 router.get("/public", ctrl.listPublic);
 router.get("/block-types", ctrl.getBlockTypes);
+router.get("/components", auth, componentCtrl.listComponents);
 router.get("/slug/:slug", optionalAuth, ctrl.getBySlug);
 
 // Authenticated (must precede /:id to avoid being captured by the param route)

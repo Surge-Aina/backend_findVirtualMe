@@ -4,7 +4,7 @@
     "title": "FindVirtualMe Public API",
     "version": "1.0.0",
     "summary": "Read a FindVirtualMe account's own sites and published business profile.",
-    "description": "Authenticate with a developer API key (`Authorization: Bearer fvm_...`). A key can read only the account that created it. `leads:read` reads one captured lead. `webhooks:write` manages webhook subscriptions. Human docs: `/api/public/docs`."
+    "description": "Authenticate with a developer API key (`Authorization: Bearer fvm_...`). A key can read only the account that created it. `leads:read` reads one captured lead. `webhooks:write` manages webhook subscriptions. With `FEATURE_COMPONENTS_ENABLED` and `SITE_DRAFTS_ENABLED`, `sites:write` mutates reusable components on the site draft only (source `api`; OAuth/MCP uses `ai`). Human docs: `/api/public/docs`."
   },
   "servers": [
     {
@@ -36,6 +36,10 @@
     {
       "name": "Leads",
       "description": "Contact form submissions captured on an owned site"
+    },
+    {
+      "name": "Components",
+      "description": "Puck-shaped feature components on owned sites (draft writes when enabled)"
     }
   ],
   "security": [
@@ -260,6 +264,86 @@
           "429": {
             "$ref": "#/components/responses/RateLimited"
           }
+        }
+      }
+    },
+    "/sites/{id}/components": {
+      "get": {
+        "tags": ["Components"],
+        "summary": "List Puck component config for a site",
+        "description": "Returns Puck-style `config` (root + components with fields/defaultProps), `dataMapping`, and serialized `data` when FEATURE_COMPONENTS_ENABLED is on. Requires `sites:read`.",
+        "operationId": "listSiteComponents",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Puck config and mapping" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "post": {
+        "tags": ["Components"],
+        "summary": "Add component to site draft",
+        "description": "Body: `{ \"type\": \"Gallery\", \"props\": { ... } }`. Requires `sites:write`, `SITE_DRAFTS_ENABLED`, and `FEATURE_COMPONENTS_ENABLED`.",
+        "operationId": "addSiteComponent",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "201": { "description": "Draft updated" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/sites/{id}/components/reorder": {
+      "post": {
+        "tags": ["Components"],
+        "summary": "Reorder feature component sections in draft",
+        "operationId": "reorderSiteComponents",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Draft reordered" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/sites/{id}/components/{sectionId}": {
+      "patch": {
+        "tags": ["Components"],
+        "summary": "Update component props in draft",
+        "operationId": "updateSiteComponent",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "sectionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Draft section updated" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Components"],
+        "summary": "Remove component section from draft",
+        "operationId": "removeSiteComponent",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "sectionId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Section removed from draft" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
     },

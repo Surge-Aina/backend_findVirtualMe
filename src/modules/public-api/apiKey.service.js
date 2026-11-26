@@ -92,7 +92,7 @@ function normalizeScopes(scopes) {
     throw new ApiKeyError(
       400,
       "validation_error",
-      "scopes must be a non-empty array of supported read scopes",
+      "scopes must be a non-empty array of supported scopes",
       { field: "scopes" }
     );
   }
@@ -102,7 +102,7 @@ function normalizeScopes(scopes) {
       throw new ApiKeyError(
         400,
         "validation_error",
-        "scopes must be a non-empty array of supported read scopes",
+        "scopes must be a non-empty array of supported scopes",
         { field: "scopes" }
       );
     }

@@ -120,7 +120,7 @@ describe("public API v1", () => {
     const bad = await request(app)
       .post("/api/developer/api-keys")
       .set("Authorization", sessionFor(user))
-      .send({ scopes: ["sites:write"] });
+      .send({ scopes: ["sites:delete"] });
     expect(bad.status).toBe(400);
     expect(bad.body.error.code).toBe("validation_error");
   });

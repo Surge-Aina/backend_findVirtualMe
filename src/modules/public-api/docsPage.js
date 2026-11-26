@@ -46,6 +46,7 @@ function renderDocsPage() {
     <h2>Scopes</h2>
     <ul>
       <li><code>sites:read</code> — list and fetch the caller's websites.</li>
+      <li><code>sites:write</code> — add, update, remove, or reorder feature components on the site draft when <code>FEATURE_COMPONENTS_ENABLED</code> and <code>SITE_DRAFTS_ENABLED</code> are on (not included on existing keys by default).</li>
       <li><code>profile:read</code> — read the published business profile.</li>
       <li><code>webhooks:write</code> — create, list, delete, rotate, and test webhook subscriptions.</li>
       <li><code>leads:read</code> — read one lead captured on a site the caller owns.</li>
@@ -59,6 +60,11 @@ function renderDocsPage() {
         <tr><td>GET</td><td><code>/api/public/v1/me</code></td><td>any valid key</td></tr>
         <tr><td>GET</td><td><code>/api/public/v1/sites</code></td><td><code>sites:read</code></td></tr>
         <tr><td>GET</td><td><code>/api/public/v1/sites/:id</code></td><td><code>sites:read</code></td></tr>
+        <tr><td>GET</td><td><code>/api/public/v1/sites/:id/components</code></td><td><code>sites:read</code></td></tr>
+        <tr><td>POST</td><td><code>/api/public/v1/sites/:id/components</code></td><td><code>sites:write</code></td></tr>
+        <tr><td>PATCH</td><td><code>/api/public/v1/sites/:id/components/:sectionId</code></td><td><code>sites:write</code></td></tr>
+        <tr><td>DELETE</td><td><code>/api/public/v1/sites/:id/components/:sectionId</code></td><td><code>sites:write</code></td></tr>
+        <tr><td>POST</td><td><code>/api/public/v1/sites/:id/components/reorder</code></td><td><code>sites:write</code></td></tr>
         <tr><td>GET</td><td><code>/api/public/v1/business-profile</code></td><td><code>profile:read</code></td></tr>
         <tr><td>GET</td><td><code>/api/public/v1/leads/:leadId</code></td><td><code>leads:read</code></td></tr>
         <tr><td>POST</td><td><code>/api/public/v1/webhooks</code></td><td><code>webhooks:write</code></td></tr>
