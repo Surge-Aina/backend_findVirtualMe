@@ -38,6 +38,8 @@ const DATA_MAPPING = Object.freeze({
     "Section data stores title, target (empty = site URL, /path, or https URL per qr-code module rules), size, and caption.",
   voucherOffer:
     "Section data stores presentation fields plus userVoucherId (Puck props.voucherId). Voucher codes and redemption counts are never persisted or returned in component props.",
+  bookingRequest:
+    "Visitors submit POST /api/booking-requests (when FEATURE_COMPONENT_BOOKING_ENABLED). Stored as leads with leadType booking plus service and requested window.",
 });
 
 function sectionIdStr(section) {

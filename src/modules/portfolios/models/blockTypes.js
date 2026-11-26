@@ -170,6 +170,13 @@ const BLOCK_TYPES = {
       "Marketing block referencing an owner UserVoucher by id; never stores voucher codes or redemption stats",
     templates: ["healthcare", "handyman", "projectManager", "dataScientist", "agent"],
   },
+
+  bookingRequest: {
+    label: "Booking request",
+    description:
+      "Visitor-submitted time request routed as a booking lead (not a confirmed appointment)",
+    templates: ["healthcare", "handyman", "projectManager", "dataScientist", "agent"],
+  },
 };
 
 for (const meta of Object.values(BLOCK_TYPES)) {

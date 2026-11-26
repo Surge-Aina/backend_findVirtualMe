@@ -18,7 +18,7 @@ function textOrNull(value) {
 }
 
 function presentLead(doc, form, siteId) {
-  return {
+  const base = {
     id: doc._id.toString(),
     siteId: String(siteId),
     form,
@@ -29,6 +29,16 @@ function presentLead(doc, form, siteId) {
     consent: consentFromStored(doc.consentContact),
     createdAt: doc.createdAt || null,
   };
+  if (form === "booking") {
+    base.booking = {
+      service: textOrNull(doc.bookingService),
+      requestedStart: doc.bookingRequestedStart || null,
+      requestedEnd: doc.bookingRequestedEnd || null,
+      timezone: textOrNull(doc.bookingTimezone),
+      sectionId: doc.bookingSectionId ? String(doc.bookingSectionId) : null,
+    };
+  }
+  return base;
 }
 
 async function getLead({ ownerId, leadId, siteId }) {
@@ -43,7 +53,9 @@ async function getLead({ ownerId, leadId, siteId }) {
     if (siteId && String(docSite) !== String(siteId)) return null;
     const owned = await Portfolio.findOne({ _id: docSite, owner: ownerId }).select("_id").lean();
     if (!owned) return null;
-    return presentLead(doc, source.form, docSite);
+    const form =
+      source.form === "contact" && doc.leadType === "booking" ? "booking" : source.form;
+    return presentLead(doc, form, docSite);
   }
   return null;
 }

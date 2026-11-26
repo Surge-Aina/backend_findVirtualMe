@@ -1,4 +1,5 @@
-const { normalizePuckType, PUCK_COMPONENTS } = require("./componentRegistry");
+const { normalizePuckType, PUCK_COMPONENTS, assertComponentTypeEnabled } = require("./componentRegistry");
+const { assertValidIanaTimezone } = require("../../../shared/validation/ianaTimezone");
 const { propsToSectionData } = require("./puckDataMapping");
 
 const MAX_CONFIG_BYTES = 50 * 1024;
@@ -382,6 +383,7 @@ function mergeWithDefaultProps(defaultProps, props) {
 }
 
 function validateComponentProps(typeOrLegacyId, props) {
+  assertComponentTypeEnabled(typeOrLegacyId);
   const type = normalizePuckType(typeOrLegacyId);
   if (!type) {
     throw new ComponentConfigError("Unknown component type", {
@@ -426,6 +428,23 @@ function validateComponentProps(typeOrLegacyId, props) {
     if (merged.ctaUrl) {
       merged.ctaUrl = validateHttpUrlWithHost(merged.ctaUrl, "ctaUrl");
       validateTextValue(merged.ctaUrl, { maxLength: 2048 }, "ctaUrl", { httpUrl: true });
+    }
+  }
+  if (type === "BookingRequest") {
+    try {
+      merged.timezone = assertValidIanaTimezone(merged.timezone, "timezone");
+    } catch (err) {
+      throw new ComponentConfigError(err.message, {
+        code: "invalid_component_config",
+        details: { field: "timezone" },
+      });
+    }
+    if (Array.isArray(merged.services)) {
+      merged.services = merged.services.map((entry, index) => {
+        const name = typeof entry === "string" ? entry : entry?.name;
+        validateTextValue(name, { maxLength: 80 }, `services[${index}].name`, { required: true });
+        return { name: String(name).trim() };
+      });
     }
   }
   if (type === "SocialLinks") {

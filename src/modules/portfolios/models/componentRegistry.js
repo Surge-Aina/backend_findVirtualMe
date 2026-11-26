@@ -1,4 +1,5 @@
 const { BLOCK_TYPES } = require("./blockTypes");
+const { isFeatureComponentBookingEnabled } = require("../../../shared/config/featureComponentBooking");
 
 /**
  * Feature component registry shaped for Puck (https://github.com/puckeditor/puck, MIT).
@@ -31,6 +32,7 @@ const LEGACY_TYPE_ALIASES = Object.freeze({
   socialLinks: "SocialLinks",
   qrCode: "QrCode",
   voucherOffer: "VoucherOffer",
+  bookingRequest: "BookingRequest",
 });
 
 const ROOT_CONFIG = Object.freeze({
@@ -300,6 +302,42 @@ const PUCK_COMPONENTS = Object.freeze({
       voucherRef: "UserVoucher._id for portfolio owner; codes are never stored in section.data",
     },
   },
+  BookingRequest: {
+    label: "Booking request",
+    fields: {
+      sectionTitle: { type: "text", label: "Section title", maxLength: 120 },
+      intro: { type: "textarea", label: "Intro", maxLength: 2000 },
+      services: {
+        type: "array",
+        label: "Services visitors can pick",
+        min: 0,
+        max: 32,
+        arrayFields: {
+          name: { type: "text", label: "Name", maxLength: 80 },
+        },
+        defaultItemProps: {
+          name: "Consultation",
+        },
+      },
+      minNoticeHours: { type: "number", label: "Minimum notice (hours)", min: 0, max: 168 },
+      daysAheadMax: { type: "number", label: "Max days ahead", min: 1, max: 365 },
+      timezone: { type: "text", label: "Timezone (IANA)", maxLength: 64 },
+      confirmationText: { type: "textarea", label: "Confirmation text", maxLength: 500 },
+    },
+    defaultProps: {
+      sectionTitle: "Request a time",
+      intro: "Pick a window that works for you. We'll confirm availability by email.",
+      services: [],
+      minNoticeHours: 24,
+      daysAheadMax: 30,
+      timezone: "America/New_York",
+      confirmationText: "Thanks — your request was sent.",
+    },
+    metadata: {
+      blockType: "bookingRequest",
+      submissionEndpoint: "/api/booking-requests",
+    },
+  },
   BusinessHours: {
     label: "Business hours",
     fields: {
@@ -344,17 +382,50 @@ const PUCK_COMPONENTS = Object.freeze({
 
 const PUCK_COMPONENT_TYPES = Object.freeze(Object.keys(PUCK_COMPONENTS));
 
-const PUCK_TYPE_SET = new Set(PUCK_COMPONENT_TYPES);
+const COMPONENT_ENABLED_CHECKS = Object.freeze({
+  BookingRequest: isFeatureComponentBookingEnabled,
+});
+
+const BOOKING_DISABLED_CODE = "FEATURE_COMPONENT_BOOKING_DISABLED";
+
+function isComponentCatalogEnabled(type) {
+  const gate = COMPONENT_ENABLED_CHECKS[type];
+  if (gate && !gate()) return false;
+  return true;
+}
+
+function enabledPuckComponentTypes() {
+  return PUCK_COMPONENT_TYPES.filter(isComponentCatalogEnabled);
+}
 
 function normalizePuckType(typeOrLegacyId) {
   if (typeof typeOrLegacyId !== "string") return null;
   const trimmed = typeOrLegacyId.trim();
-  if (PUCK_TYPE_SET.has(trimmed)) return trimmed;
-  return LEGACY_TYPE_ALIASES[trimmed] || null;
+  let resolved = null;
+  if (PUCK_COMPONENT_TYPES.includes(trimmed)) resolved = trimmed;
+  else resolved = LEGACY_TYPE_ALIASES[trimmed] || null;
+  if (!resolved) return null;
+  if (!isComponentCatalogEnabled(resolved)) return null;
+  return resolved;
 }
 
 function isFeatureComponentId(typeOrLegacyId) {
   return Boolean(normalizePuckType(typeOrLegacyId));
+}
+
+function assertComponentTypeEnabled(typeOrLegacyId) {
+  if (typeof typeOrLegacyId !== "string") return;
+  const trimmed = typeOrLegacyId.trim();
+  let resolved = null;
+  if (PUCK_COMPONENT_TYPES.includes(trimmed)) resolved = trimmed;
+  else resolved = LEGACY_TYPE_ALIASES[trimmed] || null;
+  if (resolved === "BookingRequest" && !isFeatureComponentBookingEnabled()) {
+    const err = new Error("BookingRequest component is not enabled");
+    err.name = "ComponentConfigError";
+    err.status = 404;
+    err.code = BOOKING_DISABLED_CODE;
+    throw err;
+  }
 }
 
 function blockTypeForComponent(typeOrLegacyId) {
@@ -392,7 +463,7 @@ function serializeComponentConfigForApi(entry, type) {
 
 function buildPuckConfig() {
   const components = {};
-  for (const type of PUCK_COMPONENT_TYPES) {
+  for (const type of enabledPuckComponentTypes()) {
     components[type] = serializeComponentConfigForApi(PUCK_COMPONENTS[type], type);
   }
   return {
@@ -406,7 +477,7 @@ function listComponentsForTemplate(template) {
     return [];
   }
   const config = buildPuckConfig();
-  return PUCK_COMPONENT_TYPES.map((type) => ({
+  return enabledPuckComponentTypes().map((type) => ({
     type,
     ...config.components[type],
   }));
@@ -427,4 +498,8 @@ module.exports = {
   isUnifiedTemplate,
   buildPuckConfig,
   listComponentsForTemplate,
+  enabledPuckComponentTypes,
+  isComponentCatalogEnabled,
+  assertComponentTypeEnabled,
+  BOOKING_DISABLED_CODE,
 };
