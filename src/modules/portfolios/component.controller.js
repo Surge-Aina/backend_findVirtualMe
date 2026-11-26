@@ -37,6 +37,7 @@ exports.listComponents = async (req, res) => {
     const listed = await componentService.listAvailableComponents({
       ownerId: req.user._id || req.user.id,
       siteId,
+      audience: "owner",
     });
     if (!listed) return res.status(404).json({ error: "Portfolio not found" });
 

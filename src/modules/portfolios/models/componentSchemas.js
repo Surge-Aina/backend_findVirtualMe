@@ -47,7 +47,16 @@ function assertAllowedKey(key, path) {
   }
 }
 
-function validateTextValue(value, field, path, { required = false } = {}) {
+function validateHttpUrlString(value, path) {
+  if (!/^https?:\/\//i.test(value)) {
+    throw new ComponentConfigError(`${path} must start with http:// or https://`, {
+      code: "invalid_component_config",
+      details: { field: path },
+    });
+  }
+}
+
+function validateTextValue(value, field, path, { required = false, httpUrl = false } = {}) {
   if (value === undefined || value === null) {
     if (required) {
       throw new ComponentConfigError(`${path} is required`, {
@@ -69,6 +78,9 @@ function validateTextValue(value, field, path, { required = false } = {}) {
       code: "invalid_component_config",
       details: { field: path, max },
     });
+  }
+  if (httpUrl || path.endsWith(".url")) {
+    validateHttpUrlString(value, path);
   }
 }
 
@@ -107,11 +119,43 @@ function validateRadioValue(value, field, path) {
   }
 }
 
+function stripFieldValue(field, value) {
+  if (value === undefined || value === null) return value;
+  switch (field.type) {
+    case "object": {
+      const out = {};
+      const objectFields = field.objectFields || {};
+      for (const key of Object.keys(objectFields)) {
+        if (value[key] !== undefined) {
+          out[key] = stripFieldValue(objectFields[key], value[key]);
+        }
+      }
+      return out;
+    }
+    case "array":
+      return (Array.isArray(value) ? value : []).map((item) =>
+        stripFieldValue({ type: "object", objectFields: field.arrayFields || {} }, item)
+      );
+    default:
+      return value;
+  }
+}
+
+function stripPropsAgainstFields(fields, value) {
+  if (!fields || value === undefined || value === null) return {};
+  const out = {};
+  for (const [key, field] of Object.entries(fields)) {
+    if (value[key] === undefined) continue;
+    out[key] = stripFieldValue(field, value[key]);
+  }
+  return out;
+}
+
 function validateFieldValue(field, value, path, { required = false } = {}) {
   switch (field.type) {
     case "text":
     case "textarea":
-      validateTextValue(value, field, path, { required });
+      validateTextValue(value, field, path, { required, httpUrl: path.endsWith(".url") });
       break;
     case "number":
       validateNumberValue(value, field, path);
@@ -130,7 +174,14 @@ function validateFieldValue(field, value, path, { required = false } = {}) {
       for (const key of Object.keys(value)) {
         assertAllowedKey(key, `${path}.${key}`);
         const sub = field.objectFields?.[key];
-        if (sub) validateFieldValue(sub, value[key], `${path}.${key}`);
+        if (sub) {
+          validateFieldValue(sub, value[key], `${path}.${key}`);
+        } else {
+          throw new ComponentConfigError(`Unknown nested prop "${key}"`, {
+            code: "invalid_component_config",
+            details: { field: `${path}.${key}` },
+          });
+        }
       }
       break;
     case "array":
@@ -167,22 +218,25 @@ function validateFieldValue(field, value, path, { required = false } = {}) {
           const sub = arrayFields[key];
           if (sub) {
             validateFieldValue(sub, item[key], `${itemPath}.${key}`, {
-              required: sub.type === "text" && arrayFields[key] === sub,
+              required: sub.type === "text" && key === "url",
+            });
+          } else {
+            throw new ComponentConfigError(`Unknown nested prop "${key}"`, {
+              code: "invalid_component_config",
+              details: { field: `${itemPath}.${key}` },
             });
           }
         }
-        for (const [key, sub] of Object.entries(arrayFields)) {
-          if (sub.type === "text" && item[key] === undefined && false) {
-            // optional text in array rows
-          }
+        if (arrayFields.url && item.url !== undefined) {
+          validateTextValue(
+            item.url,
+            { ...arrayFields.url, maxLength: 2048 },
+            `${itemPath}.url`,
+            { required: true, httpUrl: true }
+          );
         }
         if (arrayFields.title && item.title !== undefined) {
           validateTextValue(item.title, arrayFields.title, `${itemPath}.title`, { required: true });
-        }
-        if (arrayFields.url && item.url !== undefined) {
-          validateTextValue(item.url, { ...arrayFields.url, maxLength: 2048 }, `${itemPath}.url`, {
-            required: true,
-          });
         }
         if (arrayFields.quote && item.quote !== undefined) {
           validateTextValue(item.quote, arrayFields.quote, `${itemPath}.quote`, { required: true });
@@ -206,9 +260,6 @@ function mergeWithDefaultProps(defaultProps, props) {
   return { ...base, ...props };
 }
 
-/**
- * Validate Puck-style props for a component type (server-side mirror of Puck field types).
- */
 function validateComponentProps(typeOrLegacyId, props) {
   const type = normalizePuckType(typeOrLegacyId);
   if (!type) {
@@ -220,15 +271,6 @@ function validateComponentProps(typeOrLegacyId, props) {
 
   const entry = PUCK_COMPONENTS[type];
   const merged = mergeWithDefaultProps(entry.defaultProps, props);
-  const sectionData = propsToSectionData(merged);
-
-  const sizeBytes = configSizeBytes(sectionData);
-  if (sizeBytes > MAX_CONFIG_BYTES) {
-    throw new ComponentConfigError("Component props exceed size limit", {
-      code: "component_config_too_large",
-      details: { maxBytes: MAX_CONFIG_BYTES, sizeBytes },
-    });
-  }
 
   if (props?.id !== undefined && props.id !== null && typeof props.id !== "string") {
     throw new ComponentConfigError("props.id must be a string when provided", {
@@ -251,10 +293,21 @@ function validateComponentProps(typeOrLegacyId, props) {
     validateFieldValue(field, merged[key], key);
   }
 
+  const stripped = stripPropsAgainstFields(entry.fields, merged);
+  const withId = props?.id ? { ...stripped, id: props.id } : stripped;
+  const sectionData = propsToSectionData(withId);
+
+  const sizeBytes = configSizeBytes(sectionData);
+  if (sizeBytes > MAX_CONFIG_BYTES) {
+    throw new ComponentConfigError("Component props exceed size limit", {
+      code: "component_config_too_large",
+      details: { maxBytes: MAX_CONFIG_BYTES, sizeBytes },
+    });
+  }
+
   return sectionData;
 }
 
-/** @deprecated name kept for call sites — validates props, returns section.data */
 function validateComponentConfig(typeOrLegacyId, configOrProps) {
   return validateComponentProps(typeOrLegacyId, configOrProps);
 }

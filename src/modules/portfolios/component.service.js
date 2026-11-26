@@ -18,6 +18,8 @@ const {
 } = require("./models/puckDataMapping");
 const { recordComponentAudit } = require("./componentAudit.service");
 
+const MAX_PORTFOLIO_SECTIONS = portfolioService.MAX_PORTFOLIO_SECTIONS;
+
 class FeatureComponentsError extends Error {
   constructor(message, { status = 403, code = "feature_components_disabled", details } = {}) {
     super(message);
@@ -50,7 +52,7 @@ function assertDraftWritesAllowed() {
 function throwUnlessPortfolioOwner(check) {
   if (check.ok) return;
   const status = check.status === 403 ? 404 : check.status || 404;
-  const code = status === 404 ? "not_found" : check.status === 403 ? "forbidden" : "not_found";
+  const code = status === 404 ? "not_found" : "not_found";
   throw new FeatureComponentsError(check.error || "Not found", {
     status,
     code,
@@ -64,46 +66,94 @@ function resolveTypeAndProps(input = {}) {
   return { type, props, rawType };
 }
 
-async function loadSiteSectionsAndTitle(siteId, ownerId) {
+function mutationEnvelope(ctx, extra) {
+  return {
+    draftMode: true,
+    approvalState: "pending_owner",
+    source: ctx.draftSource,
+    ...extra,
+  };
+}
+
+async function loadListingContext(siteId, ownerId, { publishedOnly }) {
   const portfolio = await Portfolio.findById(siteId).select("owner template title sections").lean();
   if (!portfolio || String(portfolio.owner) !== String(ownerId)) return null;
 
   const draftView = await portfolioDraftService.getOwnerDraft(siteId);
-  const sections = draftView?.hasDraft
+  const hasDraft = Boolean(draftView?.hasDraft);
+
+  if (publishedOnly) {
+    return {
+      template: portfolio.template,
+      title: portfolio.title || "",
+      sections: portfolio.sections || [],
+      hasDraft,
+      approvalState: hasDraft ? draftView.draft.approvalState : "approved",
+      source: hasDraft ? draftView.draft.source : "owner",
+      dataSource: "published",
+    };
+  }
+
+  const sections = hasDraft
     ? draftView.draft.sections || []
     : draftView?.published?.sections || portfolio.sections || [];
-  const title = draftView?.hasDraft ? draftView.draft.title : draftView?.published?.title || portfolio.title;
+  const title = hasDraft
+    ? draftView.draft.title
+    : draftView?.published?.title || portfolio.title || "";
 
-  return { template: portfolio.template, sections, title };
+  return {
+    template: portfolio.template,
+    title,
+    sections,
+    hasDraft,
+    approvalState: hasDraft ? draftView.draft.approvalState : "approved",
+    source: hasDraft ? draftView.draft.source : "owner",
+    dataSource: hasDraft ? "draft" : "published",
+  };
 }
 
-async function listAvailableComponents({ ownerId, siteId }) {
+/**
+ * @param {{ ownerId: string, siteId: string, audience?: 'public' | 'owner' | 'mcp' }} params
+ */
+async function listAvailableComponents({ ownerId, siteId, audience = "owner" }) {
   assertComponentsAvailable();
-  const site = await loadSiteSectionsAndTitle(siteId, ownerId);
-  if (!site) return null;
+  const publishedOnly = audience === "public";
+  const ctx = await loadListingContext(siteId, ownerId, { publishedOnly });
+  if (!ctx) return null;
 
   const puckPayload = buildOwnerComponentsPayload({
-    template: site.template,
-    sections: isUnifiedTemplate(site.template) ? site.sections : [],
-    title: site.title,
+    template: ctx.template,
+    sections: isUnifiedTemplate(ctx.template) ? ctx.sections : [],
+    title: ctx.title,
   });
 
   return {
     siteId: String(siteId),
-    template: site.template,
+    template: ctx.template,
+    hasDraft: ctx.hasDraft,
+    approvalState: ctx.approvalState,
+    source: ctx.source,
+    dataSource: ctx.dataSource,
     ...puckPayload,
   };
 }
 
+function plainSection(section) {
+  if (!section) return null;
+  return typeof section.toObject === "function" ? section.toObject() : section;
+}
+
 function publicSectionView(section) {
-  const puckType = componentIdForBlockType(section.type);
-  const puckItem = sectionToComponentData(section);
+  const plain = plainSection(section);
+  if (!plain) return null;
+  const puckType = componentIdForBlockType(plain.type);
+  const puckItem = sectionToComponentData(plain);
   return {
-    sectionId: sectionIdStr(section),
+    sectionId: sectionIdStr(plain),
     type: puckType,
-    blockType: section.type,
-    order: section.order,
-    visible: section.visible !== false,
+    blockType: plain.type,
+    order: plain.order,
+    visible: plain.visible !== false,
     props: puckItem?.props || {},
   };
 }
@@ -115,7 +165,7 @@ async function resolveDraftAfterExternalWrite(siteId, source) {
 
 async function writeAudit(ctx, payload) {
   await recordComponentAudit({
-    portfolioId: siteIdFromCtx(ctx),
+    portfolioId: ctx.siteId,
     ownerId: ctx.ownerId,
     ...payload,
     source: ctx.draftSource,
@@ -123,10 +173,6 @@ async function writeAudit(ctx, payload) {
     installationId: ctx.installationId,
     apiKeyId: ctx.apiKeyId,
   });
-}
-
-function siteIdFromCtx(ctx) {
-  return ctx.siteId;
 }
 
 function buildExternalWriteContext(publicApiAuth, siteId) {
@@ -142,6 +188,23 @@ function buildExternalWriteContext(publicApiAuth, siteId) {
   };
 }
 
+function assertUnifiedSiteTemplate(template) {
+  if (!isUnifiedTemplate(template)) {
+    throw new FeatureComponentsError("Feature components apply only to unified site templates", {
+      status: 400,
+      code: "validation_error",
+      details: { field: "template", template },
+    });
+  }
+}
+
+function activeDraftSections(ctx) {
+  const draftBefore = ctx.draftBefore;
+  return draftBefore?.hasDraft
+    ? draftBefore.draft.sections
+    : draftBefore?.published?.sections || [];
+}
+
 async function addComponent(ctx, input) {
   assertDraftWritesAllowed();
   const { type, props, rawType } = resolveTypeAndProps(input);
@@ -155,6 +218,12 @@ async function addComponent(ctx, input) {
   const ownerCheck = await portfolioService.assertPortfolioOwner(ctx.siteId, ctx.ownerId);
   throwUnlessPortfolioOwner(ownerCheck);
 
+  const listing = await loadListingContext(ctx.siteId, ctx.ownerId, { publishedOnly: false });
+  if (!listing) {
+    throw new FeatureComponentsError("Site not found", { status: 404, code: "not_found" });
+  }
+  assertUnifiedSiteTemplate(listing.template);
+
   const validated = validateComponentProps(type, props);
   const blockType = blockTypeForComponent(type);
   const order = input.order;
@@ -167,20 +236,22 @@ async function addComponent(ctx, input) {
   );
 
   await resolveDraftAfterExternalWrite(ctx.siteId, ctx.draftSource);
-  const draft = await portfolioDraftService.addDraftSection(
-    ctx.siteId,
-    blockType,
-    validated,
-    order,
-    { componentWrite: true }
-  );
+  const draft = await portfolioDraftService.addDraftSection(ctx.siteId, blockType, validated, order);
   if (!draft) {
     throw new FeatureComponentsError("Site not found", { status: 404, code: "not_found" });
   }
 
   await portfolioDraftService.applyExternalDraftSource(draft, ctx.draftSource);
 
-  const added = draft.sections.find((s) => !beforeIds.has(sectionIdStr(s))) || draft.sections[draft.sections.length - 1];
+  const added = draft.sections.find(
+    (s) => s.type === blockType && !beforeIds.has(sectionIdStr(s))
+  );
+  if (!added) {
+    throw new FeatureComponentsError("Failed to locate added component section", {
+      status: 500,
+      code: "internal_error",
+    });
+  }
 
   await writeAudit(ctx, {
     action: "add",
@@ -188,16 +259,10 @@ async function addComponent(ctx, input) {
     sectionId: sectionIdStr(added),
   });
 
-  return {
-    draftMode: true,
-    approvalState: "pending_owner",
-    source: ctx.draftSource,
-    section: publicSectionView(added),
-    portfolio: portfolioDraftService.draftMutationPortfolioResponse(draft),
-  };
+  return mutationEnvelope(ctx, { section: publicSectionView(added) });
 }
 
-async function updateComponent(ctx, { sectionId, props, config, type: _t, componentId: _c }) {
+async function updateComponent(ctx, { sectionId, props, config }) {
   const puckProps = props !== undefined ? props : config;
   assertDraftWritesAllowed();
   const ownerCheck = await portfolioService.assertPortfolioOwner(ctx.siteId, ctx.ownerId);
@@ -233,11 +298,7 @@ async function updateComponent(ctx, { sectionId, props, config, type: _t, compon
     ...puckProps,
     id: String(sectionId),
   });
-  const updatedDraft = await portfolioDraftService.updateDraftSection(
-    ctx.siteId,
-    sectionId,
-    validated
-  );
+  const updatedDraft = await portfolioDraftService.updateDraftSection(ctx.siteId, sectionId, validated);
   if (!updatedDraft) {
     throw new FeatureComponentsError("Section not found", { status: 404, code: "not_found" });
   }
@@ -251,13 +312,7 @@ async function updateComponent(ctx, { sectionId, props, config, type: _t, compon
     sectionId,
   });
 
-  return {
-    draftMode: true,
-    approvalState: "pending_owner",
-    source: ctx.draftSource,
-    section: publicSectionView(section),
-    portfolio: portfolioDraftService.draftMutationPortfolioResponse(updatedDraft),
-  };
+  return mutationEnvelope(ctx, { section: publicSectionView(section) });
 }
 
 async function removeComponent(ctx, { sectionId }) {
@@ -271,7 +326,22 @@ async function removeComponent(ctx, { sectionId }) {
     ? draftBefore.draft.sections
     : draftBefore?.published?.sections || [];
   const target = sections.find((s) => sectionIdStr(s) === String(sectionId));
-  const puckType = target ? componentIdForBlockType(target.type) : "";
+  if (!target) {
+    throw new FeatureComponentsError("Section not found", {
+      status: 404,
+      code: "not_found",
+      details: { sectionId },
+    });
+  }
+
+  const puckType = componentIdForBlockType(target.type);
+  if (!puckType) {
+    throw new FeatureComponentsError("Section is not a feature component", {
+      status: 400,
+      code: "not_a_component",
+      details: { sectionId },
+    });
+  }
 
   const updatedDraft = await portfolioDraftService.removeDraftSection(ctx.siteId, sectionId);
   if (!updatedDraft) {
@@ -282,21 +352,14 @@ async function removeComponent(ctx, { sectionId }) {
 
   await writeAudit(ctx, {
     action: "remove",
-    componentId: puckType || "",
+    componentId: puckType,
     sectionId,
   });
 
-  return {
-    draftMode: true,
-    approvalState: "pending_owner",
-    source: ctx.draftSource,
-    removedSectionId: String(sectionId),
-    portfolio: portfolioDraftService.draftMutationPortfolioResponse(updatedDraft),
-  };
+  return mutationEnvelope(ctx, { removedSectionId: String(sectionId) });
 }
 
-async function reorderComponents(ctx, { sectionIds }) {
-  assertDraftWritesAllowed();
+function validateReorderSectionIds(sectionIds, componentSectionIds) {
   if (!Array.isArray(sectionIds) || sectionIds.length === 0) {
     throw new FeatureComponentsError("sectionIds must be a non-empty array", {
       status: 400,
@@ -305,6 +368,41 @@ async function reorderComponents(ctx, { sectionIds }) {
     });
   }
 
+  if (sectionIds.length > MAX_PORTFOLIO_SECTIONS) {
+    throw new FeatureComponentsError(`sectionIds exceed the maximum of ${MAX_PORTFOLIO_SECTIONS}`, {
+      status: 400,
+      code: "validation_error",
+      details: { field: "sectionIds", max: MAX_PORTFOLIO_SECTIONS },
+    });
+  }
+
+  const normalizedIds = sectionIds.map((id) => String(id));
+  const unique = new Set(normalizedIds);
+  if (unique.size !== normalizedIds.length) {
+    throw new FeatureComponentsError("sectionIds must not contain duplicates", {
+      status: 400,
+      code: "validation_error",
+      details: { field: "sectionIds" },
+    });
+  }
+
+  const expected = [...componentSectionIds].sort();
+  const got = [...normalizedIds].sort();
+  if (expected.length !== got.length || expected.some((id, i) => id !== got[i])) {
+    throw new FeatureComponentsError("sectionIds must list every feature component section exactly once", {
+      status: 400,
+      code: "validation_error",
+      details: {
+        field: "sectionIds",
+        expectedCount: expected.length,
+        receivedCount: got.length,
+      },
+    });
+  }
+}
+
+async function reorderComponents(ctx, { sectionIds }) {
+  assertDraftWritesAllowed();
   const ownerCheck = await portfolioService.assertPortfolioOwner(ctx.siteId, ctx.ownerId);
   throwUnlessPortfolioOwner(ownerCheck);
 
@@ -315,38 +413,33 @@ async function reorderComponents(ctx, { sectionIds }) {
     ? draftBefore.draft.sections
     : draftBefore?.published?.sections || [];
 
-  const componentSectionIds = new Set(
-    sections.filter((s) => componentIdForBlockType(s.type)).map((s) => sectionIdStr(s))
-  );
+  const componentSectionIds = sections
+    .filter((s) => componentIdForBlockType(s.type))
+    .map((s) => sectionIdStr(s));
 
-  for (const id of sectionIds) {
-    if (!componentSectionIds.has(String(id))) {
-      throw new FeatureComponentsError("sectionIds must reference feature component sections", {
-        status: 400,
-        code: "validation_error",
-        details: { field: "sectionIds", invalidId: String(id) },
-      });
-    }
-  }
+  validateReorderSectionIds(sectionIds, componentSectionIds);
 
   const componentOrdered = sectionIds.map((id) => String(id));
+  const componentSectionIdSet = new Set(componentSectionIds);
   const baselineOrder = sections.map((s) => sectionIdStr(s));
 
   const mergedOrder = [];
   let ci = 0;
   for (const sid of baselineOrder) {
-    if (componentSectionIds.has(sid)) {
-      if (ci < componentOrdered.length) {
-        mergedOrder.push(componentOrdered[ci]);
-        ci += 1;
-      }
+    if (componentSectionIdSet.has(sid)) {
+      mergedOrder.push(componentOrdered[ci]);
+      ci += 1;
     } else {
       mergedOrder.push(sid);
     }
   }
-  while (ci < componentOrdered.length) {
-    mergedOrder.push(componentOrdered[ci]);
-    ci += 1;
+
+  if (mergedOrder.length > MAX_PORTFOLIO_SECTIONS) {
+    throw new FeatureComponentsError(`Portfolio sections exceed the maximum of ${MAX_PORTFOLIO_SECTIONS}`, {
+      status: 400,
+      code: "validation_error",
+      details: { max: MAX_PORTFOLIO_SECTIONS },
+    });
   }
 
   const updatedDraft = await portfolioDraftService.reorderDraftSections(ctx.siteId, mergedOrder);
@@ -366,13 +459,7 @@ async function reorderComponents(ctx, { sectionIds }) {
     .filter((s) => componentIdForBlockType(s.type))
     .map(publicSectionView);
 
-  return {
-    draftMode: true,
-    approvalState: "pending_owner",
-    source: ctx.draftSource,
-    sections: viewSections,
-    portfolio: portfolioDraftService.draftMutationPortfolioResponse(updatedDraft),
-  };
+  return mutationEnvelope(ctx, { sections: viewSections });
 }
 
 module.exports = {

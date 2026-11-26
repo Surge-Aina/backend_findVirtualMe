@@ -20,8 +20,15 @@ function assertSiteAccess(req, res, siteId) {
 }
 
 function mapServiceError(res, err) {
-  if (err.name === "FeatureComponentsError" || err.name === "ComponentConfigError") {
-    return sendError(res, err.status, err.code, err.message, err.details);
+  if (
+    err.name === "FeatureComponentsError" ||
+    err.name === "ComponentConfigError" ||
+    err.name === "PortfolioValidationError" ||
+    err.status
+  ) {
+    const status = err.status || 400;
+    const code = err.code || (status === 400 ? "validation_error" : "request_failed");
+    return sendError(res, status, code, err.message, err.details);
   }
   console.error("public_api_components_error");
   return sendError(res, 500, "internal_error", "Internal server error");
@@ -35,6 +42,7 @@ exports.listComponents = async (req, res) => {
     const listed = await componentService.listAvailableComponents({
       ownerId: ownerId(req),
       siteId,
+      audience: "public",
     });
     if (!listed) return sendError(res, 404, "not_found", "Site not found");
 

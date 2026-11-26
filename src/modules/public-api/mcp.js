@@ -130,7 +130,11 @@ function registerTools(server, auth) {
         return { isError: true, content: [{ type: "text", text: "not_found" }] };
       }
       try {
-        const listed = await componentService.listAvailableComponents({ ownerId, siteId });
+        const listed = await componentService.listAvailableComponents({
+          ownerId,
+          siteId,
+          audience: "mcp",
+        });
         if (!listed) return { isError: true, content: [{ type: "text", text: "not_found" }] };
         return textResult(listed);
       } catch (err) {
