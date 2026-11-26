@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const Portfolio = require("./models/Portfolio");
+const { isSiteDraftsEnabled } = require("../../shared/config/siteDrafts");
+const portfolioDraftService = require("./portfolioDraft.service");
 const { readLegacyPortfolioById } = require("../../../scripts/migratePortfolios");
 const { notifySitePublished, notifyBusinessProfileUpdated } = require("../public-api/lifecycleEvents");
 const { buildBusinessProfile, publishedContact } = require("../public-api/businessProfile");
@@ -408,6 +410,17 @@ async function getPortfolioForViewer(id, viewerUserId, options = {}) {
   const { domainHost } = options;
   const portfolio = await getPortfolio(id);
   if (!portfolio) return null;
+
+  const ownerId = portfolio.owner?.toString?.();
+  const viewerStr = viewerUserId?.toString?.();
+  const isOwner = ownerId && viewerStr && ownerId === viewerStr;
+
+  if (isOwner && isSiteDraftsEnabled()) {
+    const PortfolioDraft = require("./models/PortfolioDraft");
+    const draft = await PortfolioDraft.findOne({ portfolioId: id }).lean();
+    return portfolioDraftService.mergeDraftIntoOwnerPortfolioResponse(portfolio, draft);
+  }
+
   if (canViewerAccessPortfolio(portfolio, viewerUserId)) return portfolio;
   if (domainHost && (await isActiveDomainMappingForPortfolio(domainHost, id))) {
     return portfolio;
@@ -419,6 +432,17 @@ async function getPortfolioBySlugForViewer(slug, viewerUserId, options = {}) {
   const { domainHost } = options;
   const portfolio = await getPortfolioBySlug(slug);
   if (!portfolio) return null;
+
+  const ownerId = portfolio.owner?.toString?.();
+  const viewerStr = viewerUserId?.toString?.();
+  const isOwner = ownerId && viewerStr && ownerId === viewerStr;
+
+  if (isOwner && isSiteDraftsEnabled()) {
+    const PortfolioDraft = require("./models/PortfolioDraft");
+    const draft = await PortfolioDraft.findOne({ portfolioId: portfolio._id }).lean();
+    return portfolioDraftService.mergeDraftIntoOwnerPortfolioResponse(portfolio, draft);
+  }
+
   if (canViewerAccessPortfolio(portfolio, viewerUserId)) return portfolio;
   const id = portfolio._id?.toString?.();
   if (domainHost && id && (await isActiveDomainMappingForPortfolio(domainHost, id))) {
@@ -489,6 +513,12 @@ async function assertPortfolioOwner(portfolioId, userId) {
 // ─── Update base fields ─────────────────────────────────────────────────────
 
 async function updatePortfolio(id, updates) {
+  if (isSiteDraftsEnabled()) {
+    const draft = await portfolioDraftService.updateDraftPortfolio(id, updates);
+    if (!draft) return null;
+    return portfolioDraftService.draftMutationPortfolioResponse(draft);
+  }
+
   const allowed = [
     "title",
     "slug",
@@ -570,6 +600,12 @@ async function updatePortfolio(id, updates) {
 // ─── Section-level operations ────────────────────────────────────────────────
 
 async function updateSection(portfolioId, sectionId, data) {
+  if (isSiteDraftsEnabled()) {
+    const draft = await portfolioDraftService.updateDraftSection(portfolioId, sectionId, data);
+    if (!draft) return null;
+    return portfolioDraftService.draftMutationPortfolioResponse(draft);
+  }
+
   const portfolio = await Portfolio.findById(portfolioId);
   if (!portfolio) return null;
 
@@ -584,6 +620,18 @@ async function updateSection(portfolioId, sectionId, data) {
 }
 
 async function addSection(portfolioId, blockType, data, order, options = {}) {
+  if (isSiteDraftsEnabled()) {
+    const draft = await portfolioDraftService.addDraftSection(
+      portfolioId,
+      blockType,
+      data,
+      order,
+      options
+    );
+    if (!draft) return null;
+    return portfolioDraftService.draftMutationPortfolioResponse(draft);
+  }
+
   const portfolio = await Portfolio.findById(portfolioId);
   if (!portfolio) return null;
 
@@ -613,6 +661,12 @@ async function addSection(portfolioId, blockType, data, order, options = {}) {
 }
 
 async function removeSection(portfolioId, sectionId) {
+  if (isSiteDraftsEnabled()) {
+    const draft = await portfolioDraftService.removeDraftSection(portfolioId, sectionId);
+    if (!draft) return null;
+    return portfolioDraftService.draftMutationPortfolioResponse(draft);
+  }
+
   const before = await Portfolio.findById(portfolioId).lean();
   const updated = await Portfolio.findByIdAndUpdate(
     portfolioId,
@@ -624,6 +678,12 @@ async function removeSection(portfolioId, sectionId) {
 }
 
 async function reorderSections(portfolioId, orderedIds) {
+  if (isSiteDraftsEnabled()) {
+    const draft = await portfolioDraftService.reorderDraftSections(portfolioId, orderedIds);
+    if (!draft) return null;
+    return portfolioDraftService.draftMutationPortfolioResponse(draft);
+  }
+
   const portfolio = await Portfolio.findById(portfolioId);
   if (!portfolio) return null;
 
@@ -644,6 +704,10 @@ async function reorderSections(portfolioId, orderedIds) {
 // ─── Toggle helpers ──────────────────────────────────────────────────────────
 
 async function toggleVisibility(id) {
+  if (isSiteDraftsEnabled()) {
+    return portfolioDraftService.toggleDraftVisibility(id);
+  }
+
   const doc = await Portfolio.findById(id).select("visibility owner template");
   if (!doc) return null;
 
@@ -656,6 +720,10 @@ async function toggleVisibility(id) {
 }
 
 async function toggleBranding(id) {
+  if (isSiteDraftsEnabled()) {
+    return portfolioDraftService.toggleDraftBranding(id);
+  }
+
   const doc = await Portfolio.findById(id).select("hideBranding");
   if (!doc) return null;
 
@@ -685,6 +753,16 @@ module.exports = {
   PortfolioValidationError,
   getClosestKnownBlocks,
   normalizeSections,
+  prepareSection,
+  validateSectionData,
+  normalizeThemeId,
+  normalizeThemeTokens,
+  normalizePageBannerDefaults,
+  normalizeNavBrand,
+  normalizeSubUserSettings,
+  normalizeLayoutMode,
+  plainPortfolio,
+  profileSnapshot,
   createAgentPortfolio,
   createPortfolio,
   getPortfolio,

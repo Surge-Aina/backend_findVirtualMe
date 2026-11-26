@@ -1,4 +1,6 @@
 const portfolioService = require("./portfolio.service");
+const portfolioDraftService = require("./portfolioDraft.service");
+const { isSiteDraftsEnabled } = require("../../shared/config/siteDrafts");
 const agentPortfolioGenerator = require("./agentPortfolioGenerator.service");
 const subscriptionAccess = require("../payments/subscription-access.service");
 
@@ -364,6 +366,95 @@ exports.remove = async (req, res) => {
   } catch (err) {
     console.error("portfolio.remove error:", err);
     res.status(500).json({ error: "Failed to delete portfolio" });
+  }
+};
+
+exports.getDraft = async (req, res) => {
+  try {
+    if (!(await denyUnlessOwner(req, res))) return;
+    if (!isSiteDraftsEnabled()) {
+      return res.status(404).json({ error: "Site drafts are not enabled", code: "DRAFTS_DISABLED" });
+    }
+    const detail = await portfolioDraftService.getOwnerDraft(req.params.id);
+    if (!detail) return res.status(404).json({ error: "Portfolio not found" });
+    res.json({ success: true, ...detail });
+  } catch (err) {
+    console.error("portfolio.getDraft error");
+    res.status(500).json({ error: "Failed to load draft" });
+  }
+};
+
+exports.publishDraft = async (req, res) => {
+  try {
+    if (!(await denyUnlessOwner(req, res))) return;
+    if (!isSiteDraftsEnabled()) {
+      return res.status(404).json({ error: "Site drafts are not enabled", code: "DRAFTS_DISABLED" });
+    }
+    const ownerId = req.user._id || req.user.id;
+    const result = await portfolioDraftService.publishDraft(req.params.id, ownerId);
+    if (!result) return res.status(404).json({ error: "Portfolio not found" });
+    res.json({
+      success: true,
+      versionNumber: result.versionNumber,
+      portfolio: result.portfolio,
+    });
+  } catch (err) {
+    console.error("portfolio.publishDraft error:", err?.message || err);
+    return sendPortfolioError(res, err, "Failed to publish draft");
+  }
+};
+
+exports.listVersions = async (req, res) => {
+  try {
+    if (!(await denyUnlessOwner(req, res))) return;
+    if (!isSiteDraftsEnabled()) {
+      return res.status(404).json({ error: "Site drafts are not enabled", code: "DRAFTS_DISABLED" });
+    }
+    const check = await portfolioService.assertPortfolioOwner(req.params.id, req.user?._id || req.user?.id);
+    if (!check.ok) {
+      return res.status(check.status).json({ error: check.error });
+    }
+    const versions = await portfolioDraftService.listVersions(req.params.id);
+    res.json({ success: true, versions });
+  } catch (err) {
+    console.error("portfolio.listVersions error");
+    res.status(500).json({ error: "Failed to list versions" });
+  }
+};
+
+exports.getVersion = async (req, res) => {
+  try {
+    if (!(await denyUnlessOwner(req, res))) return;
+    if (!isSiteDraftsEnabled()) {
+      return res.status(404).json({ error: "Site drafts are not enabled", code: "DRAFTS_DISABLED" });
+    }
+    const version = await portfolioDraftService.getVersionSnapshot(
+      req.params.id,
+      req.params.versionNumber
+    );
+    if (!version) return res.status(404).json({ error: "Version not found" });
+    res.json({ success: true, version });
+  } catch (err) {
+    console.error("portfolio.getVersion error");
+    res.status(500).json({ error: "Failed to load version" });
+  }
+};
+
+exports.revertVersion = async (req, res) => {
+  try {
+    if (!(await denyUnlessOwner(req, res))) return;
+    if (!isSiteDraftsEnabled()) {
+      return res.status(404).json({ error: "Site drafts are not enabled", code: "DRAFTS_DISABLED" });
+    }
+    const result = await portfolioDraftService.revertVersionToDraft(
+      req.params.id,
+      req.params.versionNumber
+    );
+    if (!result) return res.status(404).json({ error: "Version not found" });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error("portfolio.revertVersion error");
+    return sendPortfolioError(res, err, "Failed to revert version");
   }
 };
 
