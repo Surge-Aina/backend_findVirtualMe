@@ -3,6 +3,7 @@ const { loginUser, signupUser } = require("./auth.controller");
 const { googleLogin } = require("./googleLogin/googleLogin.controller");
 const { bagglemeHandoff } = require("./bagglemeHandoff/bagglemeHandoff.controller");
 const passwordResetRoutes = require("./passwordReset/passwordReset.routes");
+const phoneLoginRoutes = require("./phoneLogin/phoneLogin.routes");
 
 const router = express.Router();
 
@@ -11,5 +12,6 @@ router.post("/signup", signupUser);
 router.post("/google", googleLogin);
 router.post("/baggleme", bagglemeHandoff);
 router.use(passwordResetRoutes);
+router.use("/phone", phoneLoginRoutes);
 
 module.exports = router;

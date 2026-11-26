@@ -11,6 +11,8 @@ const ALWAYS_HIDDEN = [
   "resetPasswordToken",
   "resetPasswordExpires",
   "resetCode",
+  "phoneEnc",
+  "phoneLookupHash",
   "stripeCustomerId",
   "stripeSubscriptionId",
   "googleId",
