@@ -1,7 +1,7 @@
 const express = require("express");
 const request = require("supertest");
-const mongoose = require("mongoose");
 const Portfolio = require("../models/Portfolio");
+const DomainRoute = require("../../domains/DomainRouter/DomainRouter.model");
 const PortfolioDraft = require("../models/PortfolioDraft");
 const PortfolioVersion = require("../models/PortfolioVersion");
 const portfolioService = require("../portfolio.service");
@@ -115,6 +115,64 @@ describe("Portfolio drafts and version history", () => {
       expect(live.title).toBe("Svc Published");
     });
 
+    it("does not expose draft content on owner-authenticated GET by id", async () => {
+      const portfolio = await createPublicPortfolio({ title: "Published Title" });
+
+      await request(app)
+        .patch(`/api/portfolios/${portfolio._id}`)
+        .send({ title: "Draft Title Only" });
+
+      const ownerRead = await request(app)
+        .get(`/api/portfolios/${portfolio._id}`)
+        .set("Authorization", "Bearer owner-token");
+
+      expect(ownerRead.status).toBe(200);
+      expect(ownerRead.body.title).toBe("Published Title");
+      expect(ownerRead.body.draftMode).toBeUndefined();
+    });
+
+    it("does not expose draft on domain-mapped GET for the owner", async () => {
+      const portfolio = await Portfolio.create({
+        owner: TEST_USER_ID,
+        template: "agent",
+        title: "Mapped Published",
+        visibility: "private",
+        sections: [{ type: "summary", order: 0, data: { name: "Site" } }],
+      });
+
+      await DomainRoute.create({
+        userId: TEST_USER_ID,
+        domain: "draft-owner.example",
+        portfolioId: portfolio._id,
+        isActive: true,
+      });
+
+      await request(app)
+        .patch(`/api/portfolios/${portfolio._id}`)
+        .send({ title: "Mapped Draft Title" });
+
+      const viaDomain = await request(app)
+        .get(`/api/portfolios/${portfolio._id}`)
+        .set("Authorization", "Bearer owner-token")
+        .set("X-Portfolio-Domain-Host", "draft-owner.example");
+
+      expect(viaDomain.status).toBe(200);
+      expect(viaDomain.body.title).toBe("Mapped Published");
+    });
+
+    it("rejects client attempts to set draft source metadata on patch", async () => {
+      const portfolio = await createPublicPortfolio();
+
+      const res = await request(app)
+        .patch(`/api/portfolios/${portfolio._id}`)
+        .send({ title: "Ok", source: "ai", approvalState: "approved" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe("READ_ONLY_DRAFT_FIELD");
+
+      expect(await PortfolioDraft.countDocuments({ portfolioId: portfolio._id })).toBe(0);
+    });
+
     it("keeps the public site unchanged until publish", async () => {
       const portfolio = await createPublicPortfolio({ title: "Published Title" });
 
@@ -195,6 +253,44 @@ describe("Portfolio drafts and version history", () => {
 
       const publish = await request(app).post(`/api/portfolios/${portfolio._id}/publish`);
       expect(publish.status).toBe(403);
+    });
+
+    it("handles concurrent publish without duplicate version numbers", async () => {
+      const portfolio = await createPublicPortfolio({ title: "Concurrent Base" });
+      await request(app)
+        .patch(`/api/portfolios/${portfolio._id}`)
+        .send({ title: "Concurrent Draft" });
+
+      const [a, b] = await Promise.all([
+        request(app).post(`/api/portfolios/${portfolio._id}/publish`),
+        request(app).post(`/api/portfolios/${portfolio._id}/publish`),
+      ]);
+
+      const statuses = [a.status, b.status].sort();
+      expect(statuses).toEqual(expect.arrayContaining([200]));
+      expect(a.status === 200 || b.status === 200).toBe(true);
+
+      const versionRows = await PortfolioVersion.find({ portfolioId: portfolio._id })
+        .select("versionNumber")
+        .lean();
+      const versionNumbers = versionRows.map((v) => v.versionNumber).sort((x, y) => x - y);
+      expect(versionNumbers).toEqual([...new Set(versionNumbers)].sort((x, y) => x - y));
+      expect(versionNumbers.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("deletes draft and version rows when the portfolio is removed", async () => {
+      const portfolio = await createPublicPortfolio({ title: "To Delete" });
+      await request(app).patch(`/api/portfolios/${portfolio._id}`).send({ title: "Drafted" });
+      await request(app).post(`/api/portfolios/${portfolio._id}/publish`);
+
+      expect(await PortfolioDraft.countDocuments({ portfolioId: portfolio._id })).toBe(1);
+      expect(await PortfolioVersion.countDocuments({ portfolioId: portfolio._id })).toBe(1);
+
+      const del = await request(app).delete(`/api/portfolios/${portfolio._id}`);
+      expect(del.status).toBe(200);
+
+      expect(await PortfolioDraft.countDocuments({ portfolioId: portfolio._id })).toBe(0);
+      expect(await PortfolioVersion.countDocuments({ portfolioId: portfolio._id })).toBe(0);
     });
 
     it("retains at most MAX_VERSIONS_PER_SITE snapshots", async () => {

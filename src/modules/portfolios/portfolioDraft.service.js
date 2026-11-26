@@ -12,6 +12,8 @@ function ps() {
   return portfolioService();
 }
 
+const CLIENT_BLOCKED_DRAFT_KEYS = ["source", "approvalState", "externalRef"];
+
 const EDITABLE_KEYS = [
   "title",
   "slug",
@@ -126,8 +128,48 @@ async function ensureDraft(portfolioId, { source = "owner" } = {}) {
       data: s.data,
     })),
   });
-  await draft.save();
-  return draft;
+  try {
+    await draft.save();
+    return draft;
+  } catch (err) {
+    if (err.code === 11000) {
+      const existing = await PortfolioDraft.findOne({ portfolioId });
+      if (existing) return existing;
+    }
+    throw err;
+  }
+}
+
+async function deleteDraftAndVersionsForSite(portfolioId) {
+  await Promise.all([
+    PortfolioDraft.deleteMany({ portfolioId }),
+    PortfolioVersion.deleteMany({ portfolioId }),
+  ]);
+}
+
+const MAX_PUBLISH_VERSION_RETRIES = 8;
+
+async function insertVersionRecord(portfolioId, ownerId, draft, versionSnapshot) {
+  for (let attempt = 0; attempt < MAX_PUBLISH_VERSION_RETRIES; attempt += 1) {
+    const versionNumber = await getNextVersionNumber(portfolioId);
+    try {
+      await PortfolioVersion.create({
+        portfolioId,
+        versionNumber,
+        publishedAt: new Date(),
+        publishedBy: ownerId,
+        source: draft.source || "owner",
+        snapshot: versionSnapshot,
+      });
+      return versionNumber;
+    } catch (err) {
+      if (err.code === 11000 && attempt < MAX_PUBLISH_VERSION_RETRIES - 1) {
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error("Unable to allocate version number");
 }
 
 async function buildSanitizedUpdate(portfolioId, updates, template) {
@@ -178,9 +220,23 @@ async function applySanitizedToDraft(draft, sanitized) {
   return draft.save();
 }
 
+function rejectClientDraftMetadata(updates) {
+  for (const blocked of CLIENT_BLOCKED_DRAFT_KEYS) {
+    if (updates[blocked] !== undefined) {
+      const { PortfolioValidationError } = ps();
+      throw new PortfolioValidationError(`Cannot set ${blocked} via portfolio update`, {
+        code: "READ_ONLY_DRAFT_FIELD",
+        details: { field: blocked },
+      });
+    }
+  }
+}
+
 async function updateDraftPortfolio(portfolioId, updates) {
   const published = await Portfolio.findById(portfolioId).select("template owner");
   if (!published) return null;
+
+  rejectClientDraftMetadata(updates);
 
   const draft = await ensureDraft(portfolioId);
   if (!draft) return null;
@@ -361,9 +417,6 @@ async function publishDraft(portfolioId, ownerId) {
   const before = portfolio.toObject();
   applyDraftSnapshotToPortfolioDocument(portfolio, draft);
 
-  const versionNumber = await getNextVersionNumber(portfolioId);
-  portfolio.publishedVersionNumber = versionNumber;
-
   const versionSnapshot = {
     ...extractSnapshotFromDoc(draft),
     sections: (draft.sections || []).map((s) => ({
@@ -374,21 +427,16 @@ async function publishDraft(portfolioId, ownerId) {
     })),
   };
 
-  await PortfolioVersion.create({
-    portfolioId,
-    versionNumber,
-    publishedAt: new Date(),
-    publishedBy: ownerId,
-    source: draft.source || "owner",
-    snapshot: versionSnapshot,
-  });
-
-  await pruneVersions(portfolioId);
-
   const saved = await portfolio.save();
   emitProfileChangeFromPublish(before, saved);
 
-  if (saved.visibility === "public" && saved.owner) {
+  const versionNumber = await insertVersionRecord(portfolioId, ownerId, draft, versionSnapshot);
+  saved.publishedVersionNumber = versionNumber;
+  await saved.save();
+
+  await pruneVersions(portfolioId);
+
+  if (ps().shouldNotifySitePublished(before, saved) && saved.owner) {
     notifySitePublished({
       ownerId: saved.owner,
       siteId: saved._id,
@@ -481,40 +529,6 @@ async function revertVersionToDraft(portfolioId, versionNumber) {
   };
 }
 
-function mergeDraftIntoOwnerPortfolioResponse(published, draftLean) {
-  const base = { ...published };
-  if (!draftLean) {
-    return {
-      ...base,
-      draftMode: true,
-      hasUnpublishedDraft: false,
-    };
-  }
-
-  const pubSnap = extractSnapshotFromDoc(published);
-  const draftSnap = extractSnapshotFromDoc(draftLean);
-  const hasUnpublishedDraft = JSON.stringify(pubSnap) !== JSON.stringify(draftSnap);
-
-  return {
-    ...base,
-    draftMode: true,
-    hasUnpublishedDraft,
-    workingDraft: draftToOwnerView(draftLean),
-    title: draftLean.title,
-    slug: draftLean.slug,
-    visibility: draftLean.visibility,
-    hideBranding: draftLean.hideBranding,
-    socialLinks: draftLean.socialLinks,
-    themeId: draftLean.themeId,
-    themeTokens: draftLean.themeTokens,
-    layoutMode: draftLean.layoutMode,
-    pageBannerDefaults: draftLean.pageBannerDefaults,
-    navBrand: draftLean.navBrand,
-    subUserSettings: draftLean.subUserSettings,
-    sections: draftLean.sections,
-  };
-}
-
 function draftMutationPortfolioResponse(draft) {
   const plain = ps().plainPortfolio(draft);
   return {
@@ -552,6 +566,7 @@ module.exports = {
   listVersions,
   getVersionSnapshot,
   revertVersionToDraft,
-  mergeDraftIntoOwnerPortfolioResponse,
   draftMutationPortfolioResponse,
+  deleteDraftAndVersionsForSite,
+  insertVersionRecord,
 };

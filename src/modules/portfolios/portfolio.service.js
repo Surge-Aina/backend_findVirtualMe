@@ -18,6 +18,7 @@ const {
 
 const MAX_PORTFOLIO_SECTIONS = 24;
 const MAX_SECTION_DATA_BYTES = 50 * 1024;
+const MAX_THEME_TOKENS_BYTES = 50 * 1024;
 const MAX_BLOCK_HINTS = 5;
 
 class PortfolioValidationError extends Error {
@@ -138,7 +139,29 @@ function normalizeThemeTokens(themeTokens) {
       code: "INVALID_THEME_TOKENS",
     });
   }
+
+  const sizeBytes = getJsonSizeBytes(themeTokens);
+  if (sizeBytes > MAX_THEME_TOKENS_BYTES) {
+    throw new PortfolioValidationError(
+      `themeTokens exceed the maximum of ${MAX_THEME_TOKENS_BYTES} bytes`,
+      {
+        code: "THEME_TOKENS_TOO_LARGE",
+        details: { sizeBytes, maxBytes: MAX_THEME_TOKENS_BYTES },
+      }
+    );
+  }
+
   return themeTokens;
+}
+
+function shouldNotifySitePublished(beforeDoc, afterDoc) {
+  const after = plainPortfolio(afterDoc);
+  const before = plainPortfolio(beforeDoc);
+  if (!after || after.visibility !== "public") return false;
+  if (!before) return true;
+  const firstVersionedPublish = (before.publishedVersionNumber || 0) === 0;
+  const becamePublic = before.visibility !== "public";
+  return firstVersionedPublish || becamePublic;
 }
 
 function normalizePageBannerDefaults(value) {
@@ -411,16 +434,6 @@ async function getPortfolioForViewer(id, viewerUserId, options = {}) {
   const portfolio = await getPortfolio(id);
   if (!portfolio) return null;
 
-  const ownerId = portfolio.owner?.toString?.();
-  const viewerStr = viewerUserId?.toString?.();
-  const isOwner = ownerId && viewerStr && ownerId === viewerStr;
-
-  if (isOwner && isSiteDraftsEnabled()) {
-    const PortfolioDraft = require("./models/PortfolioDraft");
-    const draft = await PortfolioDraft.findOne({ portfolioId: id }).lean();
-    return portfolioDraftService.mergeDraftIntoOwnerPortfolioResponse(portfolio, draft);
-  }
-
   if (canViewerAccessPortfolio(portfolio, viewerUserId)) return portfolio;
   if (domainHost && (await isActiveDomainMappingForPortfolio(domainHost, id))) {
     return portfolio;
@@ -432,16 +445,6 @@ async function getPortfolioBySlugForViewer(slug, viewerUserId, options = {}) {
   const { domainHost } = options;
   const portfolio = await getPortfolioBySlug(slug);
   if (!portfolio) return null;
-
-  const ownerId = portfolio.owner?.toString?.();
-  const viewerStr = viewerUserId?.toString?.();
-  const isOwner = ownerId && viewerStr && ownerId === viewerStr;
-
-  if (isOwner && isSiteDraftsEnabled()) {
-    const PortfolioDraft = require("./models/PortfolioDraft");
-    const draft = await PortfolioDraft.findOne({ portfolioId: portfolio._id }).lean();
-    return portfolioDraftService.mergeDraftIntoOwnerPortfolioResponse(portfolio, draft);
-  }
 
   if (canViewerAccessPortfolio(portfolio, viewerUserId)) return portfolio;
   const id = portfolio._id?.toString?.();
@@ -708,15 +711,16 @@ async function toggleVisibility(id) {
     return portfolioDraftService.toggleDraftVisibility(id);
   }
 
-  const doc = await Portfolio.findById(id).select("visibility owner template");
+  const doc = await Portfolio.findById(id).select("visibility owner template publishedVersionNumber");
   if (!doc) return null;
 
+  const before = doc.toObject();
   doc.visibility = doc.visibility === "public" ? "private" : "public";
-  await doc.save();
-  if (doc.visibility === "public" && doc.owner) {
-    notifySitePublished({ ownerId: doc.owner, siteId: doc._id, publishedAt: new Date() });
+  const saved = await doc.save();
+  if (shouldNotifySitePublished(before, saved) && saved.owner) {
+    notifySitePublished({ ownerId: saved.owner, siteId: saved._id, publishedAt: new Date() });
   }
-  return { _id: doc._id, visibility: doc.visibility };
+  return { _id: saved._id, visibility: saved.visibility };
 }
 
 async function toggleBranding(id) {
@@ -738,6 +742,8 @@ async function deletePortfolio(id) {
   const doc = await Portfolio.findByIdAndDelete(id);
   if (!doc) return null;
 
+  await portfolioDraftService.deleteDraftAndVersionsForSite(id);
+
   try {
     await deleteManyByPrefix(`portfolios/${id}/`);
   } catch (err) {
@@ -750,6 +756,8 @@ async function deletePortfolio(id) {
 module.exports = {
   MAX_PORTFOLIO_SECTIONS,
   MAX_SECTION_DATA_BYTES,
+  MAX_THEME_TOKENS_BYTES,
+  shouldNotifySitePublished,
   PortfolioValidationError,
   getClosestKnownBlocks,
   normalizeSections,

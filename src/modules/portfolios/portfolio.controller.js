@@ -6,7 +6,15 @@ const subscriptionAccess = require("../payments/subscription-access.service");
 
 function sendPortfolioError(res, err, fallbackMessage) {
   if (err.code === 11000) {
-    return res.status(400).json({ error: "Slug already taken", code: "DUPLICATE_SLUG" });
+    const keys = Object.keys(err.keyPattern || {});
+    if (keys.length === 1 && keys[0] === "slug") {
+      return res.status(400).json({ error: "Slug already taken", code: "DUPLICATE_SLUG" });
+    }
+    return res.status(409).json({
+      error: "A conflicting record already exists",
+      code: "DUPLICATE_KEY",
+      details: { fields: keys },
+    });
   }
 
   if (err.status) {
