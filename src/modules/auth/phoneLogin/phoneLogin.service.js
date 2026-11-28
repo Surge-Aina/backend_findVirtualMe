@@ -231,16 +231,7 @@ async function confirmVerifyForUser(userId, rawPhone, code, ctx) {
 
 async function loginStart(rawPhone, ctx) {
   const startedAt = Date.now();
-  let resolved;
-  try {
-    resolved = resolvePhone(rawPhone, countryFromContext(ctx));
-  } catch (err) {
-    if (err && err.code === "PHONE_COUNTRY_NOT_SUPPORTED") throw err;
-    const invalid = new Error(INVALID_INPUT);
-    invalid.status = 400;
-    throw invalid;
-  }
-  const { e164, country } = resolved;
+  const { e164, country } = resolvePhoneInput(rawPhone, ctx);
   const hash = phoneLookupHash(e164);
   const user = await User.findOne({ phoneLookupHash: hash, phoneVerified: true }).select("_id");
 

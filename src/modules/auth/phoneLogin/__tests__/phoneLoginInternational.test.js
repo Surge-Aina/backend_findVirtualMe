@@ -25,6 +25,8 @@ const PHONES = {
   IN: "+919876543210",
   CA: "+12045550123",
   GG: "+447781112233",
+  JE: "+447797700000",
+  IM: "+447624123456",
   FR: "+33601020304",
 };
 
@@ -172,8 +174,8 @@ describe("phone OTP international hardening", () => {
     }
   });
 
-  it("rejects CA, GG, FR, and bare national numbers without a country", async () => {
-    for (const phone of [PHONES.CA, PHONES.GG, PHONES.FR]) {
+  it("rejects CA, GG, JE, IM, FR, and bare national numbers without a country", async () => {
+    for (const phone of [PHONES.CA, PHONES.GG, PHONES.JE, PHONES.IM, PHONES.FR]) {
       const res = await request(app)
         .post("/api/auth/phone/start-verify")
         .set("Authorization", `Bearer ${customerToken}`)
@@ -189,6 +191,22 @@ describe("phone OTP international hardening", () => {
     expect(bare.status).toBe(400);
     expect(bare.body.message).toBe("Invalid request");
     expect(bare.body.code).toBeUndefined();
+  });
+
+  it("login/start returns 400 for bare national and invalid numbers", async () => {
+    await resetRateBuckets();
+    const bare = await request(app)
+      .post("/api/auth/phone/login/start")
+      .send({ phone: "4155552671" });
+    expect(bare.status).toBe(400);
+    expect(bare.body.message).toBe("Invalid request");
+
+    await resetRateBuckets();
+    const invalid = await request(app)
+      .post("/api/auth/phone/login/start")
+      .send({ phone: "not-a-phone" });
+    expect(invalid.status).toBe(400);
+    expect(invalid.body.message).toBe("Invalid request");
   });
 
   it("enforces per-country daily send caps", async () => {

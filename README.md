@@ -126,7 +126,7 @@ Component registry follows the [Puck](https://github.com/puckeditor/puck) (MIT) 
 
 Optional phone OTP sign-in via Twilio Verify (disabled unless explicitly enabled):
 
-- `PHONE_LOGIN_ENABLED` — set to `true` to expose `/api/auth/phone/*` routes; any other value keeps them hidden (404).
+- `PHONE_LOGIN_ENABLED` — set to `true` to expose `/api/auth/phone/*` routes; any other value keeps them hidden (404). `GET /api/auth/phone/countries` stays reachable either way and returns an empty list when the flag is off.
 - `PHONE_ENC_KEY` — 32-byte AES key, base64-encoded, for encrypting E.164 phone numbers at rest.
 - `PHONE_HASH_KEY` — 32-byte HMAC key, base64-encoded, for phone lookup hashes. If either key is missing, phone login stays off even when `PHONE_LOGIN_ENABLED` is `true`.
 - `TWILIO_ACCOUNT_SID`, `TWILIO_API_KEY_SID`, `TWILIO_API_KEY_SECRET`, `TWILIO_VERIFY_SERVICE_SID` — Twilio Verify credentials (API key auth).
