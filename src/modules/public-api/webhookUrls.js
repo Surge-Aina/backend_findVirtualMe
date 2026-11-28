@@ -268,12 +268,29 @@ function resetWebhookTransport() {
   transportOverride = null;
 }
 
+async function createPinnedHttpsTarget(rawUrl) {
+  const safeUrl = assertPublicHttpsUrl(rawUrl);
+  const url = new URL(safeUrl);
+  const records = await resolvePublicAddresses(url.hostname);
+  return {
+    hostname: bareHost(url.hostname),
+    servername: bareHost(url.hostname),
+    port: url.port || 443,
+    pathname: url.pathname,
+    search: url.search,
+    lookup: pinnedLookup(records),
+  };
+}
+
 module.exports = {
   assertPublicHttpsUrl,
   isBlockedIp,
   isPrivateIp,
   postWebhook,
   resolvePublicAddresses,
+  createPinnedHttpsTarget,
+  pinnedLookup,
+  bareHost,
   setWebhookTransport,
   resetWebhookTransport,
 };
