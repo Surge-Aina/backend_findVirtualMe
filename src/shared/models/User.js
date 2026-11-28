@@ -176,6 +176,16 @@ const userSchema = new mongoose.Schema({
     default: false,
     index: true,
   },
+  comped: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
+  compedPlan: {
+    type: String,
+    enum: ["basic", "pro", null],
+    default: null,
+  },
 });
 //remove password before sending back to front end
 userSchema.set("toJSON", {

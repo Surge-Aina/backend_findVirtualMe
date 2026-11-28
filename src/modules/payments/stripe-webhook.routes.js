@@ -463,10 +463,15 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
         const stripeSubscriptionId = session.subscription;
         const customerId = session.customer;
 
-        await User.findOneAndUpdate(
-          { stripeCustomerId: customerId },
-          { stripeSubscriptionId }
+        const billingUser = await User.findOne({ stripeCustomerId: customerId }).select(
+          "comped"
         );
+        if (!billingUser?.comped) {
+          await User.findOneAndUpdate(
+            { stripeCustomerId: customerId },
+            { stripeSubscriptionId }
+          );
+        }
         break;
       }
 

@@ -2,6 +2,10 @@ const express = require("express");
 const router = express.Router();
 const Stripe = require("stripe");
 const User = require("../../shared/models/User");
+const {
+  isCompedUser,
+  sendCompedBillingForbidden,
+} = require("../../shared/utils/compedAccount");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
@@ -82,6 +86,9 @@ router.post("/payment-intent", async (req, res) => {
 router.post(["/session", "/checkout-session"], async (req, res) => {
   try {
     const user = req.user; // middleware auth populates this
+    if (isCompedUser(user)) {
+      return sendCompedBillingForbidden(res);
+    }
     const { plan } = req.body; //"basic" or "pro"
 
     console.log("--------------------plan: ", plan);
@@ -173,6 +180,10 @@ router.post("/create-customer", async (req, res) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
+    if (isCompedUser(user)) {
+      return sendCompedBillingForbidden(res);
+    }
+
     //already has stripe customerId
     if (user.stripeCustomerId) {
       return res.json({ hasCustomer: true });
@@ -200,6 +211,10 @@ router.post("/billing-session", async (req, res) => {
 
   try {
     const user = req.user; // middleware auth populates this
+
+    if (isCompedUser(user)) {
+      return sendCompedBillingForbidden(res);
+    }
 
     const session = await stripe.billingPortal.sessions.create({
       customer: user.stripeCustomerId,
