@@ -21,7 +21,7 @@ const {
   getBlockTypesForTemplate,
   isKnownBlockType,
 } = require("./models/blockTypes");
-const { stripForbiddenDeep } = require("./sectionDataAllowlist");
+const { stripForbiddenKeysOnly } = require("./sectionDataAllowlist");
 
 const MAX_PORTFOLIO_SECTIONS = 24;
 const MAX_SECTION_DATA_BYTES = 50 * 1024;
@@ -128,7 +128,7 @@ function validateSectionData(blockType, data) {
     );
   }
 
-  return stripForbiddenDeep(data);
+  return stripForbiddenKeysOnly(data);
 }
 
 function normalizeThemeId(themeId, template) {

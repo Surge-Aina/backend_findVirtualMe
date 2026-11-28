@@ -40,6 +40,13 @@ describe("sectionDataAllowlist", () => {
     expect(out.pageBanner).toMatchObject({ enabled: true });
   });
 
+  it("sanitizeSectionDataAllowlist still caps unknown section payloads for MCP", () => {
+    const trimmed = sanitizeSectionDataAllowlist("gallery", {
+      facilityImages: Array.from({ length: 150 }, (_, i) => `https://example.com/${i}`),
+    });
+    expect(trimmed.facilityImages.length).toBeLessThanOrEqual(100);
+  });
+
   it("rejects forbidden top-level keys in section sanitize", () => {
     expect(() =>
       sanitizeSectionDataAllowlist("summary", { name: "A", constructor: { x: 1 } })
