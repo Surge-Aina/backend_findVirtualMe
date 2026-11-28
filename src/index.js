@@ -2,6 +2,7 @@ const express = require("express");
 require("dotenv").config();
 
 const corsMiddleware = require("./shared/middleware/cors.middleware");
+const httpErrorHandler = require("./shared/middleware/httpErrorHandler");
 const stripeWebhookRoutes = require("./modules/payments/stripe-webhook.routes");
 const { mountModules } = require("./modules");
 const { mountLegacy } = require("./legacy/routes");
@@ -20,5 +21,7 @@ app.use(express.json({ limit: "1mb" }));
 
 mountModules(app);
 mountLegacy(app);
+
+app.use(httpErrorHandler);
 
 module.exports = app;
