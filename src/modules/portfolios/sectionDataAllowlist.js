@@ -259,6 +259,24 @@ function sanitizeContactSection(data) {
   return out;
 }
 
+/** Dashboard/global path: remove forbidden keys only; do not clip or truncate. */
+function stripForbiddenKeysOnly(value) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => stripForbiddenKeysOnly(entry));
+  }
+  if (value === null) return null;
+  if (!isPlainObject(value)) {
+    return value;
+  }
+  const out = {};
+  for (const [key, val] of Object.entries(value)) {
+    if (isForbiddenKey(key)) continue;
+    out[key] = stripForbiddenKeysOnly(val);
+  }
+  return out;
+}
+
+/** MCP incoming sanitization fallback: bounded depth/size for untrusted payloads. */
 function stripForbiddenDeep(value, depth = 0) {
   if (depth > 8) return null;
   if (Array.isArray(value)) {
@@ -318,5 +336,6 @@ module.exports = {
   pickSummaryFields,
   pickHeroFields,
   sanitizeSectionDataAllowlist,
+  stripForbiddenKeysOnly,
   stripForbiddenDeep,
 };
