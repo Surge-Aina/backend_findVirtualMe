@@ -1,6 +1,11 @@
 const mongoose = require("mongoose");
 const Portfolio = require("./models/Portfolio");
 const { isSiteDraftsEnabled } = require("../../shared/config/siteDrafts");
+const { isAccountTeamsEnabled } = require("../../shared/config/accountTeams");
+
+function accountAccessService() {
+  return require("../account-teams/accountAccess.service");
+}
 const portfolioDraftService = require("./portfolioDraft.service");
 const { readLegacyPortfolioById } = require("../../../scripts/migratePortfolios");
 const { notifySitePublished, notifyBusinessProfileUpdated } = require("../public-api/lifecycleEvents");
@@ -446,9 +451,13 @@ async function isActiveDomainMappingForPortfolio(domainHost, portfolioId) {
  *   (same as serving that site on the mapped domain).
  */
 async function getPortfolioForViewer(id, viewerUserId, options = {}) {
-  const { domainHost, isAdmin = false } = options;
+  const { domainHost, isAdmin = false, user = null } = options;
   const portfolio = await getPortfolio(id);
   if (!portfolio) return null;
+
+  if (user && isAccountTeamsEnabled()) {
+    if (await accountAccessService().canUserViewPortfolio(portfolio, user)) return portfolio;
+  }
 
   if (canViewerAccessPortfolio(portfolio, viewerUserId, { isAdmin })) return portfolio;
   if (domainHost && (await isActiveDomainMappingForPortfolio(domainHost, id))) {
@@ -458,9 +467,13 @@ async function getPortfolioForViewer(id, viewerUserId, options = {}) {
 }
 
 async function getPortfolioBySlugForViewer(slug, viewerUserId, options = {}) {
-  const { domainHost, isAdmin = false } = options;
+  const { domainHost, isAdmin = false, user = null } = options;
   const portfolio = await getPortfolioBySlug(slug);
   if (!portfolio) return null;
+
+  if (user && isAccountTeamsEnabled()) {
+    if (await accountAccessService().canUserViewPortfolio(portfolio, user)) return portfolio;
+  }
 
   if (canViewerAccessPortfolio(portfolio, viewerUserId, { isAdmin })) return portfolio;
   const id = portfolio._id?.toString?.();
@@ -549,9 +562,15 @@ function emitProfileChange(before, after) {
  * Ensure the authenticated user owns the portfolio. Used for all mutating routes.
  * @returns {{ ok: true } | { ok: false, status: number, error: string }}
  */
-async function assertPortfolioOwner(portfolioId, userId, { isAdmin = false } = {}) {
+async function assertPortfolioOwner(portfolioId, userId, { isAdmin = false, user = null } = {}) {
   if (!userId) {
     return { ok: false, status: 401, error: "Unauthorized" };
+  }
+  if (isAccountTeamsEnabled() && user) {
+    const teamsResult = await accountAccessService().assertPortfolioMutationAccess(portfolioId, user, {
+      isAdmin,
+    });
+    if (teamsResult) return teamsResult;
   }
   const doc = await Portfolio.findById(portfolioId).select("owner").lean();
   if (!doc) {

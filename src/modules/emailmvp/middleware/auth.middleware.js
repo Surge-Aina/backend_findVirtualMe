@@ -14,8 +14,12 @@ const authRequired = (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    if (decoded.kind === "super_admin") {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
     req.user = {
-      id: decoded.userId,
+      id: decoded.userId || decoded.id,
       email: decoded.email,
     };
 

@@ -19,6 +19,12 @@ const portfolioSchema = new Schema(
       required: true,
       index: true,
     },
+    account: {
+      type: Schema.Types.ObjectId,
+      ref: "Account",
+      index: true,
+      sparse: true,
+    },
     slug: {
       type: String,
       unique: true,

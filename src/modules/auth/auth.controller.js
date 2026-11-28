@@ -2,6 +2,10 @@ const User = require("../../shared/models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { buildLoginSuccessPayload } = require("./auth.service");
+const {
+  activateInvitedMembershipsForUser,
+} = require("../account-teams/membershipActivation.service");
+const { isAccountTeamsEnabled } = require("../../shared/config/accountTeams");
 
 exports.signupUser = async (req, res) => {
   try {
@@ -27,6 +31,10 @@ exports.signupUser = async (req, res) => {
     });
     await newUser.save();
 
+    if (isAccountTeamsEnabled()) {
+      await activateInvitedMembershipsForUser(newUser);
+    }
+
     const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
@@ -50,6 +58,10 @@ exports.loginUser = async (req, res) => {
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(400).json({ message: "Invalid credentials" });
+
+    if (isAccountTeamsEnabled()) {
+      await activateInvitedMembershipsForUser(user);
+    }
 
     res.status(201).json(buildLoginSuccessPayload(user));
   } catch (err) {

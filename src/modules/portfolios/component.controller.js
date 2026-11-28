@@ -1,5 +1,10 @@
 const componentService = require("./component.service");
 const portfolioService = require("./portfolio.service");
+const { isSuperAdminUser } = require("../account-teams/superAdmin.service");
+
+function actorIsPrivileged(user) {
+  return portfolioService.isPortfolioAdmin(user) || isSuperAdminUser(user);
+}
 
 function sendComponentError(res, err, fallback) {
   if (err.name === "ComponentConfigError" || err.name === "FeatureComponentsError" || err.status) {
@@ -15,8 +20,11 @@ function sendComponentError(res, err, fallback) {
 
 async function denyUnlessOwner(req, res, siteId) {
   const userId = req.user?._id || req.user?.id;
-  const isAdmin = portfolioService.isPortfolioAdmin(req.user);
-  const check = await portfolioService.assertPortfolioOwner(siteId, userId, { isAdmin });
+  const isAdmin = actorIsPrivileged(req.user);
+  const check = await portfolioService.assertPortfolioOwner(siteId, userId, {
+    isAdmin,
+    user: req.user,
+  });
   if (!check.ok) {
     res.status(check.status).json({ error: check.error, code: check.status === 403 ? "forbidden" : "not_found" });
     return false;
@@ -39,7 +47,8 @@ exports.listComponents = async (req, res) => {
       ownerId: req.user._id || req.user.id,
       siteId,
       audience: "owner",
-      isAdmin: portfolioService.isPortfolioAdmin(req.user),
+      isAdmin: actorIsPrivileged(req.user),
+      actorUser: req.user,
     });
     if (!listed) return res.status(404).json({ error: "Portfolio not found" });
 
