@@ -400,8 +400,13 @@ async function getPortfolioBySlug(slug) {
   return Portfolio.findOne({ slug }).lean();
 }
 
-function canViewerAccessPortfolio(portfolio, viewerUserId) {
+function isPortfolioAdmin(user) {
+  return user?.role === "admin";
+}
+
+function canViewerAccessPortfolio(portfolio, viewerUserId, options = {}) {
   if (!portfolio) return false;
+  if (options.isAdmin) return true;
   if (portfolio.visibility === "public") return true;
   if (!viewerUserId) return false;
   return portfolio.owner?.toString?.() === viewerUserId.toString();
@@ -430,11 +435,11 @@ async function isActiveDomainMappingForPortfolio(domainHost, portfolioId) {
  *   (same as serving that site on the mapped domain).
  */
 async function getPortfolioForViewer(id, viewerUserId, options = {}) {
-  const { domainHost } = options;
+  const { domainHost, isAdmin = false } = options;
   const portfolio = await getPortfolio(id);
   if (!portfolio) return null;
 
-  if (canViewerAccessPortfolio(portfolio, viewerUserId)) return portfolio;
+  if (canViewerAccessPortfolio(portfolio, viewerUserId, { isAdmin })) return portfolio;
   if (domainHost && (await isActiveDomainMappingForPortfolio(domainHost, id))) {
     return portfolio;
   }
@@ -442,11 +447,11 @@ async function getPortfolioForViewer(id, viewerUserId, options = {}) {
 }
 
 async function getPortfolioBySlugForViewer(slug, viewerUserId, options = {}) {
-  const { domainHost } = options;
+  const { domainHost, isAdmin = false } = options;
   const portfolio = await getPortfolioBySlug(slug);
   if (!portfolio) return null;
 
-  if (canViewerAccessPortfolio(portfolio, viewerUserId)) return portfolio;
+  if (canViewerAccessPortfolio(portfolio, viewerUserId, { isAdmin })) return portfolio;
   const id = portfolio._id?.toString?.();
   if (domainHost && id && (await isActiveDomainMappingForPortfolio(domainHost, id))) {
     return portfolio;
@@ -456,6 +461,42 @@ async function getPortfolioBySlugForViewer(slug, viewerUserId, options = {}) {
 
 async function getUserPortfolios(ownerId) {
   return Portfolio.find({ owner: ownerId }).sort({ updatedAt: -1 }).lean();
+}
+
+const ADMIN_PORTFOLIO_LIST_MAX_LIMIT = 100;
+
+async function listPortfoliosForAdmin({ page = 1, limit = 50 } = {}) {
+  const safePage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+  const safeLimit =
+    Number.isFinite(limit) && limit > 0
+      ? Math.min(ADMIN_PORTFOLIO_LIST_MAX_LIMIT, Math.floor(limit))
+      : 50;
+  const skip = (safePage - 1) * safeLimit;
+
+  const [docs, total] = await Promise.all([
+    Portfolio.find({})
+      .select("_id owner template title visibility updatedAt")
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(safeLimit)
+      .lean(),
+    Portfolio.countDocuments({}),
+  ]);
+
+  return {
+    portfolios: docs.map((doc) => ({
+      id: doc._id,
+      ownerId: doc.owner,
+      type: doc.template,
+      title: doc.title,
+      visibility: doc.visibility,
+      updatedAt: doc.updatedAt,
+    })),
+    page: safePage,
+    limit: safeLimit,
+    total,
+    totalPages: total ? Math.ceil(total / safeLimit) : 0,
+  };
 }
 
 async function getPublicPortfolios(template) {
@@ -497,7 +538,7 @@ function emitProfileChange(before, after) {
  * Ensure the authenticated user owns the portfolio. Used for all mutating routes.
  * @returns {{ ok: true } | { ok: false, status: number, error: string }}
  */
-async function assertPortfolioOwner(portfolioId, userId) {
+async function assertPortfolioOwner(portfolioId, userId, { isAdmin = false } = {}) {
   if (!userId) {
     return { ok: false, status: 401, error: "Unauthorized" };
   }
@@ -507,10 +548,11 @@ async function assertPortfolioOwner(portfolioId, userId) {
   }
   const ownerStr = doc.owner?.toString();
   const userStr = userId.toString();
-  if (ownerStr !== userStr) {
+  const isOwner = ownerStr === userStr;
+  if (!isOwner && !isAdmin) {
     return { ok: false, status: 403, error: "Forbidden" };
   }
-  return { ok: true };
+  return { ok: true, isOwner };
 }
 
 // ─── Update base fields ─────────────────────────────────────────────────────
@@ -779,6 +821,9 @@ module.exports = {
   getPortfolioBySlugForViewer,
   getUserPortfolios,
   getPublicPortfolios,
+  listPortfoliosForAdmin,
+  isPortfolioAdmin,
+  canViewerAccessPortfolio,
   assertPortfolioOwner,
   updatePortfolio,
   updateSection,
