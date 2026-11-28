@@ -9,6 +9,15 @@ const { isSiteDraftsEnabled } = require("../../shared/config/siteDrafts");
 const { toPublicSite } = require("./siteView");
 const sitesService = require("./sites.service");
 const { PlanLimitError } = require("../portfolios/planLimits.service");
+const {
+  pickSummaryFields,
+  assertAllowedUrl,
+} = require("../portfolios/sectionDataAllowlist");
+const {
+  assertPublicSlug,
+  assertThemeId,
+  assertFlatThemeTokens,
+} = require("./siteSettingsValidation");
 
 class SiteToolsError extends Error {
   constructor(status, code, message, details) {
@@ -195,7 +204,7 @@ function mergeContentIntoSection(section, key, value, template) {
   const data = { ...(section.data || {}) };
   if (key === "resumeUrl") {
     if (section.type !== "summary") return section;
-    data.resumeUrl = typeof value === "string" ? value : "";
+    data.resumeUrl = assertAllowedUrl(typeof value === "string" ? value : "", "resumeUrl");
     section.data = portfolioService.validateSectionData(section.type, data);
     return section;
   }
@@ -213,7 +222,10 @@ function mergeContentIntoSection(section, key, value, template) {
     return section;
   }
   if (key === "summary" && section.type === "summary" && value && typeof value === "object") {
-    Object.assign(data, value);
+    const picked = pickSummaryFields(value);
+    for (const [field, fieldValue] of Object.entries(picked)) {
+      data[field] = fieldValue;
+    }
     section.data = portfolioService.validateSectionData(section.type, data);
     return section;
   }
@@ -364,15 +376,39 @@ async function updateSiteSettings({ ownerId, siteId, settings, source = "api" })
   }
 
   if (settings.slug !== undefined) {
-    const slug = String(settings.slug).trim().toLowerCase();
-    if (!slug) {
-      throw new SiteToolsError(400, "validation_error", "slug cannot be empty", { field: "slug" });
+    try {
+      settings.slug = assertPublicSlug(settings.slug);
+    } catch (err) {
+      throw new SiteToolsError(400, "validation_error", err.message || "Invalid slug", {
+        field: "slug",
+        code: err.code,
+      });
     }
-    const clash = await Portfolio.findOne({ slug, _id: { $ne: siteId } }).select("_id").lean();
+    const clash = await Portfolio.findOne({ slug: settings.slug, _id: { $ne: siteId } })
+      .select("_id owner")
+      .lean();
     if (clash) {
       throw new SiteToolsError(409, "conflict", "slug already in use", { field: "slug" });
     }
-    settings.slug = slug;
+  }
+
+  if (settings.themeId !== undefined) {
+    try {
+      settings.themeId = assertThemeId(settings.themeId);
+    } catch (err) {
+      throw new SiteToolsError(400, "validation_error", err.message, { field: "themeId", code: err.code });
+    }
+  }
+
+  if (settings.themeTokens !== undefined) {
+    try {
+      settings.themeTokens = assertFlatThemeTokens(settings.themeTokens);
+    } catch (err) {
+      throw new SiteToolsError(400, "validation_error", err.message, {
+        field: "themeTokens",
+        code: err.code,
+      });
+    }
   }
 
   if (settings.visibility !== undefined && !["public", "private"].includes(settings.visibility)) {
@@ -438,7 +474,7 @@ async function listSiteVersions({ ownerId, siteId }) {
   };
 }
 
-async function revertSiteVersion({ ownerId, siteId, versionNumber }) {
+async function revertSiteVersion({ ownerId, siteId, versionNumber, source = "api" }) {
   await assertOwnedSite(ownerId, siteId);
   const parsed = Number(versionNumber);
   if (!Number.isFinite(parsed) || parsed < 1) {
@@ -450,11 +486,18 @@ async function revertSiteVersion({ ownerId, siteId, versionNumber }) {
   if (!result) {
     throw new SiteToolsError(404, "not_found", "Version not found");
   }
+  let versionNumberRecorded = null;
+  if (isSiteDraftsEnabled()) {
+    versionNumberRecorded = await portfolioDraftService.recordWriteVersion(siteId, ownerId, {
+      source: source === "mcp" ? "ai" : "api",
+    });
+  }
   return {
     siteId: String(siteId),
     revertedFromVersion: result.revertedFromVersion,
     approvalState: result.draft?.approvalState || "pending_owner",
     note: result.note,
+    ...(versionNumberRecorded ? { versionNumber: versionNumberRecorded } : {}),
   };
 }
 

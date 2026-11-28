@@ -13,11 +13,14 @@ exports.signupUser = async (req, res) => {
       });
     }
 
-    const userExists = await User.findOne({ email });
+    const emailQuery = typeof email === "string" ? email.trim() : "";
+    const usernameQuery = typeof username === "string" ? username.trim() : "";
+
+    const userExists = await User.findOne({ email: emailQuery });
     if (userExists)
       return res.status(400).json({ message: "User already exists" });
 
-    const usernameTaken = await User.findOne({ username });
+    const usernameTaken = await User.findOne({ username: usernameQuery });
     if (usernameTaken) {
       return res.status(409).json({
         error: "conflict",
@@ -29,8 +32,8 @@ exports.signupUser = async (req, res) => {
 
     const newUser = new User({
       name,
-      username,
-      email,
+      username: usernameQuery,
+      email: emailQuery,
       password: hashed,
       authProvider: "local",
     });
@@ -58,7 +61,8 @@ exports.loginUser = async (req, res) => {
     if (!email || !password)
       return res.status(400).json({ message: "Email and Password needed" });
 
-    const user = await User.findOne({ email });
+    const emailQuery = typeof email === "string" ? email.trim() : "";
+    const user = await User.findOne({ email: emailQuery });
     if (!user)
       return res
         .status(400)

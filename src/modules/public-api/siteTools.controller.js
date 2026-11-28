@@ -28,12 +28,18 @@ function handleSiteToolsError(res, err) {
   if (err instanceof siteTools.SiteToolsError) {
     return sendError(res, err.status, err.code, err.message, err.details);
   }
+  if (err?.name === "PortfolioValidationError") {
+    return sendError(res, 400, "validation_error", err.message, err.details || {});
+  }
   console.error("public_api_site_tools_error");
   return sendError(res, 500, "internal_error", "Internal server error");
 }
 
 exports.createSite = async (req, res) => {
   if (!isMcpSiteToolsEnabled()) return featureDisabled(res);
+  if (installedSiteId(req)) {
+    return sendError(res, 403, "forbidden", "Site-scoped tokens cannot create new sites");
+  }
   try {
     const { template, title } = req.body || {};
     const data = await siteTools.createSite({

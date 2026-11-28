@@ -283,6 +283,15 @@ function registerSiteTools(server, auth, ctx) {
     },
     async ({ template, title }) => {
       if (!hasScope(auth, "sites:write")) return scopeError("sites:write");
+      if (onlySiteId) {
+        return toolErrorPayload(
+          new siteTools.SiteToolsError(
+            403,
+            "forbidden",
+            "Site-scoped tokens cannot create new sites"
+          )
+        );
+      }
       try {
         const data = await siteTools.createSite({ ownerId, template, title });
         return textResult(data);
@@ -443,7 +452,12 @@ function registerSiteTools(server, auth, ctx) {
         return { isError: true, content: [{ type: "text", text: "not_found" }] };
       }
       try {
-        const data = await siteTools.revertSiteVersion({ ownerId, siteId, versionNumber });
+        const data = await siteTools.revertSiteVersion({
+          ownerId,
+          siteId,
+          versionNumber,
+          source: "mcp",
+        });
         return textResult(data);
       } catch (err) {
         return toolErrorPayload(err);

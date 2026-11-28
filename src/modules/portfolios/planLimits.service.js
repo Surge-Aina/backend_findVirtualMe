@@ -41,9 +41,33 @@ async function assertCanCreatePortfolio(ownerId) {
   return { plan, current, max };
 }
 
+async function assertPortfolioCountWithinLimit(ownerId, createdPortfolioId) {
+  const user = await User.findById(ownerId)
+    .select("email stripeCustomerId comped compedPlan")
+    .lean();
+  const { max, plan } = user
+    ? await resolvePortfolioLimit(user)
+    : { max: FREE_PLAN_MAX_PORTFOLIOS, plan: "free" };
+  if (max === null) return { plan, max };
+
+  const current = await Portfolio.countDocuments({ owner: ownerId });
+  if (current > max) {
+    if (createdPortfolioId) {
+      await Portfolio.deleteOne({ _id: createdPortfolioId });
+    }
+    throw new PlanLimitError("Free plan allows one portfolio. Upgrade to add more.", {
+      plan,
+      max,
+      current,
+    });
+  }
+  return { plan, current, max };
+}
+
 module.exports = {
   FREE_PLAN_MAX_PORTFOLIOS,
   PlanLimitError,
   resolvePortfolioLimit,
   assertCanCreatePortfolio,
+  assertPortfolioCountWithinLimit,
 };

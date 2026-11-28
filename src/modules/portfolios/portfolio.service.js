@@ -16,6 +16,7 @@ const {
   getBlockTypesForTemplate,
   isKnownBlockType,
 } = require("./models/blockTypes");
+const { sanitizeSectionDataAllowlist } = require("./sectionDataAllowlist");
 
 const MAX_PORTFOLIO_SECTIONS = 24;
 const MAX_SECTION_DATA_BYTES = 50 * 1024;
@@ -107,7 +108,24 @@ function validateSectionData(blockType, data) {
     );
   }
 
-  const sizeBytes = getJsonSizeBytes(data);
+  const rawSizeBytes = getJsonSizeBytes(data);
+  if (rawSizeBytes > MAX_SECTION_DATA_BYTES) {
+    throw new PortfolioValidationError(
+      `Section data for "${blockType}" exceeds ${MAX_SECTION_DATA_BYTES} bytes`,
+      {
+        code: "SECTION_DATA_TOO_LARGE",
+        details: {
+          blockType,
+          sizeBytes: rawSizeBytes,
+          maxBytes: MAX_SECTION_DATA_BYTES,
+        },
+      }
+    );
+  }
+
+  const sanitized = sanitizeSectionDataAllowlist(blockType, data);
+
+  const sizeBytes = getJsonSizeBytes(sanitized);
   if (sizeBytes > MAX_SECTION_DATA_BYTES) {
     throw new PortfolioValidationError(
       `Section data for "${blockType}" exceeds ${MAX_SECTION_DATA_BYTES} bytes`,
@@ -122,7 +140,7 @@ function validateSectionData(blockType, data) {
     );
   }
 
-  return data;
+  return sanitized;
 }
 
 function normalizeThemeId(themeId, template) {
@@ -130,7 +148,8 @@ function normalizeThemeId(themeId, template) {
     return template === "agent" ? "aurora" : "";
   }
   if (themeId === null) return "";
-  return String(themeId).trim();
+  const value = String(themeId).trim();
+  return value.slice(0, 64);
 }
 
 function normalizeThemeTokens(themeTokens) {
@@ -141,7 +160,10 @@ function normalizeThemeTokens(themeTokens) {
     });
   }
 
-  const sizeBytes = getJsonSizeBytes(themeTokens);
+  const { assertFlatThemeTokens } = require("../public-api/siteSettingsValidation");
+  const flat = assertFlatThemeTokens(themeTokens);
+
+  const sizeBytes = getJsonSizeBytes(flat);
   if (sizeBytes > MAX_THEME_TOKENS_BYTES) {
     throw new PortfolioValidationError(
       `themeTokens exceed the maximum of ${MAX_THEME_TOKENS_BYTES} bytes`,
@@ -152,7 +174,7 @@ function normalizeThemeTokens(themeTokens) {
     );
   }
 
-  return themeTokens;
+  return flat;
 }
 
 function shouldNotifySitePublished(beforeDoc, afterDoc) {
@@ -365,7 +387,9 @@ async function createPortfolio(ownerId, template, overrides = {}) {
     navBrand: normalizeNavBrand(overrides.navBrand),
   });
 
-  return doc.save();
+  const saved = await doc.save();
+  await planLimits.assertPortfolioCountWithinLimit(ownerId, saved._id);
+  return saved;
 }
 
 async function createAgentPortfolio(ownerId, payload = {}) {
