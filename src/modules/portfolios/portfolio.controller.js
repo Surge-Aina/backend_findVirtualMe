@@ -37,17 +37,6 @@ function toAgentBlockList(blocks) {
   }));
 }
 
-function logAdminPortfolioEdit(adminUserId, portfolioId, action) {
-  console.info(
-    JSON.stringify({
-      event: "admin_portfolio_edit",
-      adminUserId: String(adminUserId),
-      portfolioId: String(portfolioId),
-      action: String(action),
-    })
-  );
-}
-
 async function denyUnlessOwner(req, res, { action } = {}) {
   const userId = req.user?._id || req.user?.id;
   const isAdmin = portfolioService.isPortfolioAdmin(req.user);
@@ -57,7 +46,11 @@ async function denyUnlessOwner(req, res, { action } = {}) {
     return false;
   }
   if (isAdmin && check.isOwner === false) {
-    logAdminPortfolioEdit(userId, req.params.id, action || `${req.method} ${req.route?.path || req.path}`);
+    portfolioService.logAdminPortfolioEdit(
+      userId,
+      req.params.id,
+      action || `${req.method} ${req.route?.path || req.path}`
+    );
   }
   return true;
 }

@@ -404,6 +404,17 @@ function isPortfolioAdmin(user) {
   return user?.role === "admin";
 }
 
+function logAdminPortfolioEdit(adminUserId, portfolioId, action) {
+  console.info(
+    JSON.stringify({
+      event: "admin_portfolio_edit",
+      adminUserId: String(adminUserId),
+      portfolioId: String(portfolioId),
+      action: String(action),
+    })
+  );
+}
+
 function canViewerAccessPortfolio(portfolio, viewerUserId, options = {}) {
   if (!portfolio) return false;
   if (options.isAdmin) return true;
@@ -823,6 +834,7 @@ module.exports = {
   getPublicPortfolios,
   listPortfoliosForAdmin,
   isPortfolioAdmin,
+  logAdminPortfolioEdit,
   canViewerAccessPortfolio,
   assertPortfolioOwner,
   updatePortfolio,

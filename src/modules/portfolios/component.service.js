@@ -63,6 +63,21 @@ function throwUnlessPortfolioOwner(check) {
   });
 }
 
+async function assertComponentSiteAccess(ctx, action) {
+  const isAdmin = Boolean(ctx.isAdmin);
+  const ownerCheck = await portfolioService.assertPortfolioOwner(ctx.siteId, ctx.ownerId, { isAdmin });
+  throwUnlessPortfolioOwner(ownerCheck);
+  if (isAdmin && ownerCheck.isOwner === false) {
+    portfolioService.logAdminPortfolioEdit(ctx.ownerId, ctx.siteId, action);
+  }
+  return ownerCheck;
+}
+
+async function siteOwnerIdForPortfolio(siteId) {
+  const doc = await Portfolio.findById(siteId).select("owner").lean();
+  return doc?.owner ?? null;
+}
+
 function resolveTypeAndProps(input = {}) {
   const rawType = input.type ?? input.componentId;
   const type = normalizePuckType(rawType);
@@ -79,9 +94,10 @@ function mutationEnvelope(ctx, extra) {
   };
 }
 
-async function loadListingContext(siteId, ownerId, { publishedOnly }) {
+async function loadListingContext(siteId, actorId, { publishedOnly, isAdmin = false } = {}) {
   const portfolio = await Portfolio.findById(siteId).select("owner template title sections").lean();
-  if (!portfolio || String(portfolio.owner) !== String(ownerId)) return null;
+  if (!portfolio) return null;
+  if (!isAdmin && String(portfolio.owner) !== String(actorId)) return null;
 
   const draftView = await portfolioDraftService.getOwnerDraft(siteId);
   const hasDraft = Boolean(draftView?.hasDraft);
@@ -119,10 +135,10 @@ async function loadListingContext(siteId, ownerId, { publishedOnly }) {
 /**
  * @param {{ ownerId: string, siteId: string, audience?: 'public' | 'owner' | 'mcp' }} params
  */
-async function listAvailableComponents({ ownerId, siteId, audience = "owner" }) {
+async function listAvailableComponents({ ownerId, siteId, audience = "owner", isAdmin = false } = {}) {
   assertComponentsAvailable();
   const publishedOnly = audience === "public";
-  const ctx = await loadListingContext(siteId, ownerId, { publishedOnly });
+  const ctx = await loadListingContext(siteId, ownerId, { publishedOnly, isAdmin });
   if (!ctx) return null;
 
   const puckPayload = buildOwnerComponentsPayload({
@@ -185,6 +201,7 @@ function buildExternalWriteContext(publicApiAuth, siteId) {
   return {
     ownerId: publicApiAuth.user._id,
     siteId: String(siteId),
+    isAdmin: portfolioService.isPortfolioAdmin(publicApiAuth.user),
     draftSource,
     authType,
     installationId: publicApiAuth.installationId || null,
@@ -220,17 +237,20 @@ async function addComponent(ctx, input) {
     });
   }
 
-  const ownerCheck = await portfolioService.assertPortfolioOwner(ctx.siteId, ctx.ownerId);
-  throwUnlessPortfolioOwner(ownerCheck);
+  await assertComponentSiteAccess(ctx, "component:add");
 
-  const listing = await loadListingContext(ctx.siteId, ctx.ownerId, { publishedOnly: false });
+  const listing = await loadListingContext(ctx.siteId, ctx.ownerId, {
+    publishedOnly: false,
+    isAdmin: ctx.isAdmin,
+  });
   if (!listing) {
     throw new FeatureComponentsError("Site not found", { status: 404, code: "not_found" });
   }
   assertUnifiedSiteTemplate(listing.template);
 
   const validated = validateComponentProps(type, props);
-  await assertWritableComponentRefs(type, validated, { ownerId: ctx.ownerId });
+  const refOwnerId = (await siteOwnerIdForPortfolio(ctx.siteId)) || ctx.ownerId;
+  await assertWritableComponentRefs(type, validated, { ownerId: refOwnerId });
   const legacyData = puckPropsToSectionData(type, validated, listing.template, {});
   const blockType = blockTypeForComponent(type);
   const order = input.order;
@@ -272,8 +292,7 @@ async function addComponent(ctx, input) {
 async function updateComponent(ctx, { sectionId, props, config }) {
   const puckProps = props !== undefined ? props : config;
   assertDraftWritesAllowed();
-  const ownerCheck = await portfolioService.assertPortfolioOwner(ctx.siteId, ctx.ownerId);
-  throwUnlessPortfolioOwner(ownerCheck);
+  await assertComponentSiteAccess(ctx, "component:update");
 
   await resolveDraftAfterExternalWrite(ctx.siteId, ctx.draftSource);
   const draft = await portfolioDraftService.getOwnerDraft(ctx.siteId);
@@ -281,7 +300,10 @@ async function updateComponent(ctx, { sectionId, props, config }) {
     throw new FeatureComponentsError("Site not found", { status: 404, code: "not_found" });
   }
 
-  const listing = await loadListingContext(ctx.siteId, ctx.ownerId, { publishedOnly: false });
+  const listing = await loadListingContext(ctx.siteId, ctx.ownerId, {
+    publishedOnly: false,
+    isAdmin: ctx.isAdmin,
+  });
   if (!listing) {
     throw new FeatureComponentsError("Site not found", { status: 404, code: "not_found" });
   }
@@ -315,7 +337,8 @@ async function updateComponent(ctx, { sectionId, props, config }) {
     ...puckProps,
     id: String(sectionId),
   });
-  await assertWritableComponentRefs(puckType, validated, { ownerId: ctx.ownerId });
+  const refOwnerId = (await siteOwnerIdForPortfolio(ctx.siteId)) || ctx.ownerId;
+  await assertWritableComponentRefs(puckType, validated, { ownerId: refOwnerId });
   const legacyData = puckPropsToSectionData(puckType, validated, listing.template, existingData);
   const updatedDraft = await portfolioDraftService.updateDraftSection(ctx.siteId, sectionId, legacyData);
   if (!updatedDraft) {
@@ -336,8 +359,7 @@ async function updateComponent(ctx, { sectionId, props, config }) {
 
 async function removeComponent(ctx, { sectionId }) {
   assertDraftWritesAllowed();
-  const ownerCheck = await portfolioService.assertPortfolioOwner(ctx.siteId, ctx.ownerId);
-  throwUnlessPortfolioOwner(ownerCheck);
+  await assertComponentSiteAccess(ctx, "component:remove");
 
   await resolveDraftAfterExternalWrite(ctx.siteId, ctx.draftSource);
   const draftBefore = await portfolioDraftService.getOwnerDraft(ctx.siteId);
@@ -422,8 +444,7 @@ function validateReorderSectionIds(sectionIds, componentSectionIds) {
 
 async function reorderComponents(ctx, { sectionIds }) {
   assertDraftWritesAllowed();
-  const ownerCheck = await portfolioService.assertPortfolioOwner(ctx.siteId, ctx.ownerId);
-  throwUnlessPortfolioOwner(ownerCheck);
+  await assertComponentSiteAccess(ctx, "component:reorder");
 
   await resolveDraftAfterExternalWrite(ctx.siteId, ctx.draftSource);
 
