@@ -4,6 +4,7 @@ const schema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
     clientId: { type: String, required: true, index: true },
+    tokenFamilyId: { type: String, required: true, index: true },
     scopes: { type: [String], required: true },
     accessTokenHash: { type: String, required: true, unique: true, index: true },
     refreshTokenHash: { type: String, required: true, unique: true, index: true },

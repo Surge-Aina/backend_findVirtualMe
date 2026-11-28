@@ -1,9 +1,11 @@
-const axios = require("axios");
 const McpOAuthClient = require("./models/mcpOAuthClient.model");
 const { hashKey } = require("../public-api/apiKey.service");
-const { assertAllowedMcpOAuthRedirect, isAllowedMcpOAuthRedirect } = require("./redirectAllowlist");
-
-const metadataCache = new Map();
+const { isAllowedMcpOAuthRedirect } = require("./redirectAllowlist");
+const { fetchClientMetadataDocument } = require("./metadataFetch");
+const {
+  InvalidClientMetadataError,
+  CustomOAuthError,
+} = require("@modelcontextprotocol/sdk/server/auth/errors.js");
 
 function isMetadataClientId(clientId) {
   if (typeof clientId !== "string") return false;
@@ -40,17 +42,19 @@ function filterRedirectUris(uris) {
   return out;
 }
 
-async function fetchMetadataClient(clientId) {
-  const cached = metadataCache.get(clientId);
-  if (cached && cached.expiresAt > Date.now()) return cached.client;
+function assertRegistrationRedirects(uris) {
+  if (!Array.isArray(uris) || uris.length === 0) {
+    throw new CustomOAuthError("invalid_redirect_uri", "At least one allowed redirect_uri is required");
+  }
+  for (const uri of uris) {
+    if (!isAllowedMcpOAuthRedirect(uri)) {
+      throw new CustomOAuthError("invalid_redirect_uri", "redirect_uri is not allowed for MCP OAuth");
+    }
+  }
+}
 
-  const response = await axios.get(clientId, {
-    timeout: 8000,
-    headers: { Accept: "application/json" },
-    maxRedirects: 0,
-    validateStatus: (s) => s >= 200 && s < 300,
-  });
-  const body = response.data;
+async function fetchMetadataClient(clientId) {
+  const body = await fetchClientMetadataDocument(clientId);
   if (!body || typeof body !== "object") return null;
   if (body.client_id !== clientId) return null;
   const redirectUris = filterRedirectUris(body.redirect_uris);
@@ -65,7 +69,6 @@ async function fetchMetadataClient(clientId) {
     token_endpoint_auth_method: "none",
   };
 
-  metadataCache.set(clientId, { client, expiresAt: Date.now() + 15 * 60 * 1000 });
   await McpOAuthClient.findOneAndUpdate(
     { clientId },
     {
@@ -96,16 +99,18 @@ class McpOAuthClientsStore {
   }
 
   async registerClient(clientMetadata) {
+    assertRegistrationRedirects(clientMetadata.redirect_uris);
     const redirectUris = filterRedirectUris(clientMetadata.redirect_uris);
     if (redirectUris.length === 0) {
-      throw new Error("At least one allowed redirect_uri is required");
-    }
-    for (const uri of redirectUris) {
-      assertAllowedMcpOAuthRedirect(uri);
+      throw new CustomOAuthError("invalid_redirect_uri", "No allowed redirect_uri values were provided");
     }
     const isPublic = clientMetadata.token_endpoint_auth_method === "none" || !clientMetadata.client_secret;
     const clientSecret = isPublic ? undefined : clientMetadata.client_secret;
     const clientId = clientMetadata.client_id;
+
+    if (!clientId) {
+      throw new InvalidClientMetadataError("client_id is required");
+    }
 
     await McpOAuthClient.create({
       clientId,
@@ -133,4 +138,5 @@ module.exports = {
   McpOAuthClientsStore,
   isMetadataClientId,
   filterRedirectUris,
+  assertRegistrationRedirects,
 };

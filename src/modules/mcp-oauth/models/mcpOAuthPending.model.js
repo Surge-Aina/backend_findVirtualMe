@@ -9,6 +9,7 @@ const schema = new mongoose.Schema(
     codeChallenge: { type: String, required: true },
     state: { type: String, default: "" },
     resource: { type: String, default: "" },
+    csrfToken: { type: String, required: true },
     expiresAt: { type: Date, required: true, index: true },
   },
   { timestamps: true, collection: "mcp_oauth_pending" }

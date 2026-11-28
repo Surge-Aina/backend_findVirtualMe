@@ -1,3 +1,5 @@
+const { CustomOAuthError } = require("@modelcontextprotocol/sdk/server/auth/errors.js");
+
 const CONNECTOR_REDIRECT_PATTERNS = [
   /^https:\/\/([a-z0-9-]+\.)*claude\.ai(\/|$)/i,
   /^https:\/\/([a-z0-9-]+\.)*chatgpt\.com(\/|$)/i,
@@ -23,9 +25,7 @@ function isAllowedMcpOAuthRedirect(uri) {
 
 function assertAllowedMcpOAuthRedirect(uri) {
   if (!isAllowedMcpOAuthRedirect(uri)) {
-    const err = new Error("redirect_uri is not allowed for MCP OAuth");
-    err.code = "invalid_redirect_uri";
-    throw err;
+    throw new CustomOAuthError("invalid_redirect_uri", "redirect_uri is not allowed for MCP OAuth");
   }
   return new URL(uri).href;
 }

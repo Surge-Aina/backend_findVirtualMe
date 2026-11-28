@@ -15,7 +15,7 @@ class FindVirtualMeMcpOAuthProvider {
   }
 
   async authorize(client, params, res) {
-    const ticket = await createPendingAuthorization({
+    const { ticket } = await createPendingAuthorization({
       clientId: client.client_id,
       redirectUri: params.redirectUri,
       requestedScopes: params.scopes,
@@ -31,14 +31,13 @@ class FindVirtualMeMcpOAuthProvider {
   }
 
   async exchangeAuthorizationCode(client, authorizationCode, codeVerifier, redirectUri, resource) {
-    const tokens = await exchangeAuthorizationCode({
+    return exchangeAuthorizationCode({
       clientId: client.client_id,
       code: authorizationCode,
       codeVerifier,
       redirectUri,
       resource: resource ? resource.href : undefined,
     });
-    return tokens;
   }
 
   async exchangeRefreshToken(client, refreshToken, scopes, resource) {

@@ -9,6 +9,7 @@ const schema = new mongoose.Schema(
     redirectUri: { type: String, required: true },
     codeChallenge: { type: String, required: true },
     resource: { type: String, default: "" },
+    tokenFamilyId: { type: String, required: true, index: true },
     expiresAt: { type: Date, required: true, index: true },
     usedAt: { type: Date, default: null },
   },

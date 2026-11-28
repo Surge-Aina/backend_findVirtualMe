@@ -1,6 +1,5 @@
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 const User = require("../../shared/models/User");
 const { hashKey, hashesEqual } = require("../public-api/apiKey.service");
 const { isPublicApiScope } = require("../public-api/scopes");
@@ -8,7 +7,6 @@ const { MCP_OAUTH_CONSENT_SCOPES } = require("../../shared/config/mcpOAuth");
 const McpOAuthCode = require("./models/mcpOAuthCode.model");
 const McpOAuthToken = require("./models/mcpOAuthToken.model");
 const McpOAuthPending = require("./models/mcpOAuthPending.model");
-const McpOAuthClient = require("./models/mcpOAuthClient.model");
 const {
   mcpAccessTtlMs,
   mcpRefreshTtlMs,
@@ -16,11 +14,10 @@ const {
   mcpResourceUrl,
 } = require("../../shared/config/mcpOAuth");
 const { assertAllowedMcpOAuthRedirect } = require("./redirectAllowlist");
+const { InvalidGrantError } = require("@modelcontextprotocol/sdk/server/auth/errors.js");
 
 const ACCESS_PREFIX = "fvm_mcp_at_";
 const REFRESH_PREFIX = "fvm_mcp_rt_";
-
-const CONSENT_COOKIE = "fvm_mcp_consent";
 
 function normalizeScopes(scopes) {
   const list = Array.isArray(scopes)
@@ -49,6 +46,14 @@ function resourceMatches(expected, provided) {
   return String(provided).replace(/\/$/, "") === String(expected).replace(/\/$/, "");
 }
 
+async function revokeTokenFamily(tokenFamilyId) {
+  if (!tokenFamilyId) return;
+  await McpOAuthToken.updateMany(
+    { tokenFamilyId, revokedAt: null },
+    { $set: { revokedAt: new Date() } }
+  );
+}
+
 async function createPendingAuthorization({
   clientId,
   redirectUri,
@@ -59,6 +64,7 @@ async function createPendingAuthorization({
 }) {
   assertAllowedMcpOAuthRedirect(redirectUri);
   const ticket = crypto.randomBytes(24).toString("base64url");
+  const csrfToken = crypto.randomBytes(24).toString("base64url");
   await McpOAuthPending.create({
     ticket,
     clientId,
@@ -67,9 +73,10 @@ async function createPendingAuthorization({
     codeChallenge,
     state: state || "",
     resource: resource ? String(resource) : mcpResourceUrl().href,
+    csrfToken,
     expiresAt: new Date(Date.now() + mcpCodeTtlMs()),
   });
-  return ticket;
+  return { ticket, csrfToken };
 }
 
 async function getPendingAuthorization(ticket) {
@@ -79,6 +86,15 @@ async function getPendingAuthorization(ticket) {
     expiresAt: { $gt: new Date() },
   }).lean();
   return doc;
+}
+
+function verifyCsrf(pending, submitted) {
+  if (!pending?.csrfToken || !submitted || typeof submitted !== "string") return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(pending.csrfToken), Buffer.from(submitted));
+  } catch (_err) {
+    return false;
+  }
 }
 
 async function completeConsent({ ticket, userId, scopes }) {
@@ -99,6 +115,7 @@ async function completeConsent({ ticket, userId, scopes }) {
     throw err;
   }
 
+  const tokenFamilyId = crypto.randomBytes(16).toString("hex");
   const code = `fvm_mcp_code_${crypto.randomBytes(24).toString("base64url")}`;
   await McpOAuthCode.create({
     codeHash: hashKey(code),
@@ -108,6 +125,7 @@ async function completeConsent({ ticket, userId, scopes }) {
     redirectUri: pending.redirectUri,
     codeChallenge: pending.codeChallenge,
     resource: pending.resource || mcpResourceUrl().href,
+    tokenFamilyId,
     expiresAt: new Date(Date.now() + mcpCodeTtlMs()),
   });
   await McpOAuthPending.deleteOne({ _id: pending._id });
@@ -120,21 +138,29 @@ async function completeConsent({ ticket, userId, scopes }) {
 
 async function challengeForAuthorizationCode(clientId, authorizationCode) {
   const digest = hashKey(authorizationCode);
-  const record = await McpOAuthCode.findOne({ codeHash: digest, clientId, usedAt: null }).lean();
+  const record = await McpOAuthCode.findOne({ codeHash: digest, clientId }).lean();
   if (!record || !hashesEqual(record.codeHash, digest)) {
-    throw new Error("Invalid authorization code");
+    throw new InvalidGrantError("Authorization code is invalid");
+  }
+  if (record.usedAt) {
+    await revokeTokenFamily(record.tokenFamilyId);
+    throw new InvalidGrantError("Authorization code is invalid");
+  }
+  if (record.expiresAt < new Date()) {
+    throw new InvalidGrantError("Authorization code is invalid");
   }
   return record.codeChallenge;
 }
 
-async function issueTokenPair({ userId, clientId, scopes, resource }) {
-  await McpOAuthToken.updateMany({ userId, clientId, revokedAt: null }, { $set: { revokedAt: new Date() } });
+async function issueTokenPair({ userId, clientId, scopes, resource, tokenFamilyId }) {
+  await revokeTokenFamily(tokenFamilyId);
   const accessToken = `${ACCESS_PREFIX}${crypto.randomBytes(32).toString("base64url")}`;
   const refreshToken = `${REFRESH_PREFIX}${crypto.randomBytes(32).toString("base64url")}`;
   const now = Date.now();
   await McpOAuthToken.create({
     userId,
     clientId,
+    tokenFamilyId,
     scopes,
     accessTokenHash: hashKey(accessToken),
     refreshTokenHash: hashKey(refreshToken),
@@ -153,59 +179,84 @@ async function issueTokenPair({ userId, clientId, scopes, resource }) {
 
 async function exchangeAuthorizationCode({ clientId, code, codeVerifier, redirectUri, resource }) {
   const digest = hashKey(code);
+  const existing = await McpOAuthCode.findOne({ codeHash: digest, clientId }).lean();
+  if (!existing || !hashesEqual(existing.codeHash, digest)) {
+    throw new InvalidGrantError("Authorization code is invalid");
+  }
+  if (existing.usedAt) {
+    await revokeTokenFamily(existing.tokenFamilyId);
+    throw new InvalidGrantError("Authorization code is invalid");
+  }
+  if (existing.expiresAt < new Date()) {
+    throw new InvalidGrantError("Authorization code is invalid");
+  }
+  if (redirectUri && new URL(redirectUri).href !== existing.redirectUri) {
+    throw new InvalidGrantError("redirect_uri does not match");
+  }
+  if (codeVerifier !== undefined && !pkceMatches(codeVerifier, existing.codeChallenge)) {
+    throw new InvalidGrantError("code_verifier does not match the challenge");
+  }
+  if (!resourceMatches(existing.resource, resource || existing.resource)) {
+    throw new InvalidGrantError("Invalid resource");
+  }
+
   const record = await McpOAuthCode.findOneAndUpdate(
-    { codeHash: digest, clientId, usedAt: null, expiresAt: { $gt: new Date() } },
+    { _id: existing._id, usedAt: null, expiresAt: { $gt: new Date() } },
     { $set: { usedAt: new Date() } },
     { new: true }
   );
-  if (!record || !hashesEqual(record.codeHash, digest)) {
-    throw new Error("Authorization code is invalid");
+  if (!record) {
+    await revokeTokenFamily(existing.tokenFamilyId);
+    throw new InvalidGrantError("Authorization code is invalid");
   }
-  if (redirectUri && new URL(redirectUri).href !== record.redirectUri) {
-    throw new Error("redirect_uri does not match");
-  }
-  if (codeVerifier !== undefined && !pkceMatches(codeVerifier, record.codeChallenge)) {
-    throw new Error("PKCE verification failed");
-  }
-  if (!resourceMatches(record.resource, resource || record.resource)) {
-    throw new Error("Invalid resource");
-  }
+
   return issueTokenPair({
     userId: record.userId,
     clientId,
     scopes: record.scopes,
     resource: record.resource,
+    tokenFamilyId: record.tokenFamilyId,
   });
 }
 
 async function exchangeRefreshToken({ clientId, refreshToken, scopes, resource }) {
   const digest = hashKey(refreshToken);
-  const record = await McpOAuthToken.findOne({ refreshTokenHash: digest, clientId });
+  const record = await McpOAuthToken.findOne({ refreshTokenHash: digest, clientId }).lean();
   if (!record || !hashesEqual(record.refreshTokenHash, digest)) {
-    throw new Error("Refresh token is invalid");
+    throw new InvalidGrantError("Refresh token is invalid");
   }
-  if (record.revokedAt || record.refreshExpiresAt < new Date()) {
-    throw new Error("Refresh token is invalid");
+  if (record.revokedAt) {
+    await revokeTokenFamily(record.tokenFamilyId);
+    throw new InvalidGrantError("Refresh token is invalid");
   }
+  if (record.refreshExpiresAt < new Date()) {
+    throw new InvalidGrantError("Refresh token is invalid");
+  }
+
   const consumed = await McpOAuthToken.findOneAndUpdate(
     { _id: record._id, revokedAt: null },
-    { $set: { revokedAt: new Date() } }
+    { $set: { revokedAt: new Date() } },
+    { new: true }
   );
-  if (!consumed) throw new Error("Refresh token is invalid");
+  if (!consumed) {
+    await revokeTokenFamily(record.tokenFamilyId);
+    throw new InvalidGrantError("Refresh token is invalid");
+  }
   if (!resourceMatches(record.resource, resource || record.resource)) {
-    throw new Error("Invalid resource");
+    throw new InvalidGrantError("Invalid resource");
   }
   let effectiveScopes = record.scopes;
   if (scopes) {
     const requested = normalizeScopes(scopes);
     effectiveScopes = record.scopes.filter((s) => requested.includes(s));
-    if (effectiveScopes.length === 0) throw new Error("Invalid scopes");
+    if (effectiveScopes.length === 0) throw new InvalidGrantError("Invalid scope");
   }
   return issueTokenPair({
     userId: record.userId,
     clientId,
     scopes: effectiveScopes,
     resource: record.resource,
+    tokenFamilyId: record.tokenFamilyId,
   });
 }
 
@@ -239,7 +290,7 @@ async function authenticateMcpOAuthAccessToken(secret) {
 
 async function verifyAccessTokenForSdk(token) {
   const auth = await authenticateMcpOAuthAccessToken(token);
-  if (!auth) throw new Error("Invalid or expired token");
+  if (!auth) throw new InvalidGrantError("Invalid or expired token");
   const record = await McpOAuthToken.findOne({ accessTokenHash: hashKey(token) }).lean();
   return {
     token,
@@ -251,63 +302,43 @@ async function verifyAccessTokenForSdk(token) {
   };
 }
 
-async function verifyClientSecret(clientId, clientSecret) {
-  const doc = await McpOAuthClient.findOne({ clientId, revokedAt: null }).lean();
-  if (!doc || !doc.clientSecretHash) return false;
-  return hashesEqual(hashKey(clientSecret || ""), doc.clientSecretHash);
-}
-
-function setConsentCookie(res, userId) {
-  const token = jwt.sign({ id: String(userId), kind: "mcp_consent" }, process.env.JWT_SECRET, {
-    expiresIn: "2h",
-  });
-  res.cookie(CONSENT_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 2 * 60 * 60 * 1000,
-    path: "/mcp-oauth",
-  });
-}
-
-function readConsentUserId(req) {
-  const raw = req.cookies?.[CONSENT_COOKIE];
-  if (!raw) return null;
-  try {
-    const decoded = jwt.verify(raw, process.env.JWT_SECRET);
-    if (decoded.kind !== "mcp_consent" || !decoded.id) return null;
-    return decoded.id;
-  } catch (_err) {
-    return null;
-  }
-}
-
 async function consentLogin({ email, password }) {
-  const user = await User.findOne({ email: String(email || "").trim().toLowerCase() });
-  if (!user) return null;
-  const valid = await bcrypt.compare(password || "", user.password);
-  if (!valid) return null;
-  if (user.isActive === false) return null;
-  return user;
+  const normalized = String(email || "").trim().toLowerCase();
+  if (!normalized) return { ok: false, reason: "invalid_credentials" };
+  const user = await User.findOne({ email: normalized });
+  if (!user) return { ok: false, reason: "invalid_credentials" };
+  if (user.isActive === false) return { ok: false, reason: "inactive" };
+  if (user.authProvider === "google" || user.googleId) {
+    return { ok: false, reason: "use_web_login" };
+  }
+  if (!user.password) {
+    return { ok: false, reason: "use_web_login" };
+  }
+  let valid;
+  try {
+    valid = await bcrypt.compare(password || "", user.password);
+  } catch (_err) {
+    return { ok: false, reason: "use_web_login" };
+  }
+  if (!valid) return { ok: false, reason: "invalid_credentials" };
+  return { ok: true, user };
 }
 
 module.exports = {
   ACCESS_PREFIX,
   REFRESH_PREFIX,
-  CONSENT_COOKIE,
   normalizeScopes,
   createPendingAuthorization,
   getPendingAuthorization,
+  verifyCsrf,
   completeConsent,
   challengeForAuthorizationCode,
   exchangeAuthorizationCode,
   exchangeRefreshToken,
   revokeToken,
+  revokeTokenFamily,
   authenticateMcpOAuthAccessToken,
   verifyAccessTokenForSdk,
-  verifyClientSecret,
-  setConsentCookie,
-  readConsentUserId,
   consentLogin,
   pkceMatches,
 };

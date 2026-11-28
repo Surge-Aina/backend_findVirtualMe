@@ -20,11 +20,13 @@ function readPositiveInt(name, fallback, max) {
   return Math.min(value, max);
 }
 
+const DEFAULT_PUBLIC_API_BASE = "https://backend-production-6b312c6c.up.railway.app";
+
 function publicApiBaseUrl() {
   const raw =
     process.env.PUBLIC_API_BASE_URL ||
     process.env.MCP_OAUTH_ISSUER_URL ||
-    "https://api.findvirtual.me";
+    DEFAULT_PUBLIC_API_BASE;
   return String(raw).trim().replace(/\/+$/, "");
 }
 

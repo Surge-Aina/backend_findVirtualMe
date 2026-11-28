@@ -1,4 +1,31 @@
 const express = require("express");
+const { createOAuthMetadata, mcpAuthMetadataRouter } = require("@modelcontextprotocol/sdk/server/auth/router.js");
+const { authorizationHandler } = require("@modelcontextprotocol/sdk/server/auth/handlers/authorize.js");
+const { tokenHandler } = require("@modelcontextprotocol/sdk/server/auth/handlers/token.js");
+const { clientRegistrationHandler } = require("@modelcontextprotocol/sdk/server/auth/handlers/register.js");
+const { revocationHandler } = require("@modelcontextprotocol/sdk/server/auth/handlers/revoke.js");
+const { metadataHandler } = require("@modelcontextprotocol/sdk/server/auth/handlers/metadata.js");
+const { FindVirtualMeMcpOAuthProvider } = require("./mcpOAuthProvider");
+const { renderConsentPage, WEB_LOGIN_HINT } = require("./consentPage");
+const {
+  getPendingAuthorization,
+  completeConsent,
+  consentLogin,
+  verifyCsrf,
+  normalizeScopes,
+} = require("./mcpOAuth.service");
+const { setConsentCookie, readConsentUserId } = require("./consentCookie");
+const { throttleConsentByIp, throttleConsentByAccount } = require("./consentThrottle");
+const { McpOAuthClientsStore } = require("./clientsStore");
+const User = require("../../shared/models/User");
+const {
+  mcpOAuthIssuerUrl,
+  mcpResourceUrl,
+  MCP_OAUTH_CONSENT_SCOPES,
+  publicApiBaseUrl,
+  isMcpOAuthEnabled,
+} = require("../../shared/config/mcpOAuth");
+
 function parseCookies(header) {
   const out = {};
   if (!header || typeof header !== "string") return out;
@@ -16,31 +43,30 @@ function cookieMiddleware(req, _res, next) {
   req.cookies = parseCookies(req.headers.cookie);
   next();
 }
-const { createOAuthMetadata, mcpAuthMetadataRouter } = require("@modelcontextprotocol/sdk/server/auth/router.js");
-const { authorizationHandler } = require("@modelcontextprotocol/sdk/server/auth/handlers/authorize.js");
-const { tokenHandler } = require("@modelcontextprotocol/sdk/server/auth/handlers/token.js");
-const { clientRegistrationHandler } = require("@modelcontextprotocol/sdk/server/auth/handlers/register.js");
-const { revocationHandler } = require("@modelcontextprotocol/sdk/server/auth/handlers/revoke.js");
-const { metadataHandler } = require("@modelcontextprotocol/sdk/server/auth/handlers/metadata.js");
-const { FindVirtualMeMcpOAuthProvider } = require("./mcpOAuthProvider");
-const { renderConsentPage } = require("./consentPage");
-const {
-  getPendingAuthorization,
-  completeConsent,
-  consentLogin,
-  setConsentCookie,
-  readConsentUserId,
-  normalizeScopes,
-} = require("./mcpOAuth.service");
-const { McpOAuthClientsStore } = require("./clientsStore");
-const User = require("../../shared/models/User");
-const {
-  mcpOAuthIssuerUrl,
-  mcpResourceUrl,
-  MCP_OAUTH_CONSENT_SCOPES,
-  publicApiBaseUrl,
-  isMcpOAuthEnabled,
-} = require("../../shared/config/mcpOAuth");
+
+function consentSecurityHeaders(_req, res, next) {
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Content-Security-Policy", "frame-ancestors 'none'");
+  res.setHeader("Cache-Control", "no-store");
+  next();
+}
+
+async function renderConsentView(res, pending, { loggedIn, username, error }) {
+  const store = new McpOAuthClientsStore();
+  const client = await store.getClient(pending.clientId);
+  const html = renderConsentPage({
+    ticket: pending.ticket,
+    csrfToken: pending.csrfToken,
+    clientName: client?.client_name || pending.clientId,
+    requestedScopes: pending.requestedScopes?.length
+      ? pending.requestedScopes
+      : normalizeScopes(MCP_OAUTH_CONSENT_SCOPES),
+    loggedIn,
+    username,
+    error,
+  });
+  return res.status(error ? 401 : 200).type("html").send(html);
+}
 
 let sharedProvider;
 
@@ -79,7 +105,7 @@ function mountMcpOAuth(app) {
   if (oauthMetadata.registration_endpoint) {
     authRouter.use(
       new URL(oauthMetadata.registration_endpoint).pathname,
-      clientRegistrationHandler({ clientsStore: provider.clientsStore, rateLimit: false })
+      clientRegistrationHandler({ clientsStore: provider.clientsStore })
     );
   }
   if (oauthMetadata.revocation_endpoint) {
@@ -93,15 +119,13 @@ function mountMcpOAuth(app) {
     resource_name: "FindVirtualMe MCP",
     resource_documentation: new URL("/api/public/docs", issuerUrl).href,
   };
-  authRouter.use(
-    "/.well-known/oauth-protected-resource",
-    metadataHandler(protectedResourceMetadata)
-  );
+  authRouter.use("/.well-known/oauth-protected-resource", metadataHandler(protectedResourceMetadata));
 
   app.use(authRouter);
 
   const consentRouter = express.Router();
   consentRouter.use(cookieMiddleware);
+  consentRouter.use(consentSecurityHeaders);
   consentRouter.use(express.urlencoded({ extended: false }));
 
   consentRouter.get("/consent", async (req, res) => {
@@ -116,53 +140,51 @@ function mountMcpOAuth(app) {
         const user = await User.findById(userId).select("username").lean();
         username = user?.username;
       }
-      const store = new McpOAuthClientsStore();
-      const client = await store.getClient(pending.clientId);
-      const html = renderConsentPage({
-        ticket: pending.ticket,
-        clientName: client?.client_name || pending.clientId,
-        requestedScopes: pending.requestedScopes?.length
-          ? pending.requestedScopes
-          : normalizeScopes(MCP_OAUTH_CONSENT_SCOPES),
-        loggedIn: !!userId,
-        username,
-        error: null,
-      });
-      res.setHeader("Cache-Control", "no-store");
-      return res.status(200).type("html").send(html);
+      return renderConsentView(res, pending, { loggedIn: !!userId, username, error: null });
     } catch (_err) {
-      return res.status(500).send("Unable to load consent screen.");
+      return res.status(400).send("Unable to load consent screen.");
     }
   });
 
   consentRouter.post("/consent", async (req, res) => {
     try {
+      try {
+        throttleConsentByIp(req.ip);
+      } catch (err) {
+        return res.status(err.status || 429).send(err.message);
+      }
+
       const pending = await getPendingAuthorization(req.body?.ticket);
       if (!pending) {
         return res.status(400).send("This authorization request expired or is invalid.");
       }
+      if (!verifyCsrf(pending, req.body?.csrf)) {
+        return res.status(403).send("Invalid consent request.");
+      }
+
       let userId = readConsentUserId(req);
       if (!userId) {
-        const user = await consentLogin({
+        try {
+          throttleConsentByAccount(req.body?.email);
+        } catch (err) {
+          return res.status(err.status || 429).send(err.message);
+        }
+
+        const login = await consentLogin({
           email: req.body?.email,
           password: req.body?.password,
         });
-        if (!user) {
-          const store = new McpOAuthClientsStore();
-          const client = await store.getClient(pending.clientId);
-          const html = renderConsentPage({
-            ticket: pending.ticket,
-            clientName: client?.client_name || pending.clientId,
-            requestedScopes: pending.requestedScopes,
-            loggedIn: false,
-            username: null,
-            error: "Invalid email or password.",
-          });
-          res.setHeader("Cache-Control", "no-store");
-          return res.status(401).type("html").send(html);
+        if (!login.ok) {
+          const message =
+            login.reason === "use_web_login"
+              ? WEB_LOGIN_HINT
+              : login.reason === "inactive"
+                ? "This account is inactive."
+                : "Invalid email or password.";
+          return renderConsentView(res, pending, { loggedIn: false, username: null, error: message });
         }
-        setConsentCookie(res, user._id);
-        userId = String(user._id);
+        setConsentCookie(res, login.user._id);
+        userId = String(login.user._id);
       }
       const scopes = Array.isArray(req.body.scopes)
         ? req.body.scopes
@@ -175,7 +197,7 @@ function mountMcpOAuth(app) {
       if (err.code === "validation_error") {
         return res.status(400).send(err.message);
       }
-      return res.status(500).send("Unable to complete authorization.");
+      return res.status(400).send("Unable to complete authorization.");
     }
   });
 

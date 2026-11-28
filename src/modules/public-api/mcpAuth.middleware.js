@@ -61,6 +61,9 @@ async function authenticateMcpRequest(req, res, next) {
     }
 
     if (secret.startsWith(ACCESS_PREFIX)) {
+      if (!isMcpOAuthEnabled()) {
+        return sendError(res, INVALID_KEY.status, INVALID_KEY.code, INVALID_KEY.message);
+      }
       const oauth = await authenticateMcpOAuthAccessToken(secret);
       if (!oauth) {
         return sendMcpUnauthorized(res, req, "Invalid or expired token");

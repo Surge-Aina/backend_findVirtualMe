@@ -7,7 +7,10 @@ const SCOPE_LABELS = {
   "sites:write": "Edit site drafts (components)",
 };
 
-function renderConsentPage({ ticket, clientName, requestedScopes, loggedIn, username, error }) {
+const WEB_LOGIN_HINT =
+  "Sign in at findvirtual.me first with your usual sign-in method, then return here and retry authorization.";
+
+function renderConsentPage({ ticket, csrfToken, clientName, requestedScopes, loggedIn, username, error }) {
   const choices = requestedScopes.length ? requestedScopes : [...MCP_OAUTH_CONSENT_SCOPES];
   const scopeInputs = choices
     .map(
@@ -20,8 +23,8 @@ function renderConsentPage({ ticket, clientName, requestedScopes, loggedIn, user
     ? `<p class="lede">Signed in as <strong>${escapeHtml(username || "account")}</strong>.</p>`
     : `<fieldset class="login">
         <legend>Sign in to FindVirtualMe</legend>
-        <label>Email <input type="email" name="email" required autocomplete="username" /></label>
-        <label>Password <input type="password" name="password" required autocomplete="current-password" /></label>
+        <label>Email <input type="email" name="email" autocomplete="username" /></label>
+        <label>Password <input type="password" name="password" autocomplete="current-password" /></label>
        </fieldset>`;
 
   const errorBlock = error
@@ -39,7 +42,7 @@ function renderConsentPage({ ticket, clientName, requestedScopes, loggedIn, user
     body { margin: 0; font: 16px/1.5 Georgia, "Iowan Old Style", serif; color: #1c1917; background: #faf7f2; }
     main { max-width: 36rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
     h1 { font-family: "Palatino Linotype", Palatino, serif; font-size: 1.75rem; line-height: 1.2; }
-  .lede { font-size: 1.05rem; }
+    .lede { font-size: 1.05rem; }
     code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; background: #efeae2; padding: 0.1em 0.35em; border-radius: 0.25rem; }
     .scope { display: block; margin: 0.65rem 0; }
     .login label { display: block; margin: 0.5rem 0; }
@@ -56,6 +59,7 @@ function renderConsentPage({ ticket, clientName, requestedScopes, loggedIn, user
     ${loginBlock}
     <form method="post" action="/mcp-oauth/consent">
       <input type="hidden" name="ticket" value="${escapeHtml(ticket)}">
+      <input type="hidden" name="csrf" value="${escapeHtml(csrfToken)}">
       <h2>Choose scopes</h2>
       ${scopeInputs}
       <button type="submit">${loggedIn ? "Allow access" : "Sign in and allow"}</button>
@@ -73,4 +77,4 @@ function escapeHtml(value) {
     .replace(/"/g, "&quot;");
 }
 
-module.exports = { renderConsentPage, SCOPE_LABELS };
+module.exports = { renderConsentPage, SCOPE_LABELS, WEB_LOGIN_HINT };
