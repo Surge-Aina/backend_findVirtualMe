@@ -2,7 +2,7 @@ const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
 const { StreamableHTTPServerTransport } = require("@modelcontextprotocol/sdk/server/streamableHttp.js");
 const { z } = require("zod");
 const express = require("express");
-const { authenticateApiKey } = require("./publicApi.auth");
+const { authenticateMcpRequest } = require("./mcpAuth.middleware");
 const { publicApiRateLimit } = require("./rateLimit");
 const sitesService = require("./sites.service");
 const leadsService = require("./leads.service");
@@ -285,7 +285,7 @@ async function handleMcp(req, res) {
 
 function mountMcp(app) {
   const router = express.Router();
-  router.post("/", authenticateApiKey, publicApiRateLimit, handleMcp);
+  router.post("/", authenticateMcpRequest, publicApiRateLimit, handleMcp);
   app.use("/api/mcp", router);
 }
 

@@ -1,4 +1,7 @@
+const { publicApiBaseUrl } = require("../../shared/config/mcpOAuth");
+
 function renderDocsPage() {
+  const mcpUrl = `${publicApiBaseUrl()}/api/mcp`;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -117,7 +120,7 @@ function renderDocsPage() {
     <pre>{
   "mcpServers": {
     "findvirtualme": {
-      "url": "https://findvirtual.me/api/mcp",
+      "url": "${mcpUrl}",
       "headers": { "Authorization": "Bearer fvm_..." }
     }
   }

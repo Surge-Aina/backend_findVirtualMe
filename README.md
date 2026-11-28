@@ -82,6 +82,13 @@ Deployed environments must set `MONGODB_URI` and `JWT_SECRET`. Do not commit tho
 
 Optional one-click admin handoff (disabled unless explicitly enabled):
 
+- `MCP_OAUTH_ENABLED` — set to `true` to expose MCP-spec OAuth 2.1 discovery, dynamic client registration, PKCE authorization code tokens, and a consent screen for Claude/ChatGPT/Grok connectors. When unset, `POST /api/mcp` accepts only `fvm_` and `fvm_at_` bearer tokens as today.
+- `MCP_OAUTH_ISSUER_URL` — HTTPS base URL of this API (authorization server issuer). Required when `MCP_OAUTH_ENABLED=true`.
+- `PUBLIC_API_BASE_URL` — canonical public base URL for docs and MCP examples (defaults to `MCP_OAUTH_ISSUER_URL` or `https://api.findvirtual.me`).
+- `MCP_OAUTH_ACCESS_TTL_SECONDS` — MCP OAuth access-token lifetime (default `900`).
+- `MCP_OAUTH_REFRESH_TTL_SECONDS` — MCP OAuth refresh-token lifetime (default `2592000`).
+- `MCP_OAUTH_CODE_TTL_SECONDS` — authorization-code lifetime (default `300`).
+
 - `SITE_DRAFTS_ENABLED` — set to `true` to route owner portfolio edits through drafts and versioned publish. When unset or any other value, portfolio APIs behave as before (every save updates the live site).
 
 - `FEATURE_COMPONENTS_ENABLED` — set to `true` to expose reusable site section components (contact/lead form, gallery, services, testimonials, business hours) on unified templates.
