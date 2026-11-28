@@ -3,6 +3,10 @@ const portfolioDraftService = require("./portfolioDraft.service");
 const { isSiteDraftsEnabled } = require("../../shared/config/siteDrafts");
 const agentPortfolioGenerator = require("./agentPortfolioGenerator.service");
 const subscriptionAccess = require("../payments/subscription-access.service");
+const { isAccountTeamsEnabled } = require("../../shared/config/accountTeams");
+const accountsService = require("../account-teams/accounts.service");
+const { isSuperAdminUser } = require("../account-teams/superAdmin.service");
+const { logCrossAccountSuperAdminEdit } = require("../account-teams/accountAccess.service");
 
 function sendPortfolioError(res, err, fallbackMessage) {
   if (err.code === 11000) {
@@ -40,12 +44,21 @@ function toAgentBlockList(blocks) {
 async function denyUnlessOwner(req, res, { action } = {}) {
   const userId = req.user?._id || req.user?.id;
   const isAdmin = portfolioService.isPortfolioAdmin(req.user);
-  const check = await portfolioService.assertPortfolioOwner(req.params.id, userId, { isAdmin });
+  const check = await portfolioService.assertPortfolioOwner(req.params.id, userId, {
+    isAdmin,
+    user: req.user,
+  });
   if (!check.ok) {
     res.status(check.status).json({ error: check.error });
     return false;
   }
-  if (isAdmin && check.isOwner === false) {
+  if (isSuperAdminUser(req.user) && check.isOwner === false) {
+    logCrossAccountSuperAdminEdit(
+      req.user,
+      req.params.id,
+      action || `${req.method} ${req.route?.path || req.path}`
+    );
+  } else if (isAdmin && check.isOwner === false) {
     portfolioService.logAdminPortfolioEdit(
       userId,
       req.params.id,
@@ -228,6 +241,7 @@ exports.getById = async (req, res) => {
     const portfolio = await portfolioService.getPortfolioForViewer(req.params.id, viewerId, {
       domainHost,
       isAdmin,
+      user: req.user,
     });
     if (!portfolio) return res.status(404).json({ error: "Portfolio not found" });
     res.json(portfolio);
@@ -245,6 +259,7 @@ exports.getBySlug = async (req, res) => {
     const portfolio = await portfolioService.getPortfolioBySlugForViewer(req.params.slug, viewerId, {
       domainHost,
       isAdmin,
+      user: req.user,
     });
     if (!portfolio) return res.status(404).json({ error: "Portfolio not found" });
     res.json(portfolio);
@@ -256,6 +271,11 @@ exports.getBySlug = async (req, res) => {
 
 exports.getMine = async (req, res) => {
   try {
+    if (isAccountTeamsEnabled()) {
+      const accountId = req.get("X-Account-Id") || null;
+      const portfolios = await accountsService.getPortfoliosForAccount(req.user, accountId);
+      return res.json({ success: true, portfolios });
+    }
     const ownerId = req.user._id || req.user.id;
     const portfolios = await portfolioService.getUserPortfolios(ownerId);
     res.json({ success: true, portfolios });
@@ -278,6 +298,11 @@ exports.listPublic = async (req, res) => {
 
 exports.listAdmin = async (req, res) => {
   try {
+    const isSuper = isSuperAdminUser(req.user);
+    const isAdmin = portfolioService.isPortfolioAdmin(req.user);
+    if (!isSuper && !isAdmin) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
     const page = parseInt(req.query.page, 10);
     const limit = parseInt(req.query.limit, 10);
     const result = await portfolioService.listPortfoliosForAdmin({

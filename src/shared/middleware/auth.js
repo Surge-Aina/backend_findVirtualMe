@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
-const User = require("../models/User"); // Make sure this path is correct
+const User = require("../models/User");
+const { isAccountTeamsEnabled } = require("../config/accountTeams");
+const { buildSuperAdminUser } = require("../../modules/account-teams/superAdmin.service");
 
 /**
  * Authentication middleware to verify JWT tokens
@@ -18,14 +20,17 @@ const auth = async (req, res, next) => {
         .json({ error: "Access denied. No token provided." });
     }
 
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // console.log('Decoded token:', decoded);
-    // Check if token is expired
     if (decoded.exp && Date.now() >= decoded.exp * 1000) {
       return res.status(401).json({ error: "Token expired" });
     }
-    // Fetch user from DB
+    if (decoded.kind === "super_admin") {
+      if (!isAccountTeamsEnabled()) {
+        return res.status(401).json({ error: "Invalid token" });
+      }
+      req.user = buildSuperAdminUser();
+      return next();
+    }
     const user = await User.findById(decoded.id || decoded._id).select(
       "-password"
     );

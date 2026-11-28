@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const { isAccountTeamsEnabled } = require("../config/accountTeams");
+const { buildSuperAdminUser } = require("../../modules/account-teams/superAdmin.service");
 
 const optionalAuth = async (req, _res, next) => {
   try {
@@ -14,6 +16,10 @@ const optionalAuth = async (req, _res, next) => {
       return next();
     }
 
+    if (decoded.kind === "super_admin" && isAccountTeamsEnabled()) {
+      req.user = buildSuperAdminUser();
+      return next();
+    }
     const user = await User.findById(decoded.id || decoded._id).select("-password");
     if (user) {
       req.user = user;

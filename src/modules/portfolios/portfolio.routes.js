@@ -14,7 +14,7 @@ router.get("/slug/:slug", optionalAuth, ctrl.getBySlug);
 
 // Authenticated (must precede /:id to avoid being captured by the param route)
 router.get("/mine", auth, ctrl.getMine);
-router.get("/admin", auth, roleCheck(["admin"]), ctrl.listAdmin);
+router.get("/admin", auth, ctrl.listAdmin);
 router.post("/", auth, ctrl.create);
 router.post("/agent", auth, ctrl.createAgent);
 router.post("/agent/generate", auth, ctrl.generateAgentFromPrompt);

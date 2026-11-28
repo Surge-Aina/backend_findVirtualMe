@@ -29,6 +29,7 @@ const bookingRequestRoutes = require("./booking-request/bookingRequest.routes.js
 const domainRouterRoutes = require("./domains/DomainRouter/DomainRouter.routes.js");
 const s3UploadRoutes = require("./media/S3Upload.routes.js");
 const portfolioRoutes = require("./portfolios/portfolio.routes");
+const accountTeamsRoutes = require("./account-teams/accounts.routes");
 const voucherRoutes = require("./vouchers/voucher.routes.js");
 const qrCodeRoutes = require("./qr-code/qrCode.routes.js");
 const privacyPolicyRoutes = require("./privacy-policy/privacyPolicy.routes");
@@ -101,6 +102,7 @@ function mountModules(app) {
   app.use("/domainRouter", domainRouterRoutes);
   app.use("/api/media/s3-upload-url", s3UploadRoutes);
   app.use("/api/portfolios", portfolioRoutes);
+  app.use("/api/accounts", accountTeamsRoutes);
   app.use("/api/vouchers", voucherRoutes);
   app.use("/vouchers", voucherRoutes);
   app.use("/api/qr-codes", qrCodeRoutes);

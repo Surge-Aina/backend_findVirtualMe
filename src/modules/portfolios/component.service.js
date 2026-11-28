@@ -65,7 +65,10 @@ function throwUnlessPortfolioOwner(check) {
 
 async function assertComponentSiteAccess(ctx, action) {
   const isAdmin = Boolean(ctx.isAdmin);
-  const ownerCheck = await portfolioService.assertPortfolioOwner(ctx.siteId, ctx.ownerId, { isAdmin });
+  const ownerCheck = await portfolioService.assertPortfolioOwner(ctx.siteId, ctx.ownerId, {
+    isAdmin,
+    user: ctx.user,
+  });
   throwUnlessPortfolioOwner(ownerCheck);
   if (isAdmin && ownerCheck.isOwner === false) {
     portfolioService.logAdminPortfolioEdit(ctx.ownerId, ctx.siteId, action);
@@ -94,10 +97,20 @@ function mutationEnvelope(ctx, extra) {
   };
 }
 
-async function loadListingContext(siteId, actorId, { publishedOnly, isAdmin = false } = {}) {
-  const portfolio = await Portfolio.findById(siteId).select("owner template title sections").lean();
+async function loadListingContext(siteId, actorId, { publishedOnly, isAdmin = false, actorUser = null } = {}) {
+  const portfolio = await Portfolio.findById(siteId).select("owner account template title sections").lean();
   if (!portfolio) return null;
-  if (!isAdmin && String(portfolio.owner) !== String(actorId)) return null;
+  const ownerMatch = String(portfolio.owner) === String(actorId);
+  if (!ownerMatch && !isAdmin) {
+    const { isAccountTeamsEnabled } = require("../../shared/config/accountTeams");
+    if (isAccountTeamsEnabled() && portfolio.account && actorUser?._id) {
+      const accountAccess = require("../account-teams/accountAccess.service");
+      const membership = await accountAccess.getActiveMembership(portfolio.account, actorUser._id);
+      if (!membership) return null;
+    } else {
+      return null;
+    }
+  }
 
   const draftView = await portfolioDraftService.getOwnerDraft(siteId);
   const hasDraft = Boolean(draftView?.hasDraft);
@@ -135,10 +148,10 @@ async function loadListingContext(siteId, actorId, { publishedOnly, isAdmin = fa
 /**
  * @param {{ ownerId: string, siteId: string, audience?: 'public' | 'owner' | 'mcp' }} params
  */
-async function listAvailableComponents({ ownerId, siteId, audience = "owner", isAdmin = false } = {}) {
+async function listAvailableComponents({ ownerId, siteId, audience = "owner", isAdmin = false, actorUser = null } = {}) {
   assertComponentsAvailable();
   const publishedOnly = audience === "public";
-  const ctx = await loadListingContext(siteId, ownerId, { publishedOnly, isAdmin });
+  const ctx = await loadListingContext(siteId, ownerId, { publishedOnly, isAdmin, actorUser });
   if (!ctx) return null;
 
   const puckPayload = buildOwnerComponentsPayload({
@@ -206,6 +219,7 @@ function buildExternalWriteContext(publicApiAuth, siteId) {
     authType,
     installationId: publicApiAuth.installationId || null,
     apiKeyId: publicApiAuth.key?._id || null,
+    user: publicApiAuth.user,
   };
 }
 
@@ -242,6 +256,7 @@ async function addComponent(ctx, input) {
   const listing = await loadListingContext(ctx.siteId, ctx.ownerId, {
     publishedOnly: false,
     isAdmin: ctx.isAdmin,
+    actorUser: ctx.user,
   });
   if (!listing) {
     throw new FeatureComponentsError("Site not found", { status: 404, code: "not_found" });
@@ -303,6 +318,7 @@ async function updateComponent(ctx, { sectionId, props, config }) {
   const listing = await loadListingContext(ctx.siteId, ctx.ownerId, {
     publishedOnly: false,
     isAdmin: ctx.isAdmin,
+    actorUser: ctx.user,
   });
   if (!listing) {
     throw new FeatureComponentsError("Site not found", { status: 404, code: "not_found" });

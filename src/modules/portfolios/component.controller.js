@@ -40,6 +40,7 @@ exports.listComponents = async (req, res) => {
       siteId,
       audience: "owner",
       isAdmin: portfolioService.isPortfolioAdmin(req.user),
+      actorUser: req.user,
     });
     if (!listed) return res.status(404).json({ error: "Portfolio not found" });
 
