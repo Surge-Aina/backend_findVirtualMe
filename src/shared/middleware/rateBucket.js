@@ -12,6 +12,16 @@ const mongoose = require("mongoose");
 const COLLECTION = "api_rate_buckets";
 
 let indexTask = null;
+let nowMsForTests = null;
+
+function setRateBucketNowForTests(ms) {
+  nowMsForTests = ms == null ? null : Number(ms);
+}
+
+function currentNowMs() {
+  if (nowMsForTests != null && Number.isFinite(nowMsForTests)) return nowMsForTests;
+  return Date.now();
+}
 
 function errorClass(err) {
   const name = String((err && err.name) || "Error").replace(/[^A-Za-z0-9_]/g, "").slice(0, 80) || "Error";
@@ -72,7 +82,7 @@ function ensureRateBucketIndex() {
 }
 
 async function incrementRateBucket(key, windowMs) {
-  const now = Date.now();
+  const now = currentNowMs();
   const windowStart = Math.floor(now / windowMs) * windowMs;
   const id = `${key}:${windowStart}`;
   const expireAt = new Date(windowStart + windowMs + 60_000);
@@ -121,4 +131,6 @@ module.exports = {
   ensureRateBucketIndex,
   errorClass,
   resetRateBucketStateForTests,
+  setRateBucketNowForTests,
+  currentNowMs,
 };

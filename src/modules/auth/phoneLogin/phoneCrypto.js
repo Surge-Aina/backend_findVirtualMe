@@ -1,14 +1,46 @@
 const crypto = require("crypto");
 const { parsePhoneNumberFromString } = require("libphonenumber-js");
 const { decode32ByteKey } = require("./phoneLogin.config");
+const { isPhoneLoginCountryAllowed } = require("./phoneLoginCountries");
 
-function normalizeE164(rawPhone, defaultCountry = "US") {
+function parsePhone(rawPhone, defaultCountry) {
   if (!rawPhone || typeof rawPhone !== "string") return null;
   const trimmed = rawPhone.trim();
   if (!trimmed) return null;
-  const parsed = parsePhoneNumberFromString(trimmed, defaultCountry);
+  const hasLeadingPlus = trimmed.startsWith("+");
+  if (!hasLeadingPlus && !defaultCountry) return null;
+  const parsed = parsePhoneNumberFromString(
+    trimmed,
+    hasLeadingPlus ? undefined : defaultCountry,
+  );
   if (!parsed || !parsed.isValid()) return null;
+  return parsed;
+}
+
+function normalizeE164(rawPhone, defaultCountry) {
+  const parsed = parsePhone(rawPhone, defaultCountry);
+  if (!parsed) return null;
   return parsed.format("E.164");
+}
+
+function resolvePhone(rawPhone, defaultCountry) {
+  const parsed = parsePhone(rawPhone, defaultCountry);
+  if (!parsed) return null;
+  const e164 = parsed.format("E.164");
+  const country = parsed.country;
+  if (!country || !isPhoneLoginCountryAllowed(country)) {
+    const err = new Error("Phone number country is not supported");
+    err.status = 400;
+    err.code = "PHONE_COUNTRY_NOT_SUPPORTED";
+    throw err;
+  }
+  return { e164, country };
+}
+
+function phonePrefixForPumpGuard(e164) {
+  const digits = String(e164).replace(/\D/g, "");
+  if (digits.length <= 4) return digits;
+  return digits.slice(0, -4);
 }
 
 function phoneLast4(e164) {
@@ -57,6 +89,9 @@ function decryptPhone(payload) {
 
 module.exports = {
   normalizeE164,
+  resolvePhone,
+  parsePhone,
+  phonePrefixForPumpGuard,
   phoneLast4,
   maskPhoneForLog,
   phoneLookupHash,

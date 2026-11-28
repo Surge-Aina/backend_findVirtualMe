@@ -126,11 +126,15 @@ Component registry follows the [Puck](https://github.com/puckeditor/puck) (MIT) 
 
 Optional phone OTP sign-in via Twilio Verify (disabled unless explicitly enabled):
 
-- `PHONE_LOGIN_ENABLED` — set to `true` to expose `/api/auth/phone/*` routes; any other value keeps them hidden (404).
+- `PHONE_LOGIN_ENABLED` — set to `true` to expose `/api/auth/phone/*` routes; any other value keeps them hidden (404). `GET /api/auth/phone/countries` stays reachable either way and returns an empty list when the flag is off.
 - `PHONE_ENC_KEY` — 32-byte AES key, base64-encoded, for encrypting E.164 phone numbers at rest.
 - `PHONE_HASH_KEY` — 32-byte HMAC key, base64-encoded, for phone lookup hashes. If either key is missing, phone login stays off even when `PHONE_LOGIN_ENABLED` is `true`.
 - `TWILIO_ACCOUNT_SID`, `TWILIO_API_KEY_SID`, `TWILIO_API_KEY_SECRET`, `TWILIO_VERIFY_SERVICE_SID` — Twilio Verify credentials (API key auth).
 - `OTP_DAILY_CAP` — global daily cap for OTP sends across the app (default `200`).
+- `PHONE_LOGIN_COUNTRIES` — comma-separated ISO region codes allowed for phone OTP (default `US,GB,IN`).
+- `PHONE_OTP_COUNTRY_HOURLY_CAP` / `PHONE_OTP_COUNTRY_DAILY_CAP` — per-country send caps (defaults `25` / `80`; overrides per ISO via `PHONE_OTP_COUNTRY_HOURLY_CAP_XX` and `PHONE_OTP_COUNTRY_DAILY_CAP_XX`).
+- `PHONE_OTP_COUNTRY_HOURLY_CAP_IN` / `PHONE_OTP_COUNTRY_DAILY_CAP_IN` — India defaults (`8` / `40`).
+- `PHONE_OTP_PUMP_DISTINCT_MAX` / `PHONE_OTP_PUMP_WINDOW_MS` — SMS pumping guard thresholds (default `5` numbers per prefix per IP in `900000` ms).
 
 User seeding reads `ADMIN_EMAIL`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `CUSTOMER_EMAIL`, `CUSTOMER_USERNAME`, and `CUSTOMER_PASSWORD`. The seed fails if any of them are missing.
 

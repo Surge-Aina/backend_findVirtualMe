@@ -13,7 +13,11 @@ const {
 const { resetDailyOtpCountersForTests } = require("../phoneOtpDailyCap");
 const { resetLockoutsForTests, lockoutDocId } = require("../phoneOtpLockout");
 const { phoneLookupHash, encryptPhone } = require("../phoneCrypto");
-const { deleteRateBucketsByPrefix } = require("../../../../shared/middleware/rateBucket");
+const {
+  deleteRateBucketsByPrefix,
+  setRateBucketNowForTests,
+} = require("../../../../shared/middleware/rateBucket");
+const { resetPumpGuardsForTests } = require("../phoneOtpPumpGuard");
 const { LOGIN_START_MESSAGE } = require("../phoneLogin.service");
 
 const TEST_PHONE = "+14155552671";
@@ -81,6 +85,8 @@ const RATE_LIMITER_PREFIXES = [
   "phone_otp_send_phone_hour",
   "phone_otp_send_ip_hour",
   "phone_otp_verify_ip_hour",
+  "phone_otp_send_country_hour",
+  "phone_otp_send_country_day",
 ];
 
 async function resetPhoneOtpRateBuckets() {
@@ -102,7 +108,9 @@ describe("phone OTP auth", () => {
 
     await resetDailyOtpCountersForTests();
     await resetLockoutsForTests();
+    await resetPumpGuardsForTests();
     await resetPhoneOtpRateBuckets();
+    setRateBucketNowForTests(1_700_000_000_000);
 
     const password = await bcrypt.hash("password123", 4);
     customer = await User.create({
@@ -123,6 +131,7 @@ describe("phone OTP auth", () => {
   });
 
   afterEach(() => {
+    setRateBucketNowForTests(null);
     resetTwilioFactoryForTests();
   });
 
@@ -398,17 +407,20 @@ describe("phone OTP auth", () => {
 
     it("rate limits rapid resends for the same phone", async () => {
       mockTwilio();
+      setRateBucketNowForTests(1_800_000_000_000);
 
       const first = await request(app)
-        .post("/api/auth/phone/login/start")
+        .post("/api/auth/phone/start-verify")
+        .set("Authorization", `Bearer ${customerToken}`)
         .send({ phone: TEST_PHONE });
       expect(first.status).toBe(200);
 
       const second = await request(app)
-        .post("/api/auth/phone/login/start")
+        .post("/api/auth/phone/start-verify")
+        .set("Authorization", `Bearer ${customerToken}`)
         .send({ phone: TEST_PHONE });
       expect(second.status).toBe(429);
-    }, 20000);
+    });
 
     it("does not log OTP codes or full phone numbers on send failure", async () => {
       const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});

@@ -9,6 +9,7 @@ const {
   incrementRateBucket,
   deleteRateBucketsByPrefix,
   errorClass,
+  currentNowMs,
 } = require("./rateBucket");
 
 const trustOneHop = (_addr, index) => index < 1;
@@ -17,7 +18,7 @@ function createRateLimiter({ windowMs, max, name, keyFn }) {
   const buckets = new Map();
 
   function localIncrement(key) {
-    const now = Date.now();
+    const now = currentNowMs();
     const recent = (buckets.get(key) || []).filter((ts) => now - ts < windowMs);
     recent.push(now);
     buckets.set(key, recent);
