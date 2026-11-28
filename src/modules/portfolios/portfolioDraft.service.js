@@ -487,6 +487,31 @@ async function publishDraft(portfolioId, ownerId) {
   };
 }
 
+async function recordWriteVersion(portfolioId, ownerId, { source = "ai" } = {}) {
+  let doc = await PortfolioDraft.findOne({ portfolioId });
+  if (!doc) {
+    doc = await Portfolio.findById(portfolioId);
+  }
+  if (!doc) return null;
+
+  const snap = extractSnapshotFromDoc(doc);
+  if (!snap) return null;
+
+  const versionSnapshot = {
+    ...snap,
+    sections: (snap.sections || []).map((s) => ({
+      type: s.type,
+      order: s.order,
+      visible: s.visible !== false,
+      data: cloneJson(s.data),
+    })),
+  };
+
+  const versionNumber = await insertVersionRecord(portfolioId, ownerId, { source }, versionSnapshot);
+  await pruneVersions(portfolioId);
+  return versionNumber;
+}
+
 async function listVersions(portfolioId) {
   const versions = await PortfolioVersion.find({ portfolioId })
     .sort({ versionNumber: -1 })
@@ -600,6 +625,7 @@ module.exports = {
   toggleDraftBranding,
   getOwnerDraft,
   publishDraft,
+  recordWriteVersion,
   listVersions,
   getVersionSnapshot,
   revertVersionToDraft,

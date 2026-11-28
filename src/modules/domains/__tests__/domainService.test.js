@@ -367,6 +367,9 @@ describe('verifyDNS', () => {
           message: expect.stringContaining('Custom domain configured'),
           domain: 'example.com',
           status: 'pending_verification',
+          records: expect.arrayContaining([
+            expect.objectContaining({ type: 'CNAME', host: 'example.com', value: 'cname.vercel-dns.com' }),
+          ]),
         })
       );
     });

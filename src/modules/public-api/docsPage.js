@@ -49,7 +49,7 @@ function renderDocsPage() {
     <h2>Scopes</h2>
     <ul>
       <li><code>sites:read</code> — list and fetch the caller's websites.</li>
-      <li><code>sites:write</code> — add, update, remove, or reorder feature components on the site draft when <code>FEATURE_COMPONENTS_ENABLED</code> and <code>SITE_DRAFTS_ENABLED</code> are on (not included on existing keys by default).</li>
+      <li><code>sites:write</code> — add, update, remove, or reorder feature components on the site draft when <code>FEATURE_COMPONENTS_ENABLED</code> and <code>SITE_DRAFTS_ENABLED</code> are on. When <code>MCP_SITE_TOOLS_ENABLED</code> is <code>true</code>, also create sites and edit core content, settings, and publish flows (available on all plans).</li>
       <li><code>profile:read</code> — read the published business profile.</li>
       <li><code>webhooks:write</code> — create, list, delete, rotate, and test webhook subscriptions.</li>
       <li><code>leads:read</code> — read one lead captured on a site the caller owns.</li>
@@ -63,6 +63,12 @@ function renderDocsPage() {
         <tr><td>GET</td><td><code>/api/public/v1/me</code></td><td>any valid key</td></tr>
         <tr><td>GET</td><td><code>/api/public/v1/sites</code></td><td><code>sites:read</code></td></tr>
         <tr><td>GET</td><td><code>/api/public/v1/sites/:id</code></td><td><code>sites:read</code></td></tr>
+        <tr><td>POST</td><td><code>/api/public/v1/sites</code></td><td><code>sites:write</code> (requires <code>MCP_SITE_TOOLS_ENABLED</code>)</td></tr>
+        <tr><td>GET</td><td><code>/api/public/v1/sites/:id/content</code></td><td><code>sites:read</code></td></tr>
+        <tr><td>PATCH</td><td><code>/api/public/v1/sites/:id/content</code></td><td><code>sites:write</code></td></tr>
+        <tr><td>PATCH</td><td><code>/api/public/v1/sites/:id/settings</code></td><td><code>sites:write</code></td></tr>
+        <tr><td>POST</td><td><code>/api/public/v1/sites/:id/submit-for-publish</code></td><td><code>sites:write</code></td></tr>
+        <tr><td>POST</td><td><code>/api/public/v1/sites/:id/publish</code></td><td><code>sites:write</code></td></tr>
         <tr><td>GET</td><td><code>/api/public/v1/sites/:id/components</code></td><td><code>sites:read</code></td></tr>
         <tr><td>POST</td><td><code>/api/public/v1/sites/:id/components</code></td><td><code>sites:write</code></td></tr>
         <tr><td>PATCH</td><td><code>/api/public/v1/sites/:id/components/:sectionId</code></td><td><code>sites:write</code></td></tr>
@@ -116,7 +122,7 @@ function renderDocsPage() {
     <p>An account registers an app at <code>POST /api/developer/apps</code>. An admin approves it with <code>POST /api/admin/apps/:id/review</code> before it appears in <code>GET /api/marketplace/apps</code>. Installation is an OAuth 2.0 authorization-code grant per site. <code>code_challenge_method</code> must be <code>S256</code>. Access tokens last one hour and refresh tokens last 30 days. Both rotate. A token can call only the site it was installed on. Installing emits <code>app.installed</code>. Uninstalling emits <code>app.uninstalled</code>. The app manages its own webhook subscriptions with the install token.</p>
 
     <h2>MCP</h2>
-    <p><code>POST /api/mcp</code> speaks the Model Context Protocol. It uses the same API keys and scopes. Tools: <code>list_sites</code>, <code>get_site</code>, <code>get_business_profile</code>, <code>get_lead</code>, and <code>list_webhooks</code>. <code>get_lead</code> requires <code>leads:read</code>. A missing scope returns an error result and does not log the tool arguments.</p>
+    <p><code>GET /api/mcp</code> returns <code>405</code> with <code>Allow: POST</code>. <code>POST /api/mcp</code> speaks the Model Context Protocol with the same API keys and scopes on every plan (only the built-in OpenAI builder stays premium). Base tools: <code>list_sites</code>, <code>get_site</code>, <code>get_business_profile</code>, <code>get_lead</code>, and <code>list_webhooks</code>. When <code>MCP_SITE_TOOLS_ENABLED</code> is <code>true</code>, also: <code>create_site</code>, <code>get_site_content</code>, <code>update_site_content</code>, <code>update_site_settings</code>, <code>submit_for_publish</code>, <code>publish_site</code>, <code>list_versions</code>, and <code>revert_version</code>. Each MCP content/settings write records a version. Free accounts may own one portfolio (<code>PLAN_LIMIT</code> / HTTP 402 on a second <code>create_site</code>). Custom domains are not plan-gated. Missing scopes return an error result.</p>
     <pre>{
   "mcpServers": {
     "findvirtualme": {

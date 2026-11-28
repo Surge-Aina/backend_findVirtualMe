@@ -4,7 +4,7 @@
     "title": "FindVirtualMe Public API",
     "version": "1.0.0",
     "summary": "Read a FindVirtualMe account's own sites and published business profile.",
-    "description": "Authenticate with a developer API key (`Authorization: Bearer fvm_...`). A key can read only the account that created it. `leads:read` reads one captured lead. `webhooks:write` manages webhook subscriptions. With `FEATURE_COMPONENTS_ENABLED` and `SITE_DRAFTS_ENABLED`, `sites:write` mutates reusable components on the site draft only (source `api`; OAuth/MCP uses `ai`). Human docs: `/api/public/docs`."
+    "description": "Authenticate with a developer API key (`Authorization: Bearer fvm_...`). A key can read only the account that created it. `leads:read` reads one captured lead. `webhooks:write` manages webhook subscriptions. With `FEATURE_COMPONENTS_ENABLED` and `SITE_DRAFTS_ENABLED`, `sites:write` mutates reusable components on the site draft only (source `api`; OAuth/MCP uses `ai`). When `MCP_SITE_TOOLS_ENABLED` is `true`, `sites:read` / `sites:write` also cover create/list content, settings, submit-for-publish, and publish. MCP: `POST /api/mcp` (`GET` returns 405). Human docs: `/api/public/docs`."
   },
   "servers": [
     {
@@ -202,6 +202,34 @@
             "$ref": "#/components/responses/RateLimited"
           }
         }
+      },
+      "post": {
+        "tags": ["Sites"],
+        "summary": "Create a site",
+        "description": "Requires `sites:write` and `MCP_SITE_TOOLS_ENABLED`. Template: projectManager, dataScientist, agent, healthcare, or handyman.",
+        "operationId": "createSite",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["template"],
+                "properties": {
+                  "template": { "type": "string" },
+                  "title": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Site created" },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
       }
     },
     "/sites/{id}": {
@@ -264,6 +292,72 @@
           "429": {
             "$ref": "#/components/responses/RateLimited"
           }
+        }
+      }
+    },
+    "/sites/{id}/content": {
+      "get": {
+        "tags": ["Sites"],
+        "summary": "Get editable site content",
+        "operationId": "getSiteContent",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Core sections" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "patch": {
+        "tags": ["Sites"],
+        "summary": "Update editable site content",
+        "operationId": "updateSiteContent",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Content updated" },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/sites/{id}/settings": {
+      "patch": {
+        "tags": ["Sites"],
+        "summary": "Update site settings",
+        "operationId": "updateSiteSettings",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Settings updated" },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "description": "Slug conflict" }
+        }
+      }
+    },
+    "/sites/{id}/submit-for-publish": {
+      "post": {
+        "tags": ["Sites"],
+        "summary": "Submit draft for owner approval",
+        "operationId": "submitSiteForPublish",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Submitted" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/sites/{id}/publish": {
+      "post": {
+        "tags": ["Sites"],
+        "summary": "Publish site draft",
+        "operationId": "publishSite",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Published" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
       }
     },
