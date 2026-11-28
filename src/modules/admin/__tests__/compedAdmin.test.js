@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
 const User = require("../../../shared/models/User");
+const Subscriptions = require("../../../shared/models/Subscriptions");
 const adminRoutes = require("../admin.routes");
 
 const app = express();
@@ -85,6 +86,42 @@ describe("PATCH /api/admin/users/:id/comped", () => {
       .send({ comped: true, compedPlan: "enterprise" });
 
     expect(res.status).toBe(400);
+  });
+
+  it("refuses comped conversion when an active Stripe subscription exists", async () => {
+    const paidUser = await createUser("customer", {
+      stripeCustomerId: "cus_active_sub",
+    });
+    await Subscriptions.create({
+      customerId: "cus_active_sub",
+      email: paidUser.email,
+      subscriptionId: "sub_active",
+      status: "active",
+    });
+
+    const res = await request(app)
+      .patch(`/api/admin/users/${paidUser._id}/comped`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ comped: true, compedPlan: "pro" });
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("HAS_ACTIVE_SUBSCRIPTION");
+  });
+
+  it("clears stripeSubscriptionId when comped is enabled", async () => {
+    const target = await createUser("customer", {
+      stripeSubscriptionId: "sub_stale",
+    });
+
+    const res = await request(app)
+      .patch(`/api/admin/users/${target._id}/comped`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ comped: true, compedPlan: "basic" });
+
+    expect(res.status).toBe(200);
+    const refreshed = await User.findById(target._id).lean();
+    expect(refreshed.comped).toBe(true);
+    expect(refreshed.stripeSubscriptionId).toBeUndefined();
   });
 
   it("clears compedPlan when comped is false", async () => {

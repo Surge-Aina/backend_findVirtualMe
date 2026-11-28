@@ -5,6 +5,7 @@ const path = require("path");
 
 const mongoose = require("mongoose");
 const User = require("../../src/shared/models/User");
+const Subscriptions = require("../../src/shared/models/Subscriptions");
 
 const SCRIPT = path.join(__dirname, "..", "create-comped-customer.js");
 
@@ -66,6 +67,47 @@ describe("create-comped-customer.js", () => {
     expect(user.isDemo).toBe(false);
 
     await User.deleteOne({ _id: user._id });
+  });
+
+  it("exits non-zero when converting a user with an active subscription", async () => {
+    const stamp = `${Date.now()}_${Math.random()}`;
+    const email = `comped_blocked_${stamp}@example.com`;
+    const username = `comped_blocked_${stamp}`;
+    const passwordOut = path.join(os.tmpdir(), `comped-pass-blocked-${stamp}.txt`);
+
+    await User.create({
+      email,
+      username,
+      password: "hashed",
+      role: "customer",
+      comped: false,
+      stripeCustomerId: "cus_blocked_sub",
+    });
+    await Subscriptions.create({
+      email,
+      customerId: "cus_blocked_sub",
+      subscriptionId: "sub_blocked",
+      status: "active",
+    });
+
+    const result = runScript(
+      {
+        EMAIL: email,
+        NAME: "Blocked User",
+        USERNAME: username,
+        COMPED_PLAN: "pro",
+      },
+      ["--password-out", passwordOut]
+    );
+
+    const combined = `${result.stdout || ""}${result.stderr || ""}`;
+    expect(result.status).not.toBe(0);
+    expect(combined).toContain("HAS_ACTIVE_SUBSCRIPTION");
+    expect(combined).not.toContain(email);
+    expect(combined).not.toContain("Blocked User");
+
+    await User.deleteOne({ email });
+    await Subscriptions.deleteOne({ customerId: "cus_blocked_sub" });
   });
 
   it("is idempotent by email", async () => {

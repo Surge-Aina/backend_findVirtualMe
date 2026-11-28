@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const auth = require("../../../../shared/middleware/auth");
+const rejectComped = require("../../../../shared/middleware/rejectComped");
 
 const stripeController = require("./stripe.controller");
 
@@ -8,6 +9,7 @@ const stripeController = require("./stripe.controller");
 router.post(
   ["/domain-checkout", "/checkout"],
   auth,
+  rejectComped,
   stripeController.createCheckoutSession
 );
 

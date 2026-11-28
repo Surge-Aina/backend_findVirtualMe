@@ -1,5 +1,9 @@
 const mongoose = require("mongoose");
 const User = require("../../shared/models/User");
+const {
+  hasBlockingStripeSubscription,
+  sendActiveSubscriptionConflict,
+} = require("../../shared/utils/compedStripe");
 
 const VALID_COMPED_PLANS = new Set(["basic", "pro"]);
 
@@ -30,14 +34,29 @@ exports.patchUserComped = async (req, res) => {
       nextPlan = null;
     }
 
-    const user = await User.findByIdAndUpdate(
-      targetId,
-      { $set: { comped, compedPlan: nextPlan } },
-      { new: true, runValidators: true }
-    );
-    if (!user) {
+    const existing = await User.findById(targetId);
+    if (!existing) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    const enablingComped = comped && !existing.comped;
+    if (enablingComped) {
+      if (await hasBlockingStripeSubscription(existing)) {
+        return sendActiveSubscriptionConflict(res);
+      }
+    }
+
+    const update = {
+      $set: { comped, compedPlan: nextPlan },
+    };
+    if (comped) {
+      update.$unset = { stripeSubscriptionId: "" };
+    }
+
+    const user = await User.findByIdAndUpdate(targetId, update, {
+      new: true,
+      runValidators: true,
+    });
 
     console.log(`[COMPED-AUDIT] userId=${String(user._id)}`);
 

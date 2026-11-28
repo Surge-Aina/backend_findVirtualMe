@@ -2,16 +2,15 @@ const express = require("express");
 const router = express.Router();
 const Stripe = require("stripe");
 const User = require("../../shared/models/User");
-const {
-  isCompedUser,
-  sendCompedBillingForbidden,
-} = require("../../shared/utils/compedAccount");
+const rejectComped = require("../../shared/middleware/rejectComped");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
     ? process.env.STRIPE_SECRET_KEY_LIVE
     : process.env.STRIPE_SECRET_KEY_TEST;
 const stripe = new Stripe(stripeSecretkey);
+
+const stripeBillingPosts = rejectComped;
 
 //checkout-session: sends users to stripe payment page
 const PRICE_MAP = {
@@ -53,7 +52,7 @@ async function amountForPlan(body) {
   return { plan, amount, priceId };
 }
 
-router.post("/payment-intent", async (req, res) => {
+router.post("/payment-intent", stripeBillingPosts, async (req, res) => {
   try {
     const priced = await amountForPlan(req.body || {});
     if (!priced) {
@@ -83,12 +82,9 @@ router.post("/payment-intent", async (req, res) => {
   }
 });
 
-router.post(["/session", "/checkout-session"], async (req, res) => {
+router.post(["/session", "/checkout-session"], stripeBillingPosts, async (req, res) => {
   try {
     const user = req.user; // middleware auth populates this
-    if (isCompedUser(user)) {
-      return sendCompedBillingForbidden(res);
-    }
     const { plan } = req.body; //"basic" or "pro"
 
     console.log("--------------------plan: ", plan);
@@ -172,16 +168,12 @@ router.get("/session/:id", async (req, res) => {
   }
 });
 
-router.post("/create-customer", async (req, res) => {
+router.post("/create-customer", stripeBillingPosts, async (req, res) => {
   try {
     const user = req.user; //passed by auth middleware
 
     if (!user) {
       return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    if (isCompedUser(user)) {
-      return sendCompedBillingForbidden(res);
     }
 
     //already has stripe customerId
@@ -206,15 +198,11 @@ router.post("/create-customer", async (req, res) => {
   }
 });
 
-router.post("/billing-session", async (req, res) => {
+router.post("/billing-session", stripeBillingPosts, async (req, res) => {
   const frontEndUrl = process.env.FRONTEND_URL;
 
   try {
     const user = req.user; // middleware auth populates this
-
-    if (isCompedUser(user)) {
-      return sendCompedBillingForbidden(res);
-    }
 
     const session = await stripe.billingPortal.sessions.create({
       customer: user.stripeCustomerId,

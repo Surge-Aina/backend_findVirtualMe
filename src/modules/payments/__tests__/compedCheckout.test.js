@@ -60,6 +60,15 @@ describe("comped checkout billing guard", () => {
     expect(res.body.code).toBe("COMPED_ACCOUNT");
   });
 
+  it("blocks payment-intent for comped accounts", async () => {
+    const res = await request(buildApp(compedUser))
+      .post("/checkout/payment-intent")
+      .send({ plan: "basic" });
+
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("COMPED_ACCOUNT");
+  });
+
   it("blocks billing portal session for comped accounts", async () => {
     const res = await request(buildApp({
       ...compedUser,

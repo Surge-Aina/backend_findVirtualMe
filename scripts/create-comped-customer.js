@@ -18,6 +18,7 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
 const User = require("../src/shared/models/User");
+const { hasBlockingStripeSubscription } = require("../src/shared/utils/compedStripe");
 
 const ENV_KEYS = {
   email: "EMAIL",
@@ -92,6 +93,9 @@ async function main() {
 
   let user = await User.findOne({ email });
   if (user) {
+    if (!user.comped && (await hasBlockingStripeSubscription(user))) {
+      throw new Error("HAS_ACTIVE_SUBSCRIPTION");
+    }
     user.set({
       name,
       displayName: name,
@@ -102,6 +106,7 @@ async function main() {
       compedPlan,
       isActive: true,
     });
+    user.stripeSubscriptionId = undefined;
     await user.save();
   } else {
     const password = generatePassword();
