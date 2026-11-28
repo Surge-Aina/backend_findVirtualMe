@@ -101,8 +101,11 @@ async function loadListingContext(siteId, actorId, { publishedOnly, isAdmin = fa
   const portfolio = await Portfolio.findById(siteId).select("owner account template title sections").lean();
   if (!portfolio) return null;
   const ownerMatch = String(portfolio.owner) === String(actorId);
-  if (!ownerMatch && !isAdmin) {
-    const { isAccountTeamsEnabled } = require("../../shared/config/accountTeams");
+  const { isAccountTeamsEnabled } = require("../../shared/config/accountTeams");
+  const { isSuperAdminUser } = require("../account-teams/superAdmin.service");
+  const superAdmin =
+    isAccountTeamsEnabled() && actorUser && isSuperAdminUser(actorUser);
+  if (!ownerMatch && !isAdmin && !superAdmin) {
     if (isAccountTeamsEnabled() && portfolio.account && actorUser?._id) {
       const accountAccess = require("../account-teams/accountAccess.service");
       const membership = await accountAccess.getActiveMembership(portfolio.account, actorUser._id);
@@ -527,6 +530,7 @@ module.exports = {
   assertComponentsAvailable,
   assertDraftWritesAllowed,
   listAvailableComponents,
+  loadListingContext,
   buildExternalWriteContext,
   addComponent,
   updateComponent,

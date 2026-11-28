@@ -273,6 +273,12 @@ exports.getMine = async (req, res) => {
   try {
     if (isAccountTeamsEnabled()) {
       const accountId = req.get("X-Account-Id") || null;
+      if (accountId) {
+        const { isValidAccountId } = require("../account-teams/validateAccountId.middleware");
+        if (!isValidAccountId(accountId)) {
+          return res.status(400).json({ error: "Invalid account id", code: "INVALID_ACCOUNT_ID" });
+        }
+      }
       const portfolios = await accountsService.getPortfoliosForAccount(req.user, accountId);
       return res.json({ success: true, portfolios });
     }
@@ -298,9 +304,9 @@ exports.listPublic = async (req, res) => {
 
 exports.listAdmin = async (req, res) => {
   try {
-    const isSuper = isSuperAdminUser(req.user);
     const isAdmin = portfolioService.isPortfolioAdmin(req.user);
-    if (!isSuper && !isAdmin) {
+    const isSuper = isAccountTeamsEnabled() && isSuperAdminUser(req.user);
+    if (!isAdmin && !isSuper) {
       return res.status(403).json({ error: "Forbidden" });
     }
     const page = parseInt(req.query.page, 10);

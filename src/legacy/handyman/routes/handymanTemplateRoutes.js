@@ -17,6 +17,9 @@
 
     try {
         const payload = jwt.verify(token, process.env.JWT_SECRET);
+        if (payload.kind === "super_admin") {
+            return res.status(403).json({ message: "Forbidden" });
+        }
         // normalize to { id, userId } to match controller usage
         req.user = { id: payload.id || payload.userId, userId: payload.id || payload.userId };
         next();

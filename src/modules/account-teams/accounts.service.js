@@ -134,6 +134,31 @@ async function updateMemberRole(accountId, actor, membershipId, role) {
     await requireAccountAdmin(accountId, actor._id);
   }
 
+  const target = await AccountMembership.findOne({ _id: membershipId, account: accountId }).lean();
+  if (!target) {
+    const err = new Error("Membership not found");
+    err.status = 404;
+    throw err;
+  }
+
+  if (
+    !isSuperAdminUser(actor) &&
+    target.role === "account_admin" &&
+    role !== "account_admin" &&
+    target.status === "active"
+  ) {
+    const adminCount = await AccountMembership.countDocuments({
+      account: accountId,
+      role: "account_admin",
+      status: "active",
+    });
+    if (adminCount <= 1) {
+      const err = new Error("Cannot demote the last account admin");
+      err.status = 400;
+      throw err;
+    }
+  }
+
   const updated = await AccountMembership.findOneAndUpdate(
     { _id: membershipId, account: accountId },
     { $set: { role } },
@@ -240,4 +265,5 @@ module.exports = {
   getPortfoliosForAccount,
   requireAccountAdmin,
   assertRoleAtLeast,
+  normalizeEmail,
 };

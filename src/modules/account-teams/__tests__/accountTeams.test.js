@@ -45,11 +45,13 @@ jest.mock("openai", () =>
 
 const portfolioRoutes = require("../../portfolios/portfolio.routes");
 const accountRoutes = require("../accounts.routes");
+const authHttpRoutes = require("../../auth/auth.http.routes");
 
 const app = express();
 app.use(express.json());
 app.use("/api/portfolios", portfolioRoutes);
 app.use("/api/accounts", accountRoutes);
+app.use("/api/auth", authHttpRoutes);
 
 function nonce() {
   return `${Date.now().toString(36)}${Math.random().toString(16).slice(2, 8)}`;
@@ -205,6 +207,17 @@ describe("Account teams", () => {
     expect(mine.body.portfolios.some((p) => String(p._id) === String(portfolio._id))).toBe(true);
   });
 
+  it("allows super admin portfolio mutation access for component writes", async () => {
+    const { portfolio } = await seedWorkspace();
+    const { buildSuperAdminUser } = require("../superAdmin.service");
+    const check = await accountAccess.assertPortfolioMutationAccess(
+      portfolio._id,
+      buildSuperAdminUser()
+    );
+    expect(check.ok).toBe(true);
+    expect(check.isSuperAdmin).toBe(true);
+  });
+
   it("super admin can list all portfolios through admin endpoint", async () => {
     await seedWorkspace();
     const { buildSuperAdminUser } = require("../superAdmin.service");
@@ -212,6 +225,63 @@ describe("Account teams", () => {
     const res = await request(app).get("/api/portfolios/admin");
     expect(res.status).toBe(200);
     expect(res.body.portfolios.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("returns 400 for malformed accountId path param", async () => {
+    const res = await request(app).get("/api/accounts/not-an-object-id/members");
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("INVALID_ACCOUNT_ID");
+  });
+
+  it("returns 400 for malformed X-Account-Id on mine", async () => {
+    const res = await request(app)
+      .get("/api/portfolios/mine")
+      .set("X-Account-Id", "not-valid");
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("INVALID_ACCOUNT_ID");
+  });
+
+  it("activates invited membership when the user signs up", async () => {
+    const { account } = await seedWorkspace();
+    const inviteEmail = `invite.${nonce()}@example.test`;
+    await AccountMembership.create({
+      account: account._id,
+      email: inviteEmail,
+      role: "editor",
+      status: "invited",
+    });
+    const signup = await request(app).post("/api/auth/signup").send({
+      name: "Invited Example",
+      username: `inv_${nonce()}`,
+      email: inviteEmail,
+      password: "synthetic-password",
+    });
+    expect(signup.status).toBe(201);
+    const row = await AccountMembership.findOne({ account: account._id, email: inviteEmail }).lean();
+    expect(row.status).toBe("active");
+    expect(row.user).toBeTruthy();
+  });
+
+  it("blocks demoting the last account admin", async () => {
+    const { account } = await seedWorkspace();
+    const ownerMembership = await AccountMembership.findOne({
+      account: account._id,
+      user: OWNER_ID,
+    });
+    const res = await request(app)
+      .patch(`/api/accounts/${account._id}/members/${ownerMembership._id}`)
+      .send({ role: "editor" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/last account admin/i);
+  });
+
+  it("denies super admin on admin portfolios when teams flag is off", async () => {
+    process.env.ACCOUNT_TEAMS_ENABLED = "false";
+    const { buildSuperAdminUser } = require("../superAdmin.service");
+    mockCurrentUser = buildSuperAdminUser();
+    const res = await request(app).get("/api/portfolios/admin");
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe("Forbidden");
   });
 
   it("preserves legacy owner-only access when ACCOUNT_TEAMS_ENABLED is false", async () => {

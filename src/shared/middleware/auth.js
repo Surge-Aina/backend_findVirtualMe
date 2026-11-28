@@ -1,7 +1,11 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { isAccountTeamsEnabled } = require("../config/accountTeams");
-const { buildSuperAdminUser } = require("../../modules/account-teams/superAdmin.service");
+const {
+  buildSuperAdminUser,
+  superAdminEnvConfigured,
+} = require("../../modules/account-teams/superAdmin.service");
+const { rejectUnlessSuperAdminPathAllowed } = require("../../modules/account-teams/superAdminScope");
 
 /**
  * Authentication middleware to verify JWT tokens
@@ -25,10 +29,11 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ error: "Token expired" });
     }
     if (decoded.kind === "super_admin") {
-      if (!isAccountTeamsEnabled()) {
+      if (!isAccountTeamsEnabled() || !superAdminEnvConfigured()) {
         return res.status(401).json({ error: "Invalid token" });
       }
       req.user = buildSuperAdminUser();
+      if (!rejectUnlessSuperAdminPathAllowed(req, res)) return;
       return next();
     }
     const user = await User.findById(decoded.id || decoded._id).select(

@@ -1,5 +1,8 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+
+/** Fixed hash so failed email lookups still incur a bcrypt compare (timing-safe). */
+const TIMING_SAFE_DUMMY_HASH = bcrypt.hashSync("timing-safe-dummy-credential", 10);
 const {
   isAccountTeamsEnabled,
   getSuperAdminUserId,
@@ -31,14 +34,13 @@ async function authenticateSuperAdmin(email, password) {
   }
   const expectedEmail = String(process.env.SUPER_ADMIN_EMAIL).trim().toLowerCase();
   const supplied = String(email || "").trim().toLowerCase();
-  if (supplied !== expectedEmail) {
-    return { ok: false, status: 401, error: "Invalid credentials" };
-  }
-  const match = await bcrypt.compare(
-    String(password || ""),
-    process.env.SUPER_ADMIN_PASSWORD_HASH
-  );
-  if (!match) {
+  const passwordStr = String(password || "");
+  const hashForCompare =
+    supplied === expectedEmail
+      ? process.env.SUPER_ADMIN_PASSWORD_HASH
+      : TIMING_SAFE_DUMMY_HASH;
+  const match = await bcrypt.compare(passwordStr, hashForCompare);
+  if (supplied !== expectedEmail || !match) {
     return { ok: false, status: 401, error: "Invalid credentials" };
   }
   const user = buildSuperAdminUser();
