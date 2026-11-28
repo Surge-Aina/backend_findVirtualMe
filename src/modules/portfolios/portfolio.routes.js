@@ -4,6 +4,7 @@ const ctrl = require("./portfolio.controller");
 const componentCtrl = require("./component.controller");
 const auth = require("../../shared/middleware/auth");
 const optionalAuth = require("../../shared/middleware/optionalAuth");
+const roleCheck = require("../../shared/middleware/roleCheck");
 
 // Public (static paths before param routes)
 router.get("/public", ctrl.listPublic);
@@ -13,6 +14,7 @@ router.get("/slug/:slug", optionalAuth, ctrl.getBySlug);
 
 // Authenticated (must precede /:id to avoid being captured by the param route)
 router.get("/mine", auth, ctrl.getMine);
+router.get("/admin", auth, roleCheck(["admin"]), ctrl.listAdmin);
 router.post("/", auth, ctrl.create);
 router.post("/agent", auth, ctrl.createAgent);
 router.post("/agent/generate", auth, ctrl.generateAgentFromPrompt);

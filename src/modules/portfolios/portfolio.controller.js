@@ -37,12 +37,27 @@ function toAgentBlockList(blocks) {
   }));
 }
 
-async function denyUnlessOwner(req, res) {
+function logAdminPortfolioEdit(adminUserId, portfolioId, action) {
+  console.info(
+    JSON.stringify({
+      event: "admin_portfolio_edit",
+      adminUserId: String(adminUserId),
+      portfolioId: String(portfolioId),
+      action: String(action),
+    })
+  );
+}
+
+async function denyUnlessOwner(req, res, { action } = {}) {
   const userId = req.user?._id || req.user?.id;
-  const check = await portfolioService.assertPortfolioOwner(req.params.id, userId);
+  const isAdmin = portfolioService.isPortfolioAdmin(req.user);
+  const check = await portfolioService.assertPortfolioOwner(req.params.id, userId, { isAdmin });
   if (!check.ok) {
     res.status(check.status).json({ error: check.error });
     return false;
+  }
+  if (isAdmin && check.isOwner === false) {
+    logAdminPortfolioEdit(userId, req.params.id, action || `${req.method} ${req.route?.path || req.path}`);
   }
   return true;
 }
@@ -216,8 +231,10 @@ exports.getById = async (req, res) => {
   try {
     const viewerId = req.user?._id || req.user?.id;
     const domainHost = req.get("X-Portfolio-Domain-Host");
+    const isAdmin = portfolioService.isPortfolioAdmin(req.user);
     const portfolio = await portfolioService.getPortfolioForViewer(req.params.id, viewerId, {
       domainHost,
+      isAdmin,
     });
     if (!portfolio) return res.status(404).json({ error: "Portfolio not found" });
     res.json(portfolio);
@@ -231,8 +248,10 @@ exports.getBySlug = async (req, res) => {
   try {
     const viewerId = req.user?._id || req.user?.id;
     const domainHost = req.get("X-Portfolio-Domain-Host");
+    const isAdmin = portfolioService.isPortfolioAdmin(req.user);
     const portfolio = await portfolioService.getPortfolioBySlugForViewer(req.params.slug, viewerId, {
       domainHost,
+      isAdmin,
     });
     if (!portfolio) return res.status(404).json({ error: "Portfolio not found" });
     res.json(portfolio);
@@ -260,6 +279,21 @@ exports.listPublic = async (req, res) => {
     res.json({ success: true, portfolios });
   } catch (err) {
     console.error("portfolio.listPublic error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+exports.listAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page, 10);
+    const limit = parseInt(req.query.limit, 10);
+    const result = await portfolioService.listPortfoliosForAdmin({
+      page: Number.isFinite(page) ? page : 1,
+      limit: Number.isFinite(limit) ? limit : 50,
+    });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error("portfolio.listAdmin error:", err);
     res.status(500).json({ error: "Server error" });
   }
 };
@@ -417,10 +451,6 @@ exports.listVersions = async (req, res) => {
     if (!(await denyUnlessOwner(req, res))) return;
     if (!isSiteDraftsEnabled()) {
       return res.status(404).json({ error: "Site drafts are not enabled", code: "DRAFTS_DISABLED" });
-    }
-    const check = await portfolioService.assertPortfolioOwner(req.params.id, req.user?._id || req.user?.id);
-    if (!check.ok) {
-      return res.status(check.status).json({ error: check.error });
     }
     const versions = await portfolioDraftService.listVersions(req.params.id);
     res.json({ success: true, versions });

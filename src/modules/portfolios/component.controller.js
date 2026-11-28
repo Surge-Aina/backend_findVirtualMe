@@ -15,7 +15,8 @@ function sendComponentError(res, err, fallback) {
 
 async function denyUnlessOwner(req, res, siteId) {
   const userId = req.user?._id || req.user?.id;
-  const check = await portfolioService.assertPortfolioOwner(siteId, userId);
+  const isAdmin = portfolioService.isPortfolioAdmin(req.user);
+  const check = await portfolioService.assertPortfolioOwner(siteId, userId, { isAdmin });
   if (!check.ok) {
     res.status(check.status).json({ error: check.error, code: check.status === 403 ? "forbidden" : "not_found" });
     return false;
