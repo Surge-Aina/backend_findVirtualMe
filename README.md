@@ -90,6 +90,10 @@ Optional one-click admin handoff (disabled unless explicitly enabled):
 - `MCP_OAUTH_REFRESH_TTL_SECONDS` — MCP OAuth refresh-token lifetime (default `2592000`).
 - `MCP_OAUTH_CODE_TTL_SECONDS` — authorization-code lifetime (default `300`).
 
+- `ACCOUNT_TEAMS_ENABLED` — set to `true` to enable workspace accounts, memberships (`account_admin`, `editor`, `viewer`), `/api/accounts`, and team-scoped portfolio access. When unset or any other value, only legacy single-owner and platform `admin` rules apply. Run `npm run migrate:account-teams` (dry-run by default; pass `--write` to apply) after enabling in an environment — not invoked automatically.
+- `SUPER_ADMIN_EMAIL` — when teams are enabled, email for the shared super-admin login (`POST /api/auth/super-admin/login`). Never commit credentials.
+- `SUPER_ADMIN_PASSWORD_HASH` — bcrypt hash for the super-admin password (generate with bcrypt, store only the hash).
+
 - `SITE_DRAFTS_ENABLED` — set to `true` to route owner portfolio edits through drafts and versioned publish. When unset or any other value, portfolio APIs behave as before (every save updates the live site).
 
 - `FEATURE_COMPONENTS_ENABLED` — set to `true` to expose reusable site section components (contact/lead form, gallery, services, testimonials, business hours) on unified templates.

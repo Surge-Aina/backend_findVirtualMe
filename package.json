@@ -13,6 +13,7 @@
     "new:feature": "node scripts/newFeature.js",
     "migrate:portfolios:v2": "node scripts/migratePortfolios.js",
     "verify:portfolios:v2-migration": "node scripts/verifyPortfolioMigration.js",
+    "migrate:account-teams": "node scripts/migrateAccountTeams.js",
     "rollout:portfolios:v2-migration": "node scripts/runV2PortfolioMigrationRollout.js",
     "repair:handyman-contact:v2": "node scripts/repairHandymanContact.js",
     "repair:projectmanager-summary-email:v2": "node scripts/repairProjectManagerSummaryEmail.js"
