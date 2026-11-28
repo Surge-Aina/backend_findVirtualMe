@@ -14,6 +14,7 @@ const UnifiedPortfolio = require("../portfolios/models/Portfolio");
 const { assertPortfolioOwner } = require("../portfolios/portfolio.service");
 const { templateToPortfolioType } = require("../../shared/utils/templateToPortfolioType");
 const subscriptionAccess = require("../payments/subscription-access.service");
+const { compedHasPaidPlan, isCompedUser } = require("../../shared/utils/compedAccount");
 
 const SELF_UPDATE_FIELDS = [
   "firstName",
@@ -251,6 +252,12 @@ exports.getSubInfo = async (req, res) => {
 
 exports.getHasSubscription = async (req, res) => {
   try {
+    if (isCompedUser(req.user)) {
+      return res.status(200).json({
+        hasSubscription: compedHasPaidPlan(req.user),
+      });
+    }
+
     const { email } = req.user;
 
     const sub = await Subscriptions.findOne({ email });
@@ -265,6 +272,12 @@ exports.getHasSubscription = async (req, res) => {
       return res
         .status(404)
         .json({ message: "No User found", hasSubscription: false });
+    }
+
+    if (user.comped) {
+      return res.status(200).json({
+        hasSubscription: compedHasPaidPlan(user),
+      });
     }
 
     user.stripeSubscriptionId = sub.subscriptionId;

@@ -1,5 +1,9 @@
 const Subscriptions = require("../../shared/models/Subscriptions");
 const Stripe = require("stripe");
+const {
+  loadCompedBillingExclusionSets,
+  stripeSubMatchesCompedExclusion,
+} = require("../../shared/utils/compedStripe");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
@@ -113,10 +117,17 @@ exports.reconcileSubscriptions = async (req, res) => {
     }
 
     let createdRecordsCount = 0;
+    let skippedCompedCount = 0;
+    const compedExclusion = await loadCompedBillingExclusionSets();
     //create subscription object for each record in stripe and
     //either update existing one or create new one if missing from database
-    const updatedSubs = await Promise.all(
+    const updatedSubs = (
+      await Promise.all(
       stripeSubs.map(async (stripeSub) => {
+        if (stripeSubMatchesCompedExclusion(stripeSub, compedExclusion)) {
+          skippedCompedCount += 1;
+          return null;
+        }
         const existing = mongodbSubsMap.get(stripeSub.id);
 
         const updatedSub = {
@@ -161,16 +172,19 @@ exports.reconcileSubscriptions = async (req, res) => {
           return await Subscriptions.create(updatedSub);
         }
       })
-    );
+      )
+    ).filter(Boolean);
 
     console.log(`Total reconciled ${updatedSubs.length} subscriptions`);
     console.log(
       `Created ${createdRecordsCount} new records that were missing in mongoDB`
     );
+    console.log(`Skipped ${skippedCompedCount} comped-account subscriptions`);
     res.status(200).json({
       updatedSubs,
       total_reconciled: updatedSubs.length,
       new_records: createdRecordsCount,
+      skipped_comped: skippedCompedCount,
     });
   } catch (error) {
     console.error("Error reconciling subscriptions:", error);

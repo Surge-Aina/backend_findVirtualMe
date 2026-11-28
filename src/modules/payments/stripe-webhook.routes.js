@@ -5,6 +5,7 @@ const Subscription = require("../../shared/models/Subscriptions");
 const User = require("../../shared/models/User");
 const stripeController = require("./domain-payment/stripe/stripe.controller");
 const voucherService = require("../vouchers/voucher.service");
+const { isCompedStripeCustomer } = require("../../shared/utils/compedStripe");
 
 const stripeSecretkey =
   process.env.STRIPE_MODE === "live"
@@ -27,6 +28,12 @@ const PRICE_MAP = {
 
 function normalizeCustomerEmail(email) {
   return typeof email === "string" ? email.trim().toLowerCase() : "";
+}
+
+async function skipCompedStripeCustomer(customerId, eventType) {
+  if (!(await isCompedStripeCustomer(customerId))) return false;
+  console.log(`[COMPED-WEBHOOK] skipped event=${eventType}`);
+  return true;
 }
 
 // Endpoint for Stripe to send real-time payment status updates (Webhook)
@@ -58,6 +65,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const subscription = event.data.object;
+        if (await skipCompedStripeCustomer(subscription.customer, event.type)) break;
 
         // Fetch customer details to get email and name
         const customer = await stripe.customers.retrieve(subscription.customer);
@@ -135,6 +143,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
       //subscription cancelled
       case "customer.subscription.deleted": {
         const subscription = event.data.object;
+        if (await skipCompedStripeCustomer(subscription.customer, event.type)) break;
 
         // Fetch customer details
         const customer = await stripe.customers.retrieve(subscription.customer);
@@ -211,6 +220,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
       // Handle subscription paused
       case "customer.subscription.paused": {
         const subscription = event.data.object;
+        if (await skipCompedStripeCustomer(subscription.customer, event.type)) break;
 
         await Subscription.findOneAndUpdate(
           { customerId: subscription.customer },
@@ -232,6 +242,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
       // Handle subscription resumed
       case "customer.subscription.resumed": {
         const subscription = event.data.object;
+        if (await skipCompedStripeCustomer(subscription.customer, event.type)) break;
 
         await Subscription.findOneAndUpdate(
           { customerId: subscription.customer },
@@ -260,6 +271,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
           paymentIntent.customer &&
           paymentIntent.description?.includes("Subscription")
         ) {
+          if (await skipCompedStripeCustomer(paymentIntent.customer, event.type)) break;
           const chargeId = paymentIntent.latest_charge;
 
           //get subscription info from customer
@@ -302,6 +314,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
       //payment logs
       case "invoice.payment_succeeded": {
         const invoice = event.data.object;
+        if (await skipCompedStripeCustomer(invoice.customer, event.type)) break;
 
         // Update subscription status if past_due
         await Subscription.findOneAndUpdate(
@@ -341,6 +354,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
       //log payment failed
       case "invoice.payment_failed": {
         const invoice = event.data.object;
+        if (await skipCompedStripeCustomer(invoice.customer, event.type)) break;
 
         await Subscription.findOneAndUpdate(
           { customerId: invoice.customer },
@@ -376,6 +390,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
       // Handle trial ending
       case "customer.subscription.trial_will_end": {
         const subscription = event.data.object;
+        if (await skipCompedStripeCustomer(subscription.customer, event.type)) break;
 
         await Subscription.findOneAndUpdate(
           { customerId: subscription.customer }, // ← Search by customerId
@@ -400,6 +415,7 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
       // Handle incomplete subscriptions
       case "invoice.payment_action_required": {
         const invoice = event.data.object;
+        if (await skipCompedStripeCustomer(invoice.customer, event.type)) break;
 
         await Subscription.findOneAndUpdate(
           { customerId: invoice.customer },
@@ -463,10 +479,17 @@ router.post(["/stripe", "/webhook"], express.raw({ type: "application/json" }), 
         const stripeSubscriptionId = session.subscription;
         const customerId = session.customer;
 
-        await User.findOneAndUpdate(
-          { stripeCustomerId: customerId },
-          { stripeSubscriptionId }
+        if (await skipCompedStripeCustomer(customerId, event.type)) break;
+
+        const billingUser = await User.findOne({ stripeCustomerId: customerId }).select(
+          "comped"
         );
+        if (!billingUser?.comped) {
+          await User.findOneAndUpdate(
+            { stripeCustomerId: customerId },
+            { stripeSubscriptionId }
+          );
+        }
         break;
       }
 

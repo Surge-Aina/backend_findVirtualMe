@@ -1,6 +1,10 @@
 const Subscriptions = require("../../shared/models/Subscriptions");
 const User = require("../../shared/models/User");
 const Stripe = require("stripe");
+const {
+  isCompedUser,
+  syntheticCompedSubscription,
+} = require("../../shared/utils/compedAccount");
 
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);
 const DEFAULT_AGENT_EDIT_LIMIT = 30;
@@ -128,6 +132,10 @@ async function getActiveSubscriptionFromStripe(stripeCustomerId) {
 }
 
 async function getActiveSubscriptionForUser(user = {}) {
+  if (isCompedUser(user)) {
+    return syntheticCompedSubscription(user);
+  }
+
   const mongoSub = await getActiveSubscriptionFromMongo(user);
   if (mongoSub) return mongoSub;
 
@@ -162,6 +170,8 @@ async function consumeAiEditCredit(userId, access = null) {
           email: user.email,
           stripeCustomerId: user.stripeCustomerId,
           aiUsage: user.aiUsage,
+          comped: user.comped,
+          compedPlan: user.compedPlan,
         });
 
   if (!resolvedAccess.hasAccess) return resolvedAccess;

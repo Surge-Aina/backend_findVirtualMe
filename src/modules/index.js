@@ -33,6 +33,7 @@ const voucherRoutes = require("./vouchers/voucher.routes.js");
 const qrCodeRoutes = require("./qr-code/qrCode.routes.js");
 const privacyPolicyRoutes = require("./privacy-policy/privacyPolicy.routes");
 const termsOfServiceRoutes = require("./terms-of-service/termsOfService.routes");
+const adminRoutes = require("./admin/admin.routes");
 const developerApiKeyRoutes = require("./public-api/developerKeys.routes");
 const developerWebhookRoutes = require("./public-api/webhooks.routes");
 const { mountPublicApi } = require("./public-api/mount");
@@ -65,6 +66,7 @@ function mountModules(app) {
   app.use("/checkout", auth, checkoutRoutes);
   app.use("/api/payments/subscriptions", auth, roleCheck(["admin"]), subscriptionRoutes);
   app.use("/api/users", userRoutes);
+  app.use("/api/admin", adminRoutes);
   app.post("/user/login", loginUser);
   app.post("/user/signup", signupUser);
   app.use("/user", userRoutes);
