@@ -1,45 +1,10 @@
-const dns = require("dns").promises;
 const https = require("https");
-const { URL } = require("url");
+const { createPinnedHttpsTarget } = require("../public-api/webhookUrls");
 
 const MAX_BODY_BYTES = 32 * 1024;
 const FETCH_TIMEOUT_MS = 8000;
 const CACHE_MAX = 200;
 const cache = new Map();
-
-function isPrivateOrLocalIp(address) {
-  if (!address) return true;
-  const normalized = address.toLowerCase();
-  if (normalized.includes(":")) {
-    if (normalized === "::1" || normalized === "::") return true;
-    if (normalized.startsWith("fc") || normalized.startsWith("fd")) return true;
-    if (normalized.startsWith("fe80:")) return true;
-    return false;
-  }
-  const parts = normalized.split(".").map(Number);
-  if (parts.length !== 4 || parts.some((n) => Number.isNaN(n))) return true;
-  if (parts[0] === 10) return true;
-  if (parts[0] === 127) return true;
-  if (parts[0] === 169 && parts[1] === 254) return true;
-  if (parts[0] === 192 && parts[1] === 168) return true;
-  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
-  if (parts[0] === 0) return true;
-  return false;
-}
-
-async function assertPublicHost(url) {
-  if (url.protocol !== "https:") {
-    throw new Error("client metadata must use https");
-  }
-  const host = url.hostname;
-  if (host === "localhost" || host === "127.0.0.1" || host === "[::1]") {
-    throw new Error("client metadata host is not allowed");
-  }
-  const { address } = await dns.lookup(host, { verbatim: true });
-  if (isPrivateOrLocalIp(address)) {
-    throw new Error("client metadata host resolves to a private address");
-  }
-}
 
 function setCache(key, value) {
   if (cache.size >= CACHE_MAX) {
@@ -58,11 +23,20 @@ function getCache(key) {
   return entry.value;
 }
 
-function fetchJson(url) {
+function fetchJsonPinned(target) {
   return new Promise((resolve, reject) => {
-    const req = https.get(
-      url,
-      { timeout: FETCH_TIMEOUT_MS, headers: { Accept: "application/json" } },
+    const req = https.request(
+      {
+        protocol: "https:",
+        hostname: target.hostname,
+        servername: target.servername,
+        port: target.port,
+        method: "GET",
+        path: `${target.pathname}${target.search}`,
+        headers: { Accept: "application/json" },
+        lookup: target.lookup,
+        timeout: FETCH_TIMEOUT_MS,
+      },
       (res) => {
         if (res.statusCode !== 200) {
           res.resume();
@@ -95,6 +69,7 @@ function fetchJson(url) {
       reject(new Error("client metadata fetch timed out"));
     });
     req.on("error", reject);
+    req.end();
   });
 }
 
@@ -102,9 +77,8 @@ async function fetchClientMetadataDocument(clientId) {
   const cached = getCache(clientId);
   if (cached) return cached;
 
-  const url = new URL(clientId);
-  await assertPublicHost(url);
-  const body = await fetchJson(url);
+  const target = await createPinnedHttpsTarget(clientId);
+  const body = await fetchJsonPinned(target);
   setCache(clientId, body);
   return body;
 }
@@ -116,5 +90,5 @@ function clearMetadataFetchCache() {
 module.exports = {
   fetchClientMetadataDocument,
   clearMetadataFetchCache,
-  isPrivateOrLocalIp,
+  fetchJsonPinned,
 };
