@@ -281,7 +281,7 @@ describe("Account teams", () => {
     mockCurrentUser = buildSuperAdminUser();
     const res = await request(app).get("/api/portfolios/admin");
     expect(res.status).toBe(403);
-    expect(res.body.error).toBe("Forbidden");
+    expect(res.body.error).toBe("Access denied. Insufficient permissions.");
   });
 
   it("preserves legacy owner-only access when ACCOUNT_TEAMS_ENABLED is false", async () => {

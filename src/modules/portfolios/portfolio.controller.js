@@ -307,7 +307,9 @@ exports.listAdmin = async (req, res) => {
     const isAdmin = portfolioService.isPortfolioAdmin(req.user);
     const isSuper = isAccountTeamsEnabled() && isSuperAdminUser(req.user);
     if (!isAdmin && !isSuper) {
-      return res.status(403).json({ error: "Forbidden" });
+      return res
+        .status(403)
+        .json({ error: "Access denied. Insufficient permissions." });
     }
     const page = parseInt(req.query.page, 10);
     const limit = parseInt(req.query.limit, 10);
