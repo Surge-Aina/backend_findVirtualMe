@@ -10,7 +10,14 @@ function requirePhoneLoginFeature(req, res, next) {
 }
 
 function phoneFromBody(req) {
-  const e164 = normalizeE164(req.body && req.body.phone);
+  const body = req.body || {};
+  const country = body.country ? String(body.country).trim().toUpperCase() : undefined;
+  let e164;
+  try {
+    e164 = normalizeE164(body.phone, country);
+  } catch (_err) {
+    return "unknown";
+  }
   if (!e164) return "unknown";
   return phoneLookupHash(e164) || "unknown";
 }
@@ -56,7 +63,9 @@ function handleServiceError(res, err) {
     const errCode = err && err.code != null ? String(err.code) : "";
     console.error("phone_login_error", errName, errCode);
   }
-  return res.status(status).json({ message });
+  const body = { message };
+  if (err && err.code) body.code = err.code;
+  return res.status(status).json(body);
 }
 
 module.exports = {

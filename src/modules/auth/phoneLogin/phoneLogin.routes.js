@@ -11,9 +11,12 @@ const {
   loginStart,
   loginVerify,
   phoneStatus,
+  listCountries,
 } = require("./phoneLogin.controller");
 
 const router = express.Router();
+
+router.get("/countries", listCountries);
 
 router.use(requirePhoneLoginFeature);
 

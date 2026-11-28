@@ -1,12 +1,14 @@
 const User = require("../../../shared/models/User");
 const { buildLoginSuccessPayload } = require("../auth.service");
 const {
-  normalizeE164,
+  resolvePhone,
   phoneLookupHash,
   encryptPhone,
   phoneLast4,
   maskPhoneForLog,
 } = require("./phoneCrypto");
+const { consumeCountryOtpSend } = require("./phoneOtpCountryCap");
+const { assertNotSmsPumping } = require("./phoneOtpPumpGuard");
 const { startVerification, checkVerification } = require("./twilioVerify.service");
 const { consumeGlobalDailyOtpSend } = require("./phoneOtpDailyCap");
 const {
@@ -43,7 +45,7 @@ async function applyLoginStartTiming(startedAt) {
   }
 }
 
-async function assertCanSend(e164) {
+async function assertCanSend(e164, isoCountry, sendContext) {
   const hash = phoneLookupHash(e164);
   if (!hash) {
     const err = new Error("phone_login_disabled");
@@ -55,6 +57,15 @@ async function assertCanSend(e164) {
     err.status = 429;
     throw err;
   }
+  const countryCap = await consumeCountryOtpSend(isoCountry);
+  if (!countryCap.allowed) {
+    const err = new Error("Too many verification requests for this region");
+    err.status = 429;
+    throw err;
+  }
+  if (sendContext && sendContext.clientIp) {
+    await assertNotSmsPumping({ clientIp: sendContext.clientIp, e164 });
+  }
   const { allowed } = await consumeGlobalDailyOtpSend();
   if (!allowed) {
     const err = new Error("Too many verification requests today");
@@ -64,13 +75,13 @@ async function assertCanSend(e164) {
   return hash;
 }
 
-async function sendOtp(e164) {
+async function sendOtp(e164, isoCountry, sendContext) {
   if (!phoneLoginOperational()) {
     const err = new Error("phone_login_disabled");
     err.status = 503;
     throw err;
   }
-  await assertCanSend(e164);
+  await assertCanSend(e164, isoCountry, sendContext);
   try {
     await startVerification(e164);
   } catch (err) {
@@ -180,23 +191,35 @@ async function attachPhoneToUser(userId, e164) {
   return user;
 }
 
-async function startVerifyForUser(userId, rawPhone) {
-  const e164 = normalizeE164(rawPhone);
-  if (!e164) {
-    const err = new Error(INVALID_INPUT);
-    err.status = 400;
-    throw err;
-  }
-  return sendOtp(e164);
+function countryFromContext(ctx) {
+  return ctx && ctx.country ? String(ctx.country).trim().toUpperCase() : undefined;
 }
 
-async function confirmVerifyForUser(userId, rawPhone, code) {
-  const e164 = normalizeE164(rawPhone);
-  if (!e164) {
-    const err = new Error(INVALID_INPUT);
-    err.status = 400;
-    throw err;
+function resolvePhoneInput(rawPhone, ctx) {
+  try {
+    const resolved = resolvePhone(rawPhone, countryFromContext(ctx));
+    if (!resolved) {
+      const invalid = new Error(INVALID_INPUT);
+      invalid.status = 400;
+      throw invalid;
+    }
+    return resolved;
+  } catch (err) {
+    if (err && err.code === "PHONE_COUNTRY_NOT_SUPPORTED") throw err;
+    if (err && typeof err.status === "number") throw err;
+    const invalid = new Error(INVALID_INPUT);
+    invalid.status = 400;
+    throw invalid;
   }
+}
+
+async function startVerifyForUser(userId, rawPhone, ctx) {
+  const { e164, country } = resolvePhoneInput(rawPhone, ctx);
+  return sendOtp(e164, country, ctx);
+}
+
+async function confirmVerifyForUser(userId, rawPhone, code, ctx) {
+  const { e164 } = resolvePhoneInput(rawPhone, ctx);
   await verifyOtpCode(e164, code);
   const user = await attachPhoneToUser(userId, e164);
   return {
@@ -206,19 +229,23 @@ async function confirmVerifyForUser(userId, rawPhone, code) {
   };
 }
 
-async function loginStart(rawPhone) {
+async function loginStart(rawPhone, ctx) {
   const startedAt = Date.now();
-  const e164 = normalizeE164(rawPhone);
-  if (!e164) {
-    const err = new Error(INVALID_INPUT);
-    err.status = 400;
-    throw err;
+  let resolved;
+  try {
+    resolved = resolvePhone(rawPhone, countryFromContext(ctx));
+  } catch (err) {
+    if (err && err.code === "PHONE_COUNTRY_NOT_SUPPORTED") throw err;
+    const invalid = new Error(INVALID_INPUT);
+    invalid.status = 400;
+    throw invalid;
   }
+  const { e164, country } = resolved;
   const hash = phoneLookupHash(e164);
   const user = await User.findOne({ phoneLookupHash: hash, phoneVerified: true }).select("_id");
 
   if (user) {
-    const sendWork = sendOtp(e164).catch((err) => {
+    const sendWork = sendOtp(e164, country, ctx).catch((err) => {
       const code =
         err && err.code
           ? err.code
@@ -236,13 +263,8 @@ async function loginStart(rawPhone) {
   return { message: LOGIN_START_MESSAGE };
 }
 
-async function loginVerify(rawPhone, code) {
-  const e164 = normalizeE164(rawPhone);
-  if (!e164) {
-    const err = new Error(INVALID_INPUT);
-    err.status = 400;
-    throw err;
-  }
+async function loginVerify(rawPhone, code, ctx) {
+  const { e164 } = resolvePhoneInput(rawPhone, ctx);
   await verifyOtpCode(e164, code);
   const hash = phoneLookupHash(e164);
   const user = await User.findOne({ phoneLookupHash: hash, phoneVerified: true });
@@ -276,6 +298,6 @@ module.exports = {
   statusForUser,
   sendOtp,
   verifyOtpCode,
-  normalizeE164,
+  resolvePhoneInput,
   LOGIN_START_MESSAGE,
 };

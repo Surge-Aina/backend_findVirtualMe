@@ -18,7 +18,8 @@ describe("phoneCrypto", () => {
 
   test("normalizes and validates E.164", () => {
     expect(normalizeE164("+14155552671")).toBe("+14155552671");
-    expect(normalizeE164("(415) 555-2671")).toBe("+14155552671");
+    expect(normalizeE164("(415) 555-2671", "US")).toBe("+14155552671");
+    expect(normalizeE164("(415) 555-2671")).toBeNull();
     expect(normalizeE164("not-a-phone")).toBeNull();
   });
 

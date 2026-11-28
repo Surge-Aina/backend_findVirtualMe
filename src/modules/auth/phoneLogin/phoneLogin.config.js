@@ -53,6 +53,56 @@ function getOtpDailyCap() {
   return readPositiveInt("OTP_DAILY_CAP", 200);
 }
 
+function parseCountryAllowlist(raw) {
+  const source =
+    raw != null && String(raw).trim() !== ""
+      ? String(raw)
+      : "US,GB,IN";
+  const set = new Set();
+  for (const part of source.split(",")) {
+    const iso = part.trim().toUpperCase();
+    if (/^[A-Z]{2}$/.test(iso)) set.add(iso);
+  }
+  if (set.size === 0) {
+    set.add("US");
+    set.add("GB");
+    set.add("IN");
+  }
+  return set;
+}
+
+function getPhoneLoginCountryAllowlist() {
+  return parseCountryAllowlist(process.env.PHONE_LOGIN_COUNTRIES);
+}
+
+function getCountryOtpHourlyCap(isoCountry) {
+  const iso = String(isoCountry || "").toUpperCase();
+  const perCountry = readPositiveInt(`PHONE_OTP_COUNTRY_HOURLY_CAP_${iso}`, 0);
+  if (perCountry > 0) return perCountry;
+  if (iso === "IN") {
+    return readPositiveInt("PHONE_OTP_COUNTRY_HOURLY_CAP_IN", 8);
+  }
+  return readPositiveInt("PHONE_OTP_COUNTRY_HOURLY_CAP", 25);
+}
+
+function getCountryOtpDailyCap(isoCountry) {
+  const iso = String(isoCountry || "").toUpperCase();
+  const perCountry = readPositiveInt(`PHONE_OTP_COUNTRY_DAILY_CAP_${iso}`, 0);
+  if (perCountry > 0) return perCountry;
+  if (iso === "IN") {
+    return readPositiveInt("PHONE_OTP_COUNTRY_DAILY_CAP_IN", 40);
+  }
+  return readPositiveInt("PHONE_OTP_COUNTRY_DAILY_CAP", 80);
+}
+
+function getSmsPumpDistinctMax() {
+  return readPositiveInt("PHONE_OTP_PUMP_DISTINCT_MAX", 5);
+}
+
+function getSmsPumpWindowMs() {
+  return readPositiveInt("PHONE_OTP_PUMP_WINDOW_MS", 15 * 60 * 1000);
+}
+
 module.exports = {
   phoneLoginEnabled,
   phoneLoginOperational,
@@ -60,4 +110,9 @@ module.exports = {
   phoneLoginKeysReady,
   getOtpDailyCap,
   decode32ByteKey,
+  getPhoneLoginCountryAllowlist,
+  getCountryOtpHourlyCap,
+  getCountryOtpDailyCap,
+  getSmsPumpDistinctMax,
+  getSmsPumpWindowMs,
 };
