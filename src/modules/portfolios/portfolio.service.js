@@ -16,7 +16,7 @@ const {
   getBlockTypesForTemplate,
   isKnownBlockType,
 } = require("./models/blockTypes");
-const { sanitizeSectionDataAllowlist } = require("./sectionDataAllowlist");
+const { stripForbiddenDeep } = require("./sectionDataAllowlist");
 
 const MAX_PORTFOLIO_SECTIONS = 24;
 const MAX_SECTION_DATA_BYTES = 50 * 1024;
@@ -123,24 +123,7 @@ function validateSectionData(blockType, data) {
     );
   }
 
-  const sanitized = sanitizeSectionDataAllowlist(blockType, data);
-
-  const sizeBytes = getJsonSizeBytes(sanitized);
-  if (sizeBytes > MAX_SECTION_DATA_BYTES) {
-    throw new PortfolioValidationError(
-      `Section data for "${blockType}" exceeds ${MAX_SECTION_DATA_BYTES} bytes`,
-      {
-        code: "SECTION_DATA_TOO_LARGE",
-        details: {
-          blockType,
-          sizeBytes,
-          maxBytes: MAX_SECTION_DATA_BYTES,
-        },
-      }
-    );
-  }
-
-  return sanitized;
+  return stripForbiddenDeep(data);
 }
 
 function normalizeThemeId(themeId, template) {

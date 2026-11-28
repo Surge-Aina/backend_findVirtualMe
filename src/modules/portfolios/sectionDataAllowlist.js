@@ -318,4 +318,5 @@ module.exports = {
   pickSummaryFields,
   pickHeroFields,
   sanitizeSectionDataAllowlist,
+  stripForbiddenDeep,
 };

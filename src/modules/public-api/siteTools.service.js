@@ -11,7 +11,9 @@ const sitesService = require("./sites.service");
 const { PlanLimitError } = require("../portfolios/planLimits.service");
 const {
   pickSummaryFields,
+  pickHeroFields,
   assertAllowedUrl,
+  sanitizeSectionDataAllowlist,
 } = require("../portfolios/sectionDataAllowlist");
 const {
   assertPublicSlug,
@@ -230,10 +232,8 @@ function mergeContentIntoSection(section, key, value, template) {
     return section;
   }
   if (key === "summary" && section.type === "hero" && value && typeof value === "object") {
-    if (value.title !== undefined) data.title = value.title;
-    if (value.subtitle !== undefined) data.subtitle = value.subtitle;
-    if (value.practiceName !== undefined) data.practiceName = value.practiceName;
-    if (value.tagline !== undefined) data.tagline = value.tagline;
+    const picked = pickHeroFields(value);
+    Object.assign(data, picked);
     section.data = portfolioService.validateSectionData(section.type, data);
     return section;
   }
@@ -243,8 +243,9 @@ function mergeContentIntoSection(section, key, value, template) {
     if (typeof value !== "object") {
       throw new SiteToolsError(400, "validation_error", `${key} must be an object`, { field: key });
     }
-    const merged = { ...data, ...value };
-    section.data = portfolioService.validateSectionData(section.type, merged);
+    const sanitized = sanitizeSectionDataAllowlist(section.type, value);
+    Object.assign(data, sanitized);
+    section.data = portfolioService.validateSectionData(section.type, data);
     return section;
   }
   return section;
