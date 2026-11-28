@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Portfolio = require("./models/Portfolio");
 const { isSiteDraftsEnabled } = require("../../shared/config/siteDrafts");
+const planLimits = require("./planLimits.service");
 const portfolioDraftService = require("./portfolioDraft.service");
 const { readLegacyPortfolioById } = require("../../../scripts/migratePortfolios");
 const { notifySitePublished, notifyBusinessProfileUpdated } = require("../public-api/lifecycleEvents");
@@ -332,6 +333,8 @@ function normalizeSections(sections, options = {}) {
 // ─── Create ──────────────────────────────────────────────────────────────────
 
 async function createPortfolio(ownerId, template, overrides = {}) {
+  await planLimits.assertCanCreatePortfolio(ownerId);
+
   const rawSections =
     overrides.sections !== undefined
       ? overrides.sections

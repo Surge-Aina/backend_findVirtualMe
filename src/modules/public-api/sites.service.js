@@ -118,4 +118,5 @@ module.exports = {
   listSites,
   getSite,
   getBusinessProfile,
+  loadDomains,
 };

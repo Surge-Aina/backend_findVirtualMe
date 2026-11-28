@@ -79,6 +79,29 @@ const parseVercelErrorResponse = (error) => {
   };
 };
 
+const { getMainDomain } = require("../../shared/config/mainDomain");
+
+function formatDnsRecords(domain, vercelResult) {
+  const records = [];
+  const verification = Array.isArray(vercelResult?.verification) ? vercelResult.verification : [];
+  for (const entry of verification) {
+    if (!entry || typeof entry !== "object") continue;
+    records.push({
+      type: entry.type || "TXT",
+      host: entry.domain || entry.name || domain,
+      value: entry.value,
+    });
+  }
+  if (records.length === 0) {
+    records.push({
+      type: "CNAME",
+      host: domain,
+      value: getMainDomain(),
+    });
+  }
+  return records;
+}
+
 const addDomainToUser = async (userId, domain, portfolioId, options = {}) => {
   if (!userId) {
     throw new Error("User ID is required to associate domain");
@@ -451,16 +474,17 @@ const domainService = {
         status: isVerified ? "active" : "pending_verification",
       });
 
+      const records = formatDnsRecords(domain, vercelResult);
+
       res.status(200).json({
         message: "Custom domain configured - please verify DNS settings",
         domain: domain,
         portfolioId: portfolioId || null,
         status: isVerified ? "active" : "pending_verification",
-        verification: vercelResult?.verification, // DNS records to configure
+        records,
+        verification: vercelResult?.verification,
         instructions: {
-          dns: `Add CNAME record: ${domain} -> ${
-            process.env.MAIN_DOMAIN || "findvirtualme.com"
-          }`,
+          dns: `Add CNAME record: ${domain} -> ${getMainDomain()}`,
           verification: `Visit ${domain} once DNS propagates`,
         },
       });

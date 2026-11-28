@@ -4,6 +4,8 @@ const { createDomainMapping } = require("./DomainRouter.service");
 const { normalizeDomain, getPortfolioMeta } = require("./utils/domainHelpers");
 const { addDomainToUser } = require("../domain.service");
 const Portfolio = require("../../portfolios/models/Portfolio");
+const User = require("../../../shared/models/User");
+const vercelService = require("../vercel.service");
 const { templateToPortfolioType } = require("../../../shared/utils/templateToPortfolioType");
 const {
   extractPlatformCustomerSlugFromHostname,
@@ -116,14 +118,32 @@ exports.updateDomainRoute = async (req, res) => {
     route.updatedBy = userId;
     await route.save();
 
-    // Sync with User.domains
-    // Only call if domain exists
     if (route.domain) {
+      const userRecord = await User.findById(userId).select("domains").lean();
+      const existing = (userRecord?.domains || []).find((d) => d.domain === route.domain);
+      let dnsConfigured = existing?.dnsConfigured === true;
+      let status = existing?.status || "pending_verification";
+
+      if (portfolioId) {
+        try {
+          const verified = await vercelService.verifyDomain(route.domain);
+          dnsConfigured = verified.verified === true;
+          status = dnsConfigured ? "active" : "pending_verification";
+        } catch (_verifyErr) {
+          dnsConfigured = false;
+          if (existing?.status) {
+            status = existing.status === "active" ? "pending_verification" : existing.status;
+          } else {
+            status = "pending_verification";
+          }
+        }
+      }
+
       const options = {
-        type: "platform", 
-        status: route.isActive ? "active" : "pending",
-        dnsConfigured: false,
-        registeredAt: route.createdAt,
+        type: existing?.type || "platform",
+        status,
+        dnsConfigured,
+        registeredAt: existing?.registeredAt || route.createdAt,
       };
 
       await addDomainToUser(userId, route.domain, route.portfolioId, options);

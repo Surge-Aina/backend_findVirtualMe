@@ -8,6 +8,8 @@ const sitesService = require("./sites.service");
 const leadsService = require("./leads.service");
 const { listEndpoints } = require("./webhook.service");
 const componentService = require("../portfolios/component.service");
+const siteTools = require("./siteTools.service");
+const { isMcpSiteToolsEnabled } = require("../../shared/config/mcpSiteTools");
 
 function textResult(value) {
   return { content: [{ type: "text", text: JSON.stringify(value) }] };
@@ -260,6 +262,194 @@ function registerTools(server, auth) {
       return textResult({ webhooks: data });
     }
   );
+
+  if (isMcpSiteToolsEnabled()) {
+    registerSiteTools(server, auth, { ownerId, onlySiteId });
+  }
+}
+
+function registerSiteTools(server, auth, ctx) {
+  const { ownerId, onlySiteId } = ctx;
+
+  server.registerTool(
+    "create_site",
+    {
+      description:
+        "Create a new site from a unified template (projectManager, dataScientist, agent, healthcare, handyman).",
+      inputSchema: {
+        template: z.string(),
+        title: z.string().optional(),
+      },
+    },
+    async ({ template, title }) => {
+      if (!hasScope(auth, "sites:write")) return scopeError("sites:write");
+      try {
+        const data = await siteTools.createSite({ ownerId, template, title });
+        return textResult(data);
+      } catch (err) {
+        return toolErrorPayload(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "get_site_content",
+    {
+      description: "Read editable core sections for an owned site (summary, about, experience, skills, projects, education, contact, resumeUrl).",
+      inputSchema: { siteId: z.string() },
+    },
+    async ({ siteId }) => {
+      if (!hasScope(auth, "sites:read")) return scopeError("sites:read");
+      if (onlySiteId && onlySiteId !== String(siteId)) {
+        return { isError: true, content: [{ type: "text", text: "not_found" }] };
+      }
+      try {
+        const data = await siteTools.getSiteContent({ ownerId, siteId });
+        return textResult(data);
+      } catch (err) {
+        return toolErrorPayload(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "update_site_content",
+    {
+      description: "Update core site sections on the working draft (validated per template).",
+      inputSchema: {
+        siteId: z.string(),
+        content: z.record(z.unknown()),
+      },
+    },
+    async ({ siteId, content }) => {
+      if (!hasScope(auth, "sites:write")) return scopeError("sites:write");
+      if (onlySiteId && onlySiteId !== String(siteId)) {
+        return { isError: true, content: [{ type: "text", text: "not_found" }] };
+      }
+      try {
+        const data = await siteTools.updateSiteContent({
+          ownerId,
+          siteId,
+          content,
+          source: "mcp",
+        });
+        return textResult(data);
+      } catch (err) {
+        return toolErrorPayload(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "update_site_settings",
+    {
+      description: "Update site title, slug, visibility, and theme tokens when supported.",
+      inputSchema: {
+        siteId: z.string(),
+        settings: z.record(z.unknown()),
+      },
+    },
+    async ({ siteId, settings }) => {
+      if (!hasScope(auth, "sites:write")) return scopeError("sites:write");
+      if (onlySiteId && onlySiteId !== String(siteId)) {
+        return { isError: true, content: [{ type: "text", text: "not_found" }] };
+      }
+      try {
+        const data = await siteTools.updateSiteSettings({
+          ownerId,
+          siteId,
+          settings,
+          source: "mcp",
+        });
+        return textResult(data);
+      } catch (err) {
+        return toolErrorPayload(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "submit_for_publish",
+    {
+      description: "Mark the site draft as pending owner approval before going live.",
+      inputSchema: { siteId: z.string() },
+    },
+    async ({ siteId }) => {
+      if (!hasScope(auth, "sites:write")) return scopeError("sites:write");
+      if (onlySiteId && onlySiteId !== String(siteId)) {
+        return { isError: true, content: [{ type: "text", text: "not_found" }] };
+      }
+      try {
+        const data = await siteTools.submitForPublish({ ownerId, siteId, source: "mcp" });
+        return textResult(data);
+      } catch (err) {
+        return toolErrorPayload(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "publish_site",
+    {
+      description: "Publish the approved site draft (owner token with sites:write).",
+      inputSchema: { siteId: z.string() },
+    },
+    async ({ siteId }) => {
+      if (!hasScope(auth, "sites:write")) return scopeError("sites:write");
+      if (onlySiteId && onlySiteId !== String(siteId)) {
+        return { isError: true, content: [{ type: "text", text: "not_found" }] };
+      }
+      try {
+        const data = await siteTools.publishSite({ ownerId, siteId });
+        return textResult(data);
+      } catch (err) {
+        return toolErrorPayload(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "list_versions",
+    {
+      description: "List saved version history for an owned site (newest first).",
+      inputSchema: { siteId: z.string() },
+    },
+    async ({ siteId }) => {
+      if (!hasScope(auth, "sites:read")) return scopeError("sites:read");
+      if (onlySiteId && onlySiteId !== String(siteId)) {
+        return { isError: true, content: [{ type: "text", text: "not_found" }] };
+      }
+      try {
+        const data = await siteTools.listSiteVersions({ ownerId, siteId });
+        return textResult(data);
+      } catch (err) {
+        return toolErrorPayload(err);
+      }
+    }
+  );
+
+  server.registerTool(
+    "revert_version",
+    {
+      description: "Load a historical version into the working draft without publishing.",
+      inputSchema: {
+        siteId: z.string(),
+        versionNumber: z.number().int().min(1),
+      },
+    },
+    async ({ siteId, versionNumber }) => {
+      if (!hasScope(auth, "sites:write")) return scopeError("sites:write");
+      if (onlySiteId && onlySiteId !== String(siteId)) {
+        return { isError: true, content: [{ type: "text", text: "not_found" }] };
+      }
+      try {
+        const data = await siteTools.revertSiteVersion({ ownerId, siteId, versionNumber });
+        return textResult(data);
+      } catch (err) {
+        return toolErrorPayload(err);
+      }
+    }
+  );
 }
 
 async function handleMcp(req, res) {
@@ -285,6 +475,14 @@ async function handleMcp(req, res) {
 
 function mountMcp(app) {
   const router = express.Router();
+  router.get("/", (_req, res) => {
+    res
+      .status(405)
+      .set("Allow", "POST")
+      .json({
+        error: { code: "method_not_allowed", message: "MCP requests must use POST" },
+      });
+  });
   router.post("/", authenticateMcpRequest, publicApiRateLimit, handleMcp);
   app.use("/api/mcp", router);
 }

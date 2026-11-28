@@ -7,14 +7,23 @@ exports.signupUser = async (req, res) => {
   try {
     const { name, username, email, password } = req.body;
     if (!name || !username || !email || !password) {
-      return res
-        .status(500)
-        .json({ error: "name, username, email or password missing" });
+      return res.status(400).json({
+        error: "validation_error",
+        message: "name, username, email, and password are required",
+      });
     }
 
     const userExists = await User.findOne({ email });
     if (userExists)
       return res.status(400).json({ message: "User already exists" });
+
+    const usernameTaken = await User.findOne({ username });
+    if (usernameTaken) {
+      return res.status(409).json({
+        error: "conflict",
+        message: "Username already in use",
+      });
+    }
 
     const hashed = await bcrypt.hash(password, 10);
 
@@ -32,6 +41,13 @@ exports.signupUser = async (req, res) => {
     });
     res.status(201).json({ name, username, email, token });
   } catch (err) {
+    if (err?.code === 11000) {
+      const field = err.keyPattern?.username ? "username" : "email";
+      return res.status(409).json({
+        error: "conflict",
+        message: field === "username" ? "Username already in use" : "User already exists",
+      });
+    }
     res.status(500).json({ error: err.message });
   }
 };
